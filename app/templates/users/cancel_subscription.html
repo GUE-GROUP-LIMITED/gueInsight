@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cancel Subscription</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Cancel Subscription</h1>
+
+        <!-- Display Current Subscription Details -->
+        <p>You are currently on the <strong>{{ current_user.role|capitalize }} Plan</strong>.</p>
+        {% if subscription_status == 'Active' %}
+            <p>Your subscription is <strong>Active</strong> and will end on 
+               <strong>{{ current_user.subscription_end_date.strftime('%B %d, %Y') }}</strong>.</p>
+        {% elif subscription_status == 'Expired' %}
+            <p>Your subscription has <strong>Expired</strong>. Canceling will finalize the expiration.</p>
+        {% else %}
+            <p>Your subscription is currently <strong>Inactive</strong>.</p>
+        {% endif %}
+
+        <!-- Cancellation Confirmation -->
+        <p>Are you sure you want to cancel your subscription? This action will deactivate all premium features immediately.</p>
+
+        <!-- Form to Confirm Cancellation -->
+        <form action="{{ url_for('users.cancel_subscription') }}" method="POST">
+            <button type="submit" class="btn btn-danger">Confirm Cancellation</button>
+        </form>
+
+        <!-- Go Back Option -->
+        <a href="{{ url_for('users.user_dashboard') }}" class="btn btn-secondary">Go Back</a>
+    </div>
+</body>
+</html>

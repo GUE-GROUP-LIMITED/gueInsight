@@ -1,0 +1,11 @@
+<h1>Edit User</h1>
+<form method="POST">
+    <input type="email" name="email" value="{{ user.email }}" required>
+    <input type="text" name="first_name" value="{{ user.first_name }}" required>
+    <input type="text" name="last_name" value="{{ user.last_name }}" required>
+    <select name="role">
+        <option value="user" {% if user.role == 'user' %}selected{% endif %}>User</option>
+        <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Admin</option>
+    </select>
+    <button type="submit" class="btn btn-primary">Save Changes</button>
+</form>

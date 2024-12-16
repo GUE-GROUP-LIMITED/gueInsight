@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gue Cyber Labs | Defending the Future of Cybersecurity</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Custom Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+            <div class="container">
+                <a class="navbar-brand" href="{{ url_for('index') }}">
+                    <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Gue Cyber Labs Logo" height="40" class="d-inline-block align-text-top">
+                    Gue Cyber Labs
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}">Home</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#about">About Us</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#services">Services</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#contact">Contact</a></li>
+                        {% if current_user.is_authenticated %}
+                            <li class="nav-item"><a class="nav-link" href="{{ url_for('users.user_dashboard') }}">Dashboard</a></li>
+                            <li class="nav-item"><a class="nav-link" href="{{ url_for('users.logout') }}">Logout</a></li>
+                            <li class="nav-item"><a class="nav-link" href="{{ url_for('users.user_profile') }}">Profile</a></li>
+                        {% else %}
+                            <li class="nav-item"><a class="nav-link" href="{{ url_for('users.user_login') }}">Login</a></li>
+                            <li class="nav-item"><a class="nav-link" href="{{ url_for('users.user_signup') }}">Sign Up</a></li>
+                            <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.admin_login') }}">Admin</a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero bg-primary text-white text-center py-5">
+        <div class="container">
+            <h1>Welcome to Gue Cyber Labs</h1>
+            <p>Your partner in cutting-edge cybersecurity solutions. Defending against threats, safeguarding data, and empowering enterprises.</p>
+            <a href="#services" class="btn btn-light btn-lg">Discover Our Services</a>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section class="about bg-light py-5" id="about">
+        <div class="container text-center">
+            <h2>About Gue Cyber Labs</h2>
+            <p>At Gue Cyber Labs, we are on the forefront of cybersecurity innovation. As a division of Aliwe & Gyuve-Ado, we specialize in providing comprehensive cybersecurity solutions, including threat analysis, data protection, and system hardening.</p>
+            <p>Our goal is to provide advanced detection and defense strategies for organizations of all sizes, ensuring they are always one step ahead of evolving cyber threats.</p>
+            <p>Our team of experts is committed to delivering proactive solutions and building long-lasting partnerships with our clients, securing their digital infrastructure for a safer tomorrow.</p>
+        </div>
+    </section>
+
+    <!-- Services Section -->
+    <section class="services py-5" id="services">
+        <div class="container text-center">
+            <h2>Our Services</h2>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="service-card bg-dark text-white p-4 mb-4">
+                        <h4>Cybersecurity Threat Analysis</h4>
+                        <p>Using advanced machine learning and NLP algorithms, we detect and analyze threats in real time to help organizations stay protected from emerging risks.</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="service-card bg-dark text-white p-4 mb-4">
+                        <h4>Forensics & Attribution</h4>
+                        <p>We use state-of-the-art techniques to trace cyber-attacks, identify perpetrators, and assess the damage to guide future protection strategies.</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="service-card bg-dark text-white p-4 mb-4">
+                        <h4>Ransomware Protection</h4>
+                        <p>Our specialized tools and analysis methods help detect and mitigate ransomware threats, ensuring your data is always safe, protected, and recoverable.</p>
+                    </div>
+                </div>
+            </div>
+            <a href="#get-started" class="btn btn-primary">Start Protecting Your Organization</a>
+        </div>
+    </section>
+
+    <!-- Cybersecurity Artifact Analysis Section -->
+    <section class="artifact-analysis py-5">
+        <div class="container">
+            <h2>Comprehensive Cybersecurity Artifact Analysis</h2>
+            <p>We analyze structured, semi-structured, and unstructured artifacts using:</p>
+            <ul>
+                <li><strong>IoC Extraction:</strong> Identify potential security breaches.</li>
+                <li><strong>Threat Modeling:</strong> Gain detailed data insights for proactive responses.</li>
+                <li><strong>Forensics & Attribution:</strong> Trace the origins and impacts of attacks.</li>
+            </ul>
+            <p>Leveraging <strong>machine learning algorithms</strong>, <strong>NLP</strong>, and <strong>transformers</strong>, we offer unparalleled insights to safeguard your enterprise.</p>
+        </div>
+    </section>
+
+    <!-- Get Started Section -->
+    <section class="get-started bg-secondary text-white py-5" id="get-started">
+        <div class="container text-center">
+            <h2>Get Started with GueInsight</h2>
+            <p>Ready to strengthen your defenses? GueInsight offers tools for threat detection, real-time analytics, and ransomware protection. Get started today!</p>
+            <a href="{{ url_for('users.subscription') }}" class="btn btn-primary">Start Using GueInsight</a>
+        </div>
+    </section>
+
+    <!-- Core Features Section -->
+    <section class="core-features py-5">
+        <div class="container text-center">
+            <h2>Core Features</h2>
+            <ul>
+                <li><strong>Data Collection:</strong> Gather data from logs and threat feeds.</li>
+                <li><strong>Data Parsing:</strong> Use NLP for structured analysis.</li>
+                <li><strong>Threat Categorization:</strong> Detect and categorize suspicious behaviors.</li>
+                <li><strong>Visualization:</strong> Provide actionable insights via interactive dashboards.</li>
+                <li><strong>Export Reports:</strong> Generate detailed reports for stakeholders and decision-makers.</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- Technologies We Use Section -->
+    <section class="technologies py-5">
+        <div class="container text-center">
+            <h2>Technologies We Use</h2>
+            <ul>
+                <li><strong>NLP:</strong> Spacy, NLTK</li>
+                <li><strong>Visualization:</strong> Plotly, Kibana</li>
+                <li><strong>Data Storage:</strong> Elasticsearch, MongoDB</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- How GueInsight Works Section -->
+    <section class="how-it-works py-5">
+        <div class="container text-center">
+            <h2>How GueInsight Works</h2>
+            <p>Our platform uses a multi-layered approach to turn raw data into actionable insights:</p>
+            <ol>
+                <li><strong>Input Layer:</strong> Collect data from various sources.</li>
+                <li><strong>Preprocessing Layer:</strong> Clean and prepare the data.</li>
+                <li><strong>Analysis Layer:</strong> Detect threats and anomalies in real time.</li>
+                <li><strong>Visualization Layer:</strong> Present actionable insights through interactive dashboards and reports.</li>
+            </ol>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section class="contact py-5" id="contact">
+        <div class="container text-center">
+            <h2>Contact Us</h2>
+            <p>If you have any questions or want to learn more, feel free to contact us:</p>
+            <form>
+                <input type="email" class="form-control mb-3" placeholder="Enter your email">
+                <textarea class="form-control mb-3" rows="4" placeholder="Your message"></textarea>
+                <button type="submit" class="btn btn-primary">Send Message</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4 text-center">
+        <p>&copy; 2024 Gue Cyber Labs. All rights reserved.</p>
+        <p><a href="#" class="text-white">Privacy Policy</a> | <a href="#" class="text-white">Terms of Service</a></p>
+    </footer>
+
+    <!-- Bootstrap JS & Dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.min.js"></script>
+</body>
+</html>
