@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up</title>
+
+    <!-- Google Fonts for custom fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap CSS for responsive design -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Include intl-tel-input CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input/build/css/intlTelInput.css">
+
+    <!-- Add your custom styles -->
+    <link href="{{ url_for('static', filename='styles.css') }}" rel="stylesheet">
+
+    <style>
+        .iti { width: 100%; }
+        .form-control, .btn {
+            border-radius: 10px;
+        }
+        .btn:hover {
+            background-color: #007bff;
+            transition: background-color 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="text-center my-4">
+        <a class="navbar-brand" href="{{ url_for('index') }}">
+            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="GueInsight Logo" height="40" class="d-inline-block align-text-top">
+        </a>
+        <h1>Sign Up</h1>
+        <p>Already have an account? <a href="{{ url_for('users.user_login') }}">Login</a></p>
+    </header>
+
+    <!-- Sign Up Form Section -->
+    <section class="container">
+        <form method="POST" action="{{ url_for('users.user_signup') }}">
+            {{ form.hidden_tag() }}  <!-- CSRF protection -->
+            
+            <!-- First Name -->
+            <div class="mb-3">
+                <label for="first_name" class="form-label">First Name</label>
+                {{ form.first_name(class="form-control", id="first_name") }}
+            </div>
+
+            <!-- Last Name -->
+            <div class="mb-3">
+                <label for="last_name" class="form-label">Last Name</label>
+                {{ form.last_name(class="form-control", id="last_name") }}
+            </div>
+
+            <!-- Email -->
+            <div class="mb-3">
+                <label for="email" class="form-label">Email</label>
+                {{ form.email(class="form-control", id="email", onblur="validateEmail()") }}
+                <small id="email-error" class="text-danger"></small>
+            </div>
+
+            <!-- Phone Number -->
+            <div class="mb-3">
+                <label for="phone_number" class="form-label">Phone Number</label>
+                <input type="tel" id="phone_number" name="phone_number" class="form-control" placeholder="Enter phone number" required>
+            </div>
+
+            <!-- Country of Residence -->
+            <div class="mb-3">
+                <label for="country_of_residence" class="form-label">Country</label>
+                <select name="country_of_residence" id="country_of_residence" class="form-control">
+                    <option value="Belgium">Belgium (+32)</option>
+                    <option value="CA">Canada (+1)</option>
+                    <option value="GB">United Kingdom (+44)</option>
+                    <option value="NG">Nigeria (+234)</option>
+                    <option value="US">United States (+1)</option>
+                    <!-- Add more countries as needed -->
+                </select>
+            </div>
+
+            <!-- Password -->
+            <div class="form-group">
+                <label for="password">Password</label>
+                {{ form.password(class="form-control", id="password", onkeyup="checkPasswordStrength()") }}
+                <div id="password-strength" style="font-size: small;"></div>
+            </div>
+
+            <!-- Confirm Password -->
+            <div class="form-group">
+                <label for="confirm_password">Confirm Password</label>
+                {{ form.confirm_password(class="form-control", id="confirm_password") }}
+                <div id="password-confirmation-feedback" style="font-size: small;"></div>
+            </div>
+
+            <!-- Subscription Plan Selection -->
+            <div class="mb-3">
+                <label for="role" class="form-label">Select Your Subscription Plan</label>
+                <select name="role" id="role" class="form-control">
+                    <option value="free">Freemium (1 file upload/month)</option>
+                    <option value="premium_individual">Premium Individual (€1/month, 4 uploads/month)</option>
+                    <option value="premium_small_business">Premium SME (€2/month, 6 uploads/month)</option>
+                    <option value="premium_large_business">Premium Enterprise (€3/month, 10 uploads/month)</option>
+                </select>
+            </div>
+
+            <!-- CAPTCHA (Optional) -->
+            <div class="mb-3">
+                <div class="g-recaptcha" data-sitekey="your-site-key-here"></div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="mb-3">
+                <button type="submit" class="btn btn-primary" id="submit-btn" disabled>Create Account</button>
+            </div>
+        </form>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <ul>
+                {% for category, message in messages %}
+                    <li class="alert alert-{{ category }}">{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+        {% endwith %}
+    </section>
+
+    <!-- Footer -->
+    <footer class="text-center py-4">
+        <p>&copy; 2024 Gue Cyber Labs. All Rights Reserved.</p>
+    </footer>
+
+    <!-- Include jQuery and intl-tel-input JS -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/intl-tel-input/build/js/intlTelInput.min.js"></script>
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+
+    <script>
+        // Initialize the phone number input field with intl-tel-input
+        var input = document.querySelector("#phone_number");
+        var iti = window.intlTelInput(input, {
+            initialCountry: "auto",
+            geoIpLookup: function(callback) {
+                fetch("https://ipinfo.io/json?token=YOUR_API_KEY")
+                    .then(response => response.json())
+                    .then(data => {
+                        var countryCode = data.country || "US";
+                        callback(countryCode);
+                    });
+            },
+            utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input/build/js/utils.js"
+        });
+
+        // Password Strength Validation
+        function checkPasswordStrength() {
+            var password = document.getElementById("password").value;
+            var strength = document.getElementById("password-strength");
+            var score = 0;
+
+            if (password.length >= 8) score++;
+            if (/[A-Z]/.test(password)) score++;
+            if (/\d/.test(password)) score++;
+            if (/[!@#$%^&*()_+{}\[\]:;<>,.?~\\/-]/.test(password)) score++;
+
+            if (score === 0) {
+                strength.innerHTML = "Very Weak";
+                strength.style.color = "red";
+            } else if (score === 1) {
+                strength.innerHTML = "Weak";
+                strength.style.color = "orange";
+            } else if (score === 2) {
+                strength.innerHTML = "Medium";
+                strength.style.color = "yellow";
+            } else {
+                strength.innerHTML = "Strong";
+                strength.style.color = "green";
+            }
+        }
+
+        // Validate Email Format
+        function validateEmail() {
+            var email = document.getElementById("email").value;
+            var emailError = document.getElementById("email-error");
+            var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                emailError.textContent = "Please enter a valid email address.";
+            } else {
+                emailError.textContent = "";
+            }
+        }
+
+        // Password Confirmation Check
+        document.getElementById("confirm_password").addEventListener("input", function() {
+            var password = document.getElementById("password").value;
+            var confirmPassword = document.getElementById("confirm_password").value;
+            var feedback = document.getElementById("password-confirmation-feedback");
+
+            if (password !== confirmPassword) {
+                feedback.innerHTML = "<span style='color:red;'>Passwords do not match</span>";
+                document.getElementById("submit-btn").disabled = true;
+            } else {
+                feedback.innerHTML = "<span style='color:green;'>Passwords match</span>";
+                document.getElementById("submit-btn").disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

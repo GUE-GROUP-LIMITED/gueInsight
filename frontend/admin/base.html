@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel | GueInsight</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body>
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('admin.admin_dashboard') }}">Dashboard</a></li>
+            <li><a href="{{ url_for('admin.manage_users') }}">Users</a></li>
+            <li><a href="{{ url_for('admin.view_logs') }}">Logs</a></li>
+            <li><a href="{{ url_for('admin.admin_settings') }}">Settings</a></li>
+            <li><a href="{{ url_for('admin.admin_logout') }}">Logout</a></li>
+        </ul>
+    </nav>
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>
