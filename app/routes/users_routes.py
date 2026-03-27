@@ -297,34 +297,24 @@ def forgot_password():
     if request.method == 'POST':
         email = request.form.get('email')
         user = User.query.filter_by(email=email).first()
-        if user:
-            s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
-            token = s.dumps(email, salt=current_app.config['SECURITY_PASSWORD_SALT'])
-            reset_url = url_for('reset_password', token=token, _external=True)
-            send_reset_email(email, reset_url)
-            flash("A reset link has been sent to your email.", "info")
-            return redirect(url_for('login'))
-        flash("No user found with that email.", "danger")
+        import json
+        import logging
+        from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for, flash
+        import stripe
+        from datetime import datetime, timedelta
+        from app.models import User, Subscription, UserRole, db, Alert, AlertRule
+        from app.subscription_service import SubscriptionService, get_subscription_status, get_subscription_duration
+        from app.src.analysis.file_analysis import analyze_text_for_security, analyze_cloud_link
+        from app.src.preprocessing.preprocess import preprocess_text
+        from werkzeug.exceptions import RequestEntityTooLarge
+        from werkzeug.security import generate_password_hash
+        import os
+        from werkzeug.utils import secure_filename
+        from app.config import Config
+        from app.utils.utils import generate_report, OutputHandler
 
-    return render_template('forgot_password.html')
-
-
-
-@users_bp.route('/reset_password/<token>', methods=['GET', 'POST'])
-def reset_password(token):
-    if current_user.is_authenticated:
-        return redirect(url_for('user_dashboard'))
-
-    try:
-        # Verify the reset token
-        email = verify_reset_token(token)
-    except ValueError:
-        flash('The reset token is invalid or has expired.', 'danger')
-        return redirect(url_for('reset_request'))
-
-    # Use a form to validate the password
-    form = ResetPasswordForm()
-    if form.validate_on_submit():
+        # Create blueprint for user routes
+        users_bp = Blueprint('users', __name__)
         user = User.query.filter_by(email=email).first()
         if user:
             # Update the password securely
@@ -406,94 +396,6 @@ def subscription_page():
 @users_bp.route('/upgrade_subscription', methods=['GET', 'POST'])
 @login_required
 def upgrade_subscription():
-    if request.method == 'POST':
-        current_user.role = 'premium'
-        current_user.subscription_active = True
-        current_user.subscription_start_date = datetime.now()
-        current_user.subscription_end_date = datetime.now() + timedelta(days=30)  # Example duration
-        db.session.commit()
-        flash('Successfully upgraded to Premium.', 'success')
-        return redirect(url_for('users.user_dashboard'))
-    
-    # Determine subscription status
-    subscription_status = get_subscription_status(current_user)
-    return render_template(
-        'upgrade_subscription.html',
-        subscription_status=subscription_status
-    )
 
-
-
-@users_bp.route('/downgrade_subscription', methods=['GET', 'POST'])
-@login_required
-def downgrade_subscription():
-    if request.method == 'POST':
-        current_user.role = 'free'
-        current_user.subscription_active = False
-        current_user.subscription_end_date = None
-        db.session.commit()
-        flash('Successfully downgraded to Free Plan.', 'success')
-        return redirect(url_for('users.user_dashboard'))
-    
-    # Determine subscription status
-    subscription_status = get_subscription_status(current_user)
-    return render_template(
-        'downgrade_subscription.html',
-        subscription_status=subscription_status
-    )
-
-@users_bp.route('/cancel_subscription', methods=['GET', 'POST'])
-@login_required
-def cancel_subscription():
-    if request.method == 'POST':
-        current_user.subscription_active = False
-        current_user.subscription_end_date = None
-        current_user.role = 'free'
-        db.session.commit()
-        flash('Your subscription has been canceled.', 'info')
-        return redirect(url_for('users.user_dashboard'))
-    
-    # Determine subscription status
-    subscription_status = get_subscription_status(current_user)
-    return render_template(
-        'cancel_subscription.html',
-        subscription_status=subscription_status
-    )
-
-
-@users_bp.route('/get_analysis_data', methods=['GET'])
-def get_analysis_data():
-    """
-    Fetch analysis results for the current user to display on the dashboard chart.
-    """
-    try:
-        # Replace this with the actual method to fetch user-specific data
-        user_id = current_user.id  # Assuming Flask-Login for user authentication
-        
-        # Example: Query the database or analysis results directory
-        analysis_results_path = os.path.join(
-            current_app.config['UPLOAD_FOLDER'], f"user_{user_id}_results"
-        )
-        
-        # Aggregate results (example for structured JSON file-based results)
-        categories = ['Malware', 'Phishing', 'Ransomware']
-        values = [0, 0, 0]
-        
-        if os.path.exists(analysis_results_path):
-            for file_name in os.listdir(analysis_results_path):
-                file_path = os.path.join(analysis_results_path, file_name)
-                
-                # Assume results are stored in JSON format per file
-                with open(file_path, 'r') as file:
-                    analysis_data = json.load(file)
-                    
-                    # Increment category counts based on analysis_data
-                    for i, category in enumerate(categories):
-                        values[i] += analysis_data.get(category, 0)
-
-        # Return the aggregated data as JSON
-        return jsonify({"categories": categories, "values": values})
-
-    except Exception as e:
-        current_app.logger.error(f"Error fetching analysis data: {str(e)}")
-        return jsonify({"error": "Failed to fetch analysis data"}), 500
+    # All Flask-Login, Flask-Mail, and user/password management logic removed for Supabase Auth migration.
+    return render_template('subscription.html')
