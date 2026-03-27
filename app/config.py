@@ -4,8 +4,8 @@ import stripe
 class Config:
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
     SQLALCHEMY_DATABASE_URI = os.getenv(
-        'SQLALCHEMY_DATABASE_URI', 
-        'sqlite:////Users/gabrielaloho/gueInsight/app/instance/gueInsight_db.db'
+        'SQLALCHEMY_DATABASE_URI',
+        'sqlite:///' + os.path.join(BASE_DIR, 'instance', 'gueInsight_db.db')
     )
     UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
     OUTPUT_FOLDER = os.path.join(BASE_DIR, 'output/user_reports')

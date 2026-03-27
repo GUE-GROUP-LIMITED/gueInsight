@@ -1,21 +1,90 @@
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user, login_user, logout_user
 from werkzeug.security import generate_password_hash
 from app import db
-from app.models import User, Logs, FileUpload, UserRole
-from app.forms import AdminLoginForm, AdminSignupForm
-from flask import render_template, request, flash, redirect, url_for
-from werkzeug.security import generate_password_hash
-from flask import render_template, request, flash, redirect, url_for
-from flask_login import current_user, login_required
-from werkzeug.security import generate_password_hash
-from utils.utils import check_admin_role  
+from app.models import User, Logs, FileUpload, UserRole, Alert, AlertRule
+from app.forms import AdminLoginForm, AdminSignupForm, AlertRuleForm
+from app.utils.utils import check_admin_role  
 from app.admin_services import some_condition_for_critical_alert
 from app.utils.decorators import admin_required
-from app.models import User
 
 # Blueprint for admin routes
 admin_bp = Blueprint('admin', __name__)
+
+# View all triggered alerts (admin)
+@admin_bp.route('/alerts')
+@login_required
+def admin_alerts():
+    check_admin_role(current_user)
+    alerts = Alert.query.join(Alert.event).filter_by(source='analysis').all()
+    return render_template('admin/alerts.html', alerts=alerts)
+
+# List, create, edit, enable/disable, and delete global alert rules (admin)
+@admin_bp.route('/alert_rules', methods=['GET', 'POST'])
+@login_required
+def admin_alert_rules():
+    check_admin_role(current_user)
+    form = AlertRuleForm()
+    global_rules = AlertRule.query.filter_by(user_id=None).all()
+    if form.validate_on_submit():
+        new_rule = AlertRule(
+            user_id=None,
+            rule_type=form.rule_type.data,
+            value=form.value.data,
+            severity=form.severity.data,
+            enabled=form.enabled.data
+        )
+        db.session.add(new_rule)
+        db.session.commit()
+        flash('Global alert rule created successfully.', 'success')
+        return redirect(url_for('admin.admin_alert_rules'))
+    return render_template('admin/alert_rules.html', form=form, alert_rules=global_rules)
+
+@admin_bp.route('/alert_rules/edit/<int:rule_id>', methods=['GET', 'POST'])
+@login_required
+def edit_admin_alert_rule(rule_id):
+    check_admin_role(current_user)
+    rule = AlertRule.query.get_or_404(rule_id)
+    if rule.user_id is not None:
+        flash('Not a global rule.', 'danger')
+        return redirect(url_for('admin.admin_alert_rules'))
+    form = AlertRuleForm(obj=rule)
+    if form.validate_on_submit():
+        rule.rule_type = form.rule_type.data
+        rule.value = form.value.data
+        rule.severity = form.severity.data
+        rule.enabled = form.enabled.data
+        db.session.commit()
+        flash('Global alert rule updated.', 'success')
+        return redirect(url_for('admin.admin_alert_rules'))
+    return render_template('admin/edit_alert_rule.html', form=form, rule=rule)
+
+@admin_bp.route('/alert_rules/delete/<int:rule_id>', methods=['POST'])
+@login_required
+def delete_admin_alert_rule(rule_id):
+    check_admin_role(current_user)
+    rule = AlertRule.query.get_or_404(rule_id)
+    if rule.user_id is not None:
+        flash('Not a global rule.', 'danger')
+        return redirect(url_for('admin.admin_alert_rules'))
+    db.session.delete(rule)
+    db.session.commit()
+    flash('Global alert rule deleted.', 'success')
+    return redirect(url_for('admin.admin_alert_rules'))
+
+@admin_bp.route('/alert_rules/toggle/<int:rule_id>', methods=['POST'])
+@login_required
+def toggle_admin_alert_rule(rule_id):
+    check_admin_role(current_user)
+    rule = AlertRule.query.get_or_404(rule_id)
+    if rule.user_id is not None:
+        flash('Not a global rule.', 'danger')
+        return redirect(url_for('admin.admin_alert_rules'))
+    rule.enabled = not rule.enabled
+    db.session.commit()
+    flash('Global alert rule status updated.', 'success')
+    return redirect(url_for('admin.admin_alert_rules'))
 
 
 @admin_bp.route('/admin_login', methods=['GET', 'POST'])

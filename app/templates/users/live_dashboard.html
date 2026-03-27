@@ -1,0 +1,32 @@
+{% extends 'users/userbase.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Live Event Dashboard</h2>
+    <div id="event-feed" class="mb-4" style="max-height: 400px; overflow-y: auto; border: 1px solid #ccc; padding: 1em; background: #222; color: #fff;"></div>
+    <div id="trend-chart" style="height: 350px;"></div>
+</div>
+<script src="https://cdn.plot.ly/plotly-2.20.0.min.js"></script>
+<script>
+// Poll for new events every 5 seconds
+function fetchEvents() {
+    fetch('/api/live_events')
+        .then(response => response.json())
+        .then(data => {
+            // Display event feed
+            const feed = document.getElementById('event-feed');
+            feed.innerHTML = data.events.map(ev => `<div><b>${ev.timestamp}</b>: ${ev.summary}</div>`).join('');
+            // Plot trends
+            const chartData = [{
+                x: data.trend.timestamps,
+                y: data.trend.counts,
+                type: 'scatter',
+                mode: 'lines+markers',
+                line: {color: '#00bfff'}
+            }];
+            Plotly.newPlot('trend-chart', chartData, {title: 'Events Over Time', xaxis: {title: 'Time'}, yaxis: {title: 'Event Count'}});
+        });
+}
+setInterval(fetchEvents, 5000);
+fetchEvents();
+</script>
+{% endblock %}

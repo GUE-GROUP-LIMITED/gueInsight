@@ -4,6 +4,101 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user, login_user
 import stripe
 from datetime import datetime, timedelta
+from app.models import User, Subscription, UserRole, db, Alert, AlertRule
+from app.forms import LoginForm, ResetPasswordForm, SignupForm, SubmitCloudLinkForm, SubmitTextForm, UploadFileForm, LogoutForm, ProfileForm, AlertRuleForm
+from app.subscription_service import SubscriptionService
+from app.src.analysis.file_analysis import analyze_text_for_security, analyze_cloud_link
+from app.src.preprocessing.preprocess import preprocess_text
+from werkzeug.exceptions import RequestEntityTooLarge
+from werkzeug.security import generate_password_hash
+from itsdangerous import URLSafeTimedSerializer
+from flask_mail import Message
+from app import mail
+from app.subscription_service import get_subscription_status, get_subscription_duration
+from flask import jsonify
+import os
+from werkzeug.utils import secure_filename
+import datetime
+from app.config import Config
+from app.utils.utils import generate_report, OutputHandler
+
+# Create blueprint for user routes
+users_bp = Blueprint('users', __name__)
+
+# View triggered alerts for the current user
+@users_bp.route('/alerts')
+@login_required
+def user_alerts():
+    alerts = Alert.query.join(Alert.event).filter_by(source='analysis').all()
+    return render_template('users/alerts.html', alerts=alerts)
+
+# List, create, edit, enable/disable, and delete alert rules (user)
+@users_bp.route('/alert_rules', methods=['GET', 'POST'])
+@login_required
+def alert_rules():
+    form = AlertRuleForm()
+    user_rules = AlertRule.query.filter_by(user_id=current_user.id).all()
+    if form.validate_on_submit():
+        new_rule = AlertRule(
+            user_id=current_user.id,
+            rule_type=form.rule_type.data,
+            value=form.value.data,
+            severity=form.severity.data,
+            enabled=form.enabled.data
+        )
+        db.session.add(new_rule)
+        db.session.commit()
+        flash('Alert rule created successfully.', 'success')
+        return redirect(url_for('users.alert_rules'))
+    return render_template('users/alert_rules.html', form=form, alert_rules=user_rules)
+
+@users_bp.route('/alert_rules/edit/<int:rule_id>', methods=['GET', 'POST'])
+@login_required
+def edit_alert_rule(rule_id):
+    rule = AlertRule.query.get_or_404(rule_id)
+    if rule.user_id != current_user.id:
+        flash('Unauthorized.', 'danger')
+        return redirect(url_for('users.alert_rules'))
+    form = AlertRuleForm(obj=rule)
+    if form.validate_on_submit():
+        rule.rule_type = form.rule_type.data
+        rule.value = form.value.data
+        rule.severity = form.severity.data
+        rule.enabled = form.enabled.data
+        db.session.commit()
+        flash('Alert rule updated.', 'success')
+        return redirect(url_for('users.alert_rules'))
+    return render_template('users/edit_alert_rule.html', form=form, rule=rule)
+
+@users_bp.route('/alert_rules/delete/<int:rule_id>', methods=['POST'])
+@login_required
+def delete_alert_rule(rule_id):
+    rule = AlertRule.query.get_or_404(rule_id)
+    if rule.user_id != current_user.id:
+        flash('Unauthorized.', 'danger')
+        return redirect(url_for('users.alert_rules'))
+    db.session.delete(rule)
+    db.session.commit()
+    flash('Alert rule deleted.', 'success')
+    return redirect(url_for('users.alert_rules'))
+
+@users_bp.route('/alert_rules/toggle/<int:rule_id>', methods=['POST'])
+@login_required
+def toggle_alert_rule(rule_id):
+    rule = AlertRule.query.get_or_404(rule_id)
+    if rule.user_id != current_user.id:
+        flash('Unauthorized.', 'danger')
+        return redirect(url_for('users.alert_rules'))
+    rule.enabled = not rule.enabled
+    db.session.commit()
+    flash('Alert rule status updated.', 'success')
+    return redirect(url_for('users.alert_rules'))
+import json
+import logging
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
+from flask_login import login_required, current_user, login_user
+import stripe
+from datetime import datetime, timedelta
 from app.models import User, Subscription, UserRole, db
 from app.forms import LoginForm, ResetPasswordForm, SignupForm, SubmitCloudLinkForm, SubmitTextForm, UploadFileForm, LogoutForm
 from app.subscription_service import SubscriptionService
@@ -23,8 +118,8 @@ from werkzeug.utils import secure_filename
 import datetime
 from app.config import Config
 from app.subscription_service import SubscriptionService
-from app.utils import generate_report
-from utils.utils import OutputHandler
+from app.utils.utils import generate_report
+from app.utils.utils import OutputHandler
 
 
 # Create blueprint for user routes
@@ -359,14 +454,19 @@ def upload_file():
 
 
     # Handle URL Submission
+
     elif url_submission_form.validate_on_submit() and url_submission_form.cloud_link.data:
         cloud_link = url_submission_form.cloud_link.data
         try:
-            # Process the cloud link
+            # Threat intelligence enrichment
+            from app.integrations.rapidapi import enrich_url
+            enrichment = enrich_url(cloud_link)
+            # Process the cloud link (analysis)
             analysis_results = analyze_cloud_link(cloud_link)
             return jsonify({
                 'status': 'success',
                 'message': 'Cloud link processed successfully.',
+                'enrichment': enrichment,
                 'results': analysis_results
             })
 
@@ -375,14 +475,19 @@ def upload_file():
             return redirect(url_for('users.user_dashboard'))
 
     # Handle Text/Hash Submission
+
     elif text_submission_form.validate_on_submit() and text_submission_form.pasted_input.data:
         input_data = text_submission_form.pasted_input.data
         try:
-            # Process the text/hash input
+            # Threat intelligence enrichment (try as hash, IP, or URL)
+            from app.integrations.rapidapi import enrich_event
+            enrichment = enrich_event({'hash': input_data, 'ip': input_data, 'url': input_data})
+            # Process the text/hash input (analysis)
             analysis_results = analyze_text_for_security(input_data)
             return jsonify({
                 'status': 'success',
                 'message': 'Text processed successfully.',
+                'enrichment': enrichment,
                 'results': analysis_results
             })
 

@@ -24,6 +24,18 @@
                         </span>
 
                         <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('users.user_alerts') }}">
+                                <i class="bi bi-bell"></i> Alerts
+                            </a>
+                        </li>
+
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('users.alert_rules') }}">
+                                <i class="bi bi-exclamation-triangle"></i> Alert Rules
+                            </a>
+                        </li>
+
+                        <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('users.user_dashboard') }}">
                                 <i class="bi bi-speedometer2"></i> Dashboard
                             </a>

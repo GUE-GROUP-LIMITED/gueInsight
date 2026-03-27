@@ -1,8 +1,10 @@
 # app/__init__.py
 
 from flask import Flask
+
 from flask_sqlalchemy import SQLAlchemy
 from flask_mail import Mail
+from flask_migrate import Migrate
 from app.config import Config
 
 
@@ -12,6 +14,7 @@ from app.config import Config
 # Initialize the database instance
 db = SQLAlchemy()
 mail = Mail()  # Initialize Mail here without passing an app
+migrate = Migrate()
 
 def create_app():
     app = Flask(__name__)
@@ -22,10 +25,11 @@ def create_app():
 
     db.init_app(app)  # Bind SQLAlchemy to the app
     mail.init_app(app)  # Bind Flask-Mail to the app
+    migrate.init_app(app, db)  # Bind Flask-Migrate to the app
     #csrf = CSRFProtect(app)
     #csrf.init_app(app)
-    from routes.users_routes import users_bp
-    from routes.admin_routes import admin_bp
+    from app.routes.users_routes import users_bp
+    from app.routes.admin_routes import admin_bp
 
     app.register_blueprint(users_bp)
     app.register_blueprint(admin_bp)

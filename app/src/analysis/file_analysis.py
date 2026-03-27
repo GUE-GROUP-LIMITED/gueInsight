@@ -1,3 +1,5 @@
+from app.models import AlertRule, Alert, Event, db
+from app.notifications.alerts import send_slack_alert, send_teams_alert
 import re
 import json
 from transformers import pipeline
@@ -10,7 +12,7 @@ from transformers import pipeline
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 import logging
-import magic
+import mimetypes
 from PyPDF2 import PdfReader
 import docx
 import os
@@ -48,15 +50,64 @@ class Analyzer:
             results["suspicious_patterns"] = self.detect_suspicious_patterns(content)
             results["indicators_of_compromise"] = self.detect_iocs(content)
 
+            # --- ALERT RULE EVALUATION ---
+            self.evaluate_alert_rules(content, file_path, results)
+
         except Exception as e:
             self.logger.error(f"Error analyzing file {file_path}: {str(e)}")
             results["error"] = str(e)
 
         return results
 
+    def evaluate_alert_rules(self, content, file_path, analysis_results):
+        # Get all enabled rules (global and user-specific if available)
+        rules = AlertRule.query.filter_by(enabled=True).all()
+        triggered = []
+        for rule in rules:
+            triggered_flag = False
+            desc = None
+            if rule.rule_type == 'keyword' and rule.value.lower() in content.lower():
+                triggered_flag = True
+                desc = f"Keyword '{rule.value}' found in file."
+            elif rule.rule_type == 'ioc' and rule.value in analysis_results.get('indicators_of_compromise', []):
+                triggered_flag = True
+                desc = f"IOC '{rule.value}' detected in file."
+            elif rule.rule_type == 'severity' and rule.severity == analysis_results.get('severity', 'medium'):
+                triggered_flag = True
+                desc = f"Severity '{rule.severity}' matched."
+            if triggered_flag:
+                # Create Event if not already
+                event = Event(
+                    timestamp=datetime.datetime.utcnow(),
+                    source='analysis',
+                    event_type='alert',
+                    raw_data=json.dumps(analysis_results),
+                    enrichment=None,
+                    threat_detected=True
+                )
+                db.session.add(event)
+                db.session.commit()
+                alert = Alert(
+                    event_id=event.id,
+                    rule_id=rule.id,
+                    triggered_at=datetime.datetime.utcnow(),
+                    description=desc
+                )
+                db.session.add(alert)
+                db.session.commit()
+                # Send notifications (Slack/Teams)
+                send_slack_alert(f"Alert triggered: {desc}")
+                send_teams_alert(f"Alert triggered: {desc}")
+                triggered.append(desc)
+        if triggered:
+            analysis_results['alerts_triggered'] = triggered
+
+        return results
+
     def get_file_type(self, file_path: str) -> str:
         try:
-            return magic.from_file(file_path, mime=True)
+            mime, _ = mimetypes.guess_type(file_path)
+            return mime or "Unknown"
         except Exception as e:
             self.logger.error(f"Error getting file type for {file_path}: {str(e)}")
             return "Unknown"
@@ -112,9 +163,15 @@ class Analyzer:
         url_pattern = r"https?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+"
         return re.findall(ip_pattern, content) + re.findall(url_pattern, content)
 
-# Initialize transformer model for NER and text classification
-ner_pipeline = pipeline("ner", model="dbmdz/bert-large-cased-finetuned-conll03-english")
-classifier_pipeline = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
+
+# Lazy-load transformer models only when needed
+def get_ner_pipeline():
+    from transformers import pipeline
+    return pipeline("ner", model="dbmdz/bert-large-cased-finetuned-conll03-english")
+
+def get_classifier_pipeline():
+    from transformers import pipeline
+    return pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
 
 # Define IoC extraction methods
 def extract_email_addresses(text):
@@ -280,7 +337,7 @@ def analyze_text(text):
         return "No IoCs found in the text."
 
 
-from utils.utils import generate_file_hash
+from app.utils.utils import generate_file_hash
 from app.src.preprocessing.preprocess import extract_iocs
 
 def analyze_file(file_path):
