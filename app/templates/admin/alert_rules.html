@@ -1,0 +1,58 @@
+{% extends 'admin/admin_dashboard.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Manage Global Alert Rules</h2>
+    <form method="POST">
+        {{ form.hidden_tag() }}
+        <div class="mb-3">
+            {{ form.rule_type.label }}
+            {{ form.rule_type(class="form-select") }}
+        </div>
+        <div class="mb-3">
+            {{ form.value.label }}
+            {{ form.value(class="form-control") }}
+        </div>
+        <div class="mb-3">
+            {{ form.severity.label }}
+            {{ form.severity(class="form-select") }}
+        </div>
+        <div class="form-check mb-3">
+            {{ form.enabled(class="form-check-input") }}
+            {{ form.enabled.label(class="form-check-label") }}
+        </div>
+        <button type="submit" class="btn btn-primary">Add Rule</button>
+    </form>
+    <hr>
+    <h3>Global Alert Rules</h3>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Type</th>
+                <th>Value</th>
+                <th>Severity</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for rule in alert_rules %}
+            <tr>
+                <td>{{ rule.rule_type }}</td>
+                <td>{{ rule.value }}</td>
+                <td>{{ rule.severity }}</td>
+                <td>{{ 'Enabled' if rule.enabled else 'Disabled' }}</td>
+                <td>
+                    <a href="{{ url_for('admin.edit_admin_alert_rule', rule_id=rule.id) }}" class="btn btn-sm btn-warning">Edit</a>
+                    <form action="{{ url_for('admin.delete_admin_alert_rule', rule_id=rule.id) }}" method="post" style="display:inline;">
+                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                    </form>
+                    <form action="{{ url_for('admin.toggle_admin_alert_rule', rule_id=rule.id) }}" method="post" style="display:inline;">
+                        <button type="submit" class="btn btn-sm btn-secondary">{{ 'Disable' if rule.enabled else 'Enable' }}</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

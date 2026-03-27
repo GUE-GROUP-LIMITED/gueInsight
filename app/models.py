@@ -1,10 +1,49 @@
+
+
+from app import db
+from datetime import datetime
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey
-from app import db
-from datetime import datetime
 from enum import Enum as PyEnum
 from sqlalchemy.types import Enum as SQLAlchemyEnum
+
+
+
+
+# Event model for persistent event storage
+class Event(db.Model):
+    __tablename__ = 'event'
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    source = db.Column(db.String(100))  # e.g., 'api', 'manual', etc.
+    event_type = db.Column(db.String(100))  # e.g., 'alert', 'log', etc.
+    raw_data = db.Column(db.Text, nullable=False)  # JSON string of the event
+    enrichment = db.Column(db.Text)  # JSON string of enrichment results
+    threat_detected = db.Column(db.Boolean, default=False)
+
+# AlertRule model for user/admin-defined alert rules
+class AlertRule(db.Model):
+    __tablename__ = 'alert_rule'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # Null for global/admin rules
+    rule_type = db.Column(db.String(50), nullable=False)  # e.g., 'keyword', 'ioc', 'severity'
+    value = db.Column(db.String(255), nullable=False)
+    severity = db.Column(db.String(20), default='medium')
+    enabled = db.Column(db.Boolean, default=True)
+    user = db.relationship('User', backref=db.backref('alert_rules', lazy=True))
+
+# Alert model for triggered alerts
+class Alert(db.Model):
+    __tablename__ = 'alert'
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('event.id'), nullable=False)
+    rule_id = db.Column(db.Integer, db.ForeignKey('alert_rule.id'), nullable=False)
+    triggered_at = db.Column(db.DateTime, default=datetime.utcnow)
+    description = db.Column(db.String(255))
+    event = db.relationship('Event', backref=db.backref('alerts', lazy=True))
+    rule = db.relationship('AlertRule', backref=db.backref('alerts', lazy=True))
+
 
 # Enum for user roles
 class UserRole(PyEnum):

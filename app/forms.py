@@ -1,9 +1,22 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField, SubmitField, TextAreaField, FileField
+from wtforms import StringField, PasswordField, BooleanField, SubmitField, TextAreaField, FileField, SelectField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, URL
 from flask_wtf.file import FileAllowed, FileRequired
-from flask_wtf import FlaskForm
-from wtforms import TextAreaField, SubmitField
+
+class AlertRuleForm(FlaskForm):
+    rule_type = SelectField('Rule Type', choices=[
+        ('keyword', 'Keyword'),
+        ('ioc', 'Indicator of Compromise'),
+        ('severity', 'Severity'),
+    ], validators=[DataRequired()])
+    value = StringField('Value', validators=[DataRequired(), Length(max=255)])
+    severity = SelectField('Severity', choices=[
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+    ], default='medium')
+    enabled = BooleanField('Enabled', default=True)
+    submit = SubmitField('Save Rule')
 from wtforms import SelectField
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField

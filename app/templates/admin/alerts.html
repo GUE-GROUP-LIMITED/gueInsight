@@ -1,0 +1,29 @@
+{% extends 'admin/admin_dashboard.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>All Triggered Alerts</h2>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Triggered At</th>
+                <th>Description</th>
+                <th>Rule</th>
+                <th>Event</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for alert in alerts %}
+            <tr>
+                <td>{{ alert.triggered_at }}</td>
+                <td>{{ alert.description }}</td>
+                <td>{{ alert.rule.rule_type }}: {{ alert.rule.value }}</td>
+                <td><a href="#" class="btn btn-sm btn-info">View Event</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% if not alerts %}
+        <p>No alerts have been triggered yet.</p>
+    {% endif %}
+</div>
+{% endblock %}
