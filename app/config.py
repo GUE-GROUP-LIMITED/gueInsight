@@ -3,9 +3,10 @@ import stripe
 
 class Config:
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+    # Use Supabase Postgres by default. Set SQLALCHEMY_DATABASE_URI in your environment for production secrets.
     SQLALCHEMY_DATABASE_URI = os.getenv(
         'SQLALCHEMY_DATABASE_URI',
-        'sqlite:///' + os.path.join(BASE_DIR, 'instance', 'gueInsight_db.db')
+        'postgresql://postgres:[REDACTED]@aws-1-eu-west-1.pooler.supabase.com:5432/postgres'
     )
     UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
     OUTPUT_FOLDER = os.path.join(BASE_DIR, 'output/user_reports')

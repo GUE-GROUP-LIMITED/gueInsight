@@ -1,17 +1,9 @@
-@app.route('/assets/<path:filename>')
-def serve_react_assets(filename):
-    import os
-    assets_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend', 'dist', 'assets'))
-    return send_from_directory(assets_dir, filename)
-# app.py
-
 from flask import render_template, send_from_directory, request
 from flask_login import LoginManager
 from flask_mail import Mail
 from app import create_app, db
 from app.models import User
 from app.utils.utils import get_serializer
-
 
 # Initialize the Flask app
 app = create_app()  # Use the create_app function to initialize the app
@@ -32,6 +24,12 @@ def load_user(user_id):
 
 print(app.url_map)
 
+# Serve static assets for React
+@app.route('/assets/<path:filename>')
+def serve_react_assets(filename):
+    import os
+    assets_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend', 'dist', 'assets'))
+    return send_from_directory(assets_dir, filename)
 
 # Serve React frontend for all non-API, non-auth routes
 @app.route('/', defaults={'path': ''})
