@@ -1,5 +1,5 @@
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, request, redirect, url_for, flash
 from flask_login import login_required, current_user, login_user, logout_user
 from werkzeug.security import generate_password_hash
 from app import db
@@ -18,7 +18,8 @@ admin_bp = Blueprint('admin', __name__)
 def admin_alerts():
     check_admin_role(current_user)
     alerts = Alert.query.join(Alert.event).filter_by(source='analysis').all()
-    return render_template('admin/alerts.html', alerts=alerts)
+    # API endpoint: return alerts as JSON
+    return {"alerts": [a.to_dict() for a in alerts]}
 
 # List, create, edit, enable/disable, and delete global alert rules (admin)
 @admin_bp.route('/alert_rules', methods=['GET', 'POST'])
@@ -39,7 +40,8 @@ def admin_alert_rules():
         db.session.commit()
         flash('Global alert rule created successfully.', 'success')
         return redirect(url_for('admin.admin_alert_rules'))
-    return render_template('admin/alert_rules.html', form=form, alert_rules=global_rules)
+    # API endpoint: return alert rules as JSON
+    return {"alert_rules": [r.to_dict() for r in global_rules]}
 
 @admin_bp.route('/alert_rules/edit/<int:rule_id>', methods=['GET', 'POST'])
 @login_required
@@ -58,7 +60,8 @@ def edit_admin_alert_rule(rule_id):
         db.session.commit()
         flash('Global alert rule updated.', 'success')
         return redirect(url_for('admin.admin_alert_rules'))
-    return render_template('admin/edit_alert_rule.html', form=form, rule=rule)
+    # API endpoint: return rule as JSON
+    return {"rule": rule.to_dict()}
 
 @admin_bp.route('/alert_rules/delete/<int:rule_id>', methods=['POST'])
 @login_required
@@ -109,7 +112,8 @@ def admin_login():
 
         flash('Invalid credentials or insufficient permissions.', 'danger')
 
-    return render_template('admin_login.html', form=form)  # Render login form if not authenticated
+    # API endpoint: login form not rendered
+    return {"message": "Login required"}, 401
 
 
 
@@ -128,12 +132,12 @@ def admin_signup():
 
         if password != confirm_password:
             flash('Passwords do not match.', 'danger')
-            return render_template('admin_signup.html', form=form)
+            return {"error": "Passwords do not match."}, 400
 
         existing_user = User.query.filter_by(email=email).first()
         if existing_user:
             flash('An account with this email already exists.', 'danger')
-            return render_template('admin_signup.html', form=form)
+            return {"error": "Account exists."}, 400
 
         # Use a different method if scrypt is not available
         hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
@@ -155,7 +159,7 @@ def admin_signup():
         flash('Account created successfully. Please log in.', 'success')
         return redirect(url_for('admin.aadmin_login'))
 
-    return render_template('admin_signup.html', form=form)
+    return {"message": "Signup required"}, 401
 
 @admin_bp.route('/admin_dashboard', methods=['GET', 'POST'])
 @login_required
@@ -214,12 +218,8 @@ def admin_dashboard():
     # Check if there is a critical alert
     critical_alert = some_condition_for_critical_alert()
 
-    return render_template(
-        'admin_dashboard.html',
-        users=users,
-        file_uploads=file_uploads,
-        critical_alert=critical_alert
-    )
+    # API endpoint: return dashboard data as JSON
+    return {"users": [u.to_dict() for u in users], "file_uploads": [f.to_dict() for f in file_uploads], "critical_alert": critical_alert}
 
 
 # View logs (Only accessible to admins)
@@ -229,7 +229,8 @@ def view_logs():
     check_admin_role(current_user)  # Ensure current user is an admin
 
     logs = Logs.query.all()
-    return render_template('logs.html', logs=logs)
+    # API endpoint: return logs as JSON
+    return {"logs": [l.to_dict() for l in logs]}
 
 
 # View user activity logs (Only accessible to admins)
@@ -240,7 +241,8 @@ def view_user_activity(user_id):
 
     logs = Logs.query.filter_by(user_id=user_id).all()
     user = User.query.get_or_404(user_id)
-    return render_template('user_activity.html', logs=logs, user=user)
+    # API endpoint: return user activity as JSON
+    return {"logs": [l.to_dict() for l in logs], "user": user.to_dict()}
 
 
 # Delete user (Only accessible to admins)
@@ -278,7 +280,8 @@ def edit_user(user_id):
         flash('User updated successfully!', 'success')
         return redirect(url_for('admin.admin_dashboard'))
 
-    return render_template('edit_user.html', user=user)
+    # API endpoint: return user as JSON
+    return {"user": user.to_dict()}
 
 # Logout
 @admin_bp.route('/logout')
@@ -299,7 +302,8 @@ admin_bp = Blueprint('admin', __name__)
 def admin_dashboard():
     user_count = User.query.count()
     recent_users = User.query.order_by(User.id.desc()).limit(5).all()
-    return render_template('admin/dashboard.html', user_count=user_count, recent_users=recent_users)
+    # API endpoint: return dashboard summary as JSON
+    return {"user_count": user_count, "recent_users": [u.to_dict() for u in recent_users]}
 
 @admin_bp.route('/login', methods=['GET', 'POST'])
 def admin_login():
@@ -311,7 +315,7 @@ def admin_login():
             login_user(admin)
             return redirect(url_for('admin.admin_dashboard'))
         flash('Invalid credentials', 'error')
-    return render_template('admin/login.html')
+    return {"message": "Login required"}, 401
 
 @admin_bp.route('/logout', methods=['GET'])
 @login_required
@@ -324,7 +328,7 @@ def admin_logout():
 @admin_required
 def manage_users():
     users = User.query.all()
-    return render_template('admin/user_management.html', users=users)
+    return {"users": [u.to_dict() for u in users]}
 
 @admin_bp.route('/logs', methods=['GET'])
 @login_required
@@ -332,7 +336,7 @@ def manage_users():
 def view_logs():
     with open('logs/app.log', 'r') as log_file:
         logs = log_file.readlines()
-    return render_template('admin/logs.html', logs=logs)
+    return {"logs": logs}
 
 @admin_bp.route('/settings', methods=['GET', 'POST'])
 @login_required
@@ -341,4 +345,4 @@ def admin_settings():
     if request.method == 'POST':
         # Update settings logic
         flash('Settings updated!', 'success')
-    return render_template('admin/settings.html')
+    return {"message": "Settings endpoint"}

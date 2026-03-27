@@ -25,74 +25,15 @@ from app.utils.utils import generate_report, OutputHandler
 # Create blueprint for user routes
 users_bp = Blueprint('users', __name__)
 
-# View triggered alerts for the current user
-@users_bp.route('/alerts')
-@login_required
-def user_alerts():
-    alerts = Alert.query.join(Alert.event).filter_by(source='analysis').all()
-    return render_template('users/alerts.html', alerts=alerts)
 
-# List, create, edit, enable/disable, and delete alert rules (user)
-@users_bp.route('/alert_rules', methods=['GET', 'POST'])
-@login_required
-def alert_rules():
-    form = AlertRuleForm()
-    user_rules = AlertRule.query.filter_by(user_id=current_user.id).all()
-    if form.validate_on_submit():
-        new_rule = AlertRule(
-            user_id=current_user.id,
-            rule_type=form.rule_type.data,
-            value=form.value.data,
-            severity=form.severity.data,
-            enabled=form.enabled.data
-        )
-        db.session.add(new_rule)
-        db.session.commit()
-        flash('Alert rule created successfully.', 'success')
-        return redirect(url_for('users.alert_rules'))
-    return render_template('users/alert_rules.html', form=form, alert_rules=user_rules)
 
-@users_bp.route('/alert_rules/edit/<int:rule_id>', methods=['GET', 'POST'])
-@login_required
-def edit_alert_rule(rule_id):
-    rule = AlertRule.query.get_or_404(rule_id)
-    if rule.user_id != current_user.id:
-        flash('Unauthorized.', 'danger')
-        return redirect(url_for('users.alert_rules'))
-    form = AlertRuleForm(obj=rule)
-    if form.validate_on_submit():
-        rule.rule_type = form.rule_type.data
-        rule.value = form.value.data
-        rule.severity = form.severity.data
-        rule.enabled = form.enabled.data
-        db.session.commit()
-        flash('Alert rule updated.', 'success')
-        return redirect(url_for('users.alert_rules'))
-    return render_template('users/edit_alert_rule.html', form=form, rule=rule)
 
-@users_bp.route('/alert_rules/delete/<int:rule_id>', methods=['POST'])
-@login_required
-def delete_alert_rule(rule_id):
-    rule = AlertRule.query.get_or_404(rule_id)
-    if rule.user_id != current_user.id:
-        flash('Unauthorized.', 'danger')
-        return redirect(url_for('users.alert_rules'))
-    db.session.delete(rule)
-    db.session.commit()
-    flash('Alert rule deleted.', 'success')
-    return redirect(url_for('users.alert_rules'))
 
-@users_bp.route('/alert_rules/toggle/<int:rule_id>', methods=['POST'])
-@login_required
-def toggle_alert_rule(rule_id):
-    rule = AlertRule.query.get_or_404(rule_id)
-    if rule.user_id != current_user.id:
-        flash('Unauthorized.', 'danger')
-        return redirect(url_for('users.alert_rules'))
-    rule.enabled = not rule.enabled
-    db.session.commit()
-    flash('Alert rule status updated.', 'success')
-    return redirect(url_for('users.alert_rules'))
+
+
+
+
+
 import json
 import logging
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
@@ -127,184 +68,25 @@ users_bp = Blueprint('users', __name__)
 
 
 
-@users_bp.route('/profile', methods=['GET'])
-@login_required
-def user_profile():
-    form = ProfileForm()  # Initialize the form here
-    return render_template('user_profile.html', form=form)
+
 
 
 # Subscription creation and payment
-@users_bp.route('/subscribe', methods=['GET', 'POST'])
-@login_required
-def subscribe():
-    """Handle subscription creation and payment."""
-    if request.method == 'POST':
-        plan_type = request.form.get('plan_type')
-        plans = {
-            'premium_individual': 100,
-            'premium_small_business': 200,
-            'premium_large_business': 300,
-        }
-        amount = plans.get(plan_type)
 
-        if not amount:
-            flash("Invalid plan type selected.", "danger")
-            return redirect(url_for('users.subscribe'))
-
-        try:
-            payment_intent = stripe.PaymentIntent.create(
-                amount=amount,
-                currency='eur',
-                metadata={'plan_type': plan_type, 'user_id': current_user.id}
-            )
-            client_secret = payment_intent.client_secret
-            return render_template('payment.html', client_secret=client_secret, plan_type=plan_type)
-
-        except stripe.error.StripeError as e:
-            flash(f"Stripe Error: {e.user_message}", "danger")
-            return redirect(url_for('users.subscribe'))
-
-    return render_template('subscribe.html')
 
 
 # Confirm subscription after successful payment
-@users_bp.route('/confirm_subscription', methods=['POST'])
-@login_required
-def confirm_subscription():
-    payment_intent_id = request.form.get('payment_intent_id')
-    payment_method_id = request.form.get('payment_method_id')
-    plan_type = request.form.get('plan_type')
 
-    if not payment_intent_id or not payment_method_id or not plan_type:
-        flash("Missing payment information.", "danger")
-        return redirect(url_for('users.subscribe'))
-
-    try:
-        subscription_service = SubscriptionService(current_user.id)
-        success = subscription_service.confirm_payment(payment_intent_id, payment_method_id)
-
-        if success:
-            flash(f"Subscription to {plan_type} plan successfully activated.", "success")
-            return redirect(url_for('users.user_dashboard'))
-
-        flash("Payment failed. Please try again.", "danger")
-        return redirect(url_for('users.subscribe'))
-
-    except Exception as e:
-        flash(f"Error processing payment: {str(e)}", "danger")
-        return redirect(url_for('users.subscribe'))
 
 
 # Process payment and activate subscription
-@users_bp.route('/process_payment', methods=['POST'])
-@login_required
-def process_payment():
-    plan_type = request.form.get('plan_type')
-    payment_intent_id = request.form.get('payment_intent_id')
 
-    try:
-        payment_intent = stripe.PaymentIntent.retrieve(payment_intent_id)
-
-        if payment_intent.status != 'succeeded':
-            flash("Payment not successful. Please try again.", "danger")
-            return redirect(url_for('users.subscribe'))
-
-        current_user.subscription_plan = plan_type
-        current_user.subscription_start = datetime.utcnow()
-        current_user.subscription_end = datetime.utcnow() + timedelta(days=30)
-        db.session.commit()
-
-        flash("Subscription activated successfully!", "success")
-        return redirect(url_for('users.user_dashboard'))
-
-    except stripe.error.StripeError as e:
-        flash(f"Stripe Error: {e.user_message}", "danger")
-        return redirect(url_for('users.subscribe'))
-
-    except Exception as e:
-        flash(f"Error processing payment: {str(e)}", "danger")
-        return redirect(url_for('users.subscribe'))
 
 
 # Handle login
-@users_bp.route('/user_login', methods=['GET', 'POST'])
-def user_login():
-    form = LoginForm()
-
-    if form.validate_on_submit():
-        user = User.query.filter_by(email=form.email.data).first()
-
-        if user and user.check_password(form.password.data):
-            login_user(user, remember=form.remember.data)
-            next_page = request.args.get('next')
-            flash('Login successful.', 'success')
-            return redirect(next_page or url_for('users.user_dashboard'))
-
-        flash('Login failed. Please check your credentials and try again.', 'danger')
-
-    return render_template('user_login.html', form=form)
-
-@users_bp.route('/user_signup', methods=['GET', 'POST'])
-def user_signup():
-    form = SignupForm()
-
-    if form.validate_on_submit():
-        email = form.email.data
-        password = form.password.data
-        confirm_password = form.confirm_password.data
-        first_name = form.first_name.data
-        last_name = form.last_name.data
-        phone_number = form.phone_number.data
-        country_of_residence = form.country_of_residence.data
-        subscription_plan = form.subscription_plan.data
-
-        if password != confirm_password:
-            flash('Passwords do not match.', 'danger')
-            return render_template('user_signup.html', form=form)
-
-        existing_user = User.query.filter_by(email=email).first()
-        if existing_user:
-            flash('An account with this email already exists.', 'danger')
-            return render_template('user_signup.html', form=form)
-
-        # Use a different method if scrypt is not available
-        hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
 
 
-        # Create a new user
-        new_user = User(
-            email=email,
-            password=hashed_password,
-            first_name=first_name,
-            last_name=last_name,
-            phone_number=phone_number,
-            role=UserRole.USER
-        )
-        db.session.add(new_user)
-        db.session.commit()
 
-        # Set subscription start and end dates
-        start_date = datetime.utcnow()
-        if subscription_plan == 'freemium':
-            end_date = start_date + timedelta(days=30)  # Free for 30 days
-        else:
-            end_date = start_date + timedelta(days=30)  # Premium also starts with 30 days
-
-        # Create a new subscription
-        subscription = Subscription(
-            user_id=new_user.id,
-            plan=subscription_plan,
-            start_date=start_date,
-            end_date=end_date
-        )
-        db.session.add(subscription)
-        db.session.commit()
-
-        flash('Account created successfully. Please log in.', 'success')
-        return redirect(url_for('users.user_login'))
-
-    return render_template('user_signup.html', form=form)
 
 
 
