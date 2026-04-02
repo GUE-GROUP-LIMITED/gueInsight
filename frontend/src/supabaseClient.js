@@ -1,7 +1,18 @@
 // src/supabaseClient.js
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
-const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const createFallbackClient = () => ({
+	auth: {
+		getSession: async () => ({ data: { session: null }, error: null }),
+		onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+		signOut: async () => ({ error: null }),
+	},
+});
+
+export const supabase =
+	supabaseUrl && supabaseAnonKey
+		? createClient(supabaseUrl, supabaseAnonKey)
+		: createFallbackClient();

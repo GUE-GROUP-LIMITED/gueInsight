@@ -1,9 +1,10 @@
 
-from flask import Blueprint, request, redirect, url_for, flash
+import os
+from flask import Blueprint, request, redirect, url_for, flash, abort
 from flask_login import login_required, current_user, login_user, logout_user
 from werkzeug.security import generate_password_hash
 from app import db
-from app.models import User, Logs, FileUpload, UserRole, Alert, AlertRule
+from app.models import User, Logs, FileUpload, UserRole, Alert, AlertRule, Subscription
 from app.forms import AdminLoginForm, AdminSignupForm, AlertRuleForm
 from app.utils.utils import check_admin_role  
 from app.admin_services import some_condition_for_critical_alert
@@ -11,6 +12,49 @@ from app.utils.decorators import admin_required
 
 # Blueprint for admin routes
 admin_bp = Blueprint('admin', __name__)
+
+
+def _is_admin(user):
+    role = getattr(user, 'role', None)
+    role_value = getattr(role, 'value', role)
+    return role_value == 'admin'
+
+
+def _serialize_admin_user(user):
+    role = getattr(user, 'role', None)
+    role_value = getattr(role, 'value', role)
+    latest_subscription = (
+        Subscription.query
+        .filter_by(user_id=user.id)
+        .order_by(Subscription.end_date.desc())
+        .first()
+    )
+    current_plan = getattr(latest_subscription, 'plan', None) or 'Free'
+    return {
+        'id': user.id,
+        'email': user.email,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'phone_number': user.phone_number,
+        'company': getattr(user, 'company', None),
+        'job_title': getattr(user, 'job_title', None),
+        'team_size': getattr(user, 'team_size', None),
+        'primary_use_case': getattr(user, 'primary_use_case', None),
+        'newsletter_opt_in': bool(getattr(user, 'newsletter_opt_in', False)),
+        'role': role_value,
+        'is_active': bool(getattr(user, 'is_active', True)),
+        'current_plan': current_plan,
+        'plan_expires_at': latest_subscription.end_date.isoformat() if latest_subscription and latest_subscription.end_date else None,
+    }
+
+
+def _serialize_file_upload(upload):
+    return {
+        'id': upload.id,
+        'user_id': upload.user_id,
+        'file_path': upload.file_path,
+        'upload_date': upload.upload_date.isoformat() if upload.upload_date else None,
+    }
 
 # View all triggered alerts (admin)
 @admin_bp.route('/alerts')
@@ -96,70 +140,93 @@ def admin_login():
     if current_user.is_authenticated:
         return redirect(url_for('admin.admin_dashboard'))
 
-    form = AdminLoginForm()
+    if request.method != 'POST':
+        return {"message": "Login required"}, 401
 
-    if form.validate_on_submit():
-        email = form.email.data
-        password = form.password.data
+    payload = request.get_json(silent=True) or request.form
+    email = (payload.get('email') or payload.get('username') or '').strip()
+    password = payload.get('password') or ''
 
-        # Query user by email
-        user = User.query.filter_by(email=email).first()
+    if not email or not password:
+        return {"error": "Email and password are required."}, 400
 
-        if user and user.role == 'admin' and user.check_password(password):
-            login_user(user)
-            flash('Login successful!', 'success')
-            return redirect(url_for('admin.admin_dashboard'))  # Redirect after successful login
+    user = User.query.filter_by(email=email).first()
 
-        flash('Invalid credentials or insufficient permissions.', 'danger')
+    if user and _is_admin(user) and user.check_password(password):
+        login_user(user)
+        flash('Login successful!', 'success')
+        if request.is_json:
+            return {"message": "Login successful."}, 200
+        return redirect(url_for('admin.admin_dashboard'))
 
-    # API endpoint: login form not rendered
-    return {"message": "Login required"}, 401
+    flash('Invalid credentials or insufficient permissions.', 'danger')
+    return {"error": "Invalid credentials or insufficient permissions."}, 401
 
 
 
 @admin_bp.route('/admin_signup', methods=['GET', 'POST'])
 def admin_signup():
-    form = AdminSignupForm()
+    bootstrap_token = os.getenv('ADMIN_BOOTSTRAP_TOKEN')
+    provided_token = request.form.get('bootstrap_token') or request.headers.get('X-Admin-Bootstrap-Token')
+    has_existing_admin = User.query.filter_by(role=UserRole.ADMIN).first() is not None
 
-    if form.validate_on_submit():
-        email = form.email.data
-        password = form.password.data
-        confirm_password = form.confirm_password.data
-        first_name = form.first_name.data
-        last_name = form.last_name.data
-        phone_number = form.phone_number.data
-        country_of_residence = form.country_of_residence.data
+    # Bootstrap path: only available before the first admin exists.
+    if not has_existing_admin:
+        if bootstrap_token and provided_token != bootstrap_token:
+            abort(403)
+    else:
+        # After bootstrap, only authenticated admins can create other admins.
+        if not (current_user.is_authenticated and _is_admin(current_user)):
+            abort(403)
 
-        if password != confirm_password:
-            flash('Passwords do not match.', 'danger')
-            return {"error": "Passwords do not match."}, 400
+    if request.method != 'POST':
+        return {"message": "Signup required"}, 401
 
-        existing_user = User.query.filter_by(email=email).first()
-        if existing_user:
-            flash('An account with this email already exists.', 'danger')
-            return {"error": "Account exists."}, 400
+    payload = request.get_json(silent=True) or request.form
+    email = (payload.get('email') or '').strip()
+    password = payload.get('password') or ''
+    confirm_password = payload.get('confirm_password') or ''
+    first_name = (payload.get('first_name') or '').strip()
+    last_name = (payload.get('last_name') or '').strip()
+    phone_number = (payload.get('phone_number') or '').strip()
+    country_of_residence = (payload.get('country_of_residence') or '').strip()
 
-        # Use a different method if scrypt is not available
-        hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
+    required_fields = {
+        'email': email,
+        'password': password,
+        'confirm_password': confirm_password,
+        'first_name': first_name,
+        'last_name': last_name,
+        'phone_number': phone_number,
+    }
+    missing = [key for key, value in required_fields.items() if not value]
+    if missing:
+        return {"error": f"Missing required fields: {', '.join(missing)}"}, 400
 
+    if password != confirm_password:
+        flash('Passwords do not match.', 'danger')
+        return {"error": "Passwords do not match."}, 400
 
-        # Create a new user
-        new_user = User(
-            email=email,
-            password=hashed_password,
-            first_name=first_name,
-            last_name=last_name,
-            phone_number=phone_number,
-            role=UserRole.ADMIN
-        )
-        db.session.add(new_user)
-        db.session.commit()
+    existing_user = User.query.filter_by(email=email).first()
+    if existing_user:
+        flash('An account with this email already exists.', 'danger')
+        return {"error": "Account exists."}, 400
 
-     
-        flash('Account created successfully. Please log in.', 'success')
-        return redirect(url_for('admin.aadmin_login'))
+    hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
 
-    return {"message": "Signup required"}, 401
+    new_user = User(
+        email=email,
+        password=hashed_password,
+        first_name=first_name,
+        last_name=last_name,
+        phone_number=phone_number,
+        role=UserRole.ADMIN
+    )
+    db.session.add(new_user)
+    db.session.commit()
+
+    flash('Account created successfully. Please log in.', 'success')
+    return {"message": "Admin account created."}, 201
 
 @admin_bp.route('/admin_dashboard', methods=['GET', 'POST'])
 @login_required
@@ -219,7 +286,11 @@ def admin_dashboard():
     critical_alert = some_condition_for_critical_alert()
 
     # API endpoint: return dashboard data as JSON
-    return {"users": [u.to_dict() for u in users], "file_uploads": [f.to_dict() for f in file_uploads], "critical_alert": critical_alert}
+    return {
+        "users": [_serialize_admin_user(u) for u in users],
+        "file_uploads": [_serialize_file_upload(f) for f in file_uploads],
+        "critical_alert": critical_alert,
+    }
 
 
 # View logs (Only accessible to admins)
@@ -289,60 +360,3 @@ def edit_user(user_id):
 def logout():
     logout_user()
     return redirect(url_for('index'))
-
-
-
-
-
-admin_bp = Blueprint('admin', __name__)
-
-@admin_bp.route('/dashboard', methods=['GET'])
-@login_required
-@admin_required
-def admin_dashboard():
-    user_count = User.query.count()
-    recent_users = User.query.order_by(User.id.desc()).limit(5).all()
-    # API endpoint: return dashboard summary as JSON
-    return {"user_count": user_count, "recent_users": [u.to_dict() for u in recent_users]}
-
-@admin_bp.route('/login', methods=['GET', 'POST'])
-def admin_login():
-    if request.method == 'POST':
-        email = request.form['email']
-        password = request.form['password']
-        admin = User.query.filter_by(email=email, role='admin').first()
-        if admin and admin.check_password(password):
-            login_user(admin)
-            return redirect(url_for('admin.admin_dashboard'))
-        flash('Invalid credentials', 'error')
-    return {"message": "Login required"}, 401
-
-@admin_bp.route('/logout', methods=['GET'])
-@login_required
-def admin_logout():
-    logout_user()
-    return redirect(url_for('admin.admin_login'))
-
-@admin_bp.route('/users', methods=['GET'])
-@login_required
-@admin_required
-def manage_users():
-    users = User.query.all()
-    return {"users": [u.to_dict() for u in users]}
-
-@admin_bp.route('/logs', methods=['GET'])
-@login_required
-@admin_required
-def view_logs():
-    with open('logs/app.log', 'r') as log_file:
-        logs = log_file.readlines()
-    return {"logs": logs}
-
-@admin_bp.route('/settings', methods=['GET', 'POST'])
-@login_required
-@admin_required
-def admin_settings():
-    if request.method == 'POST':
-        # Update settings logic
-        flash('Settings updated!', 'success')
-    return {"message": "Settings endpoint"}
