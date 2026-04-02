@@ -1,4 +1,6 @@
-from flask import render_template, send_from_directory, request
+import os
+
+from flask import render_template, send_from_directory, request, jsonify
 from flask_login import LoginManager
 from flask_mail import Mail
 from app import create_app, db
@@ -24,10 +26,19 @@ def load_user(user_id):
 
 print(app.url_map)
 
+
+def get_frontend_dist_dir():
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend', 'dist'))
+
+
+def serve_frontend_index(status_code=200):
+    response = send_from_directory(get_frontend_dist_dir(), 'index.html')
+    response.status_code = status_code
+    return response
+
 # Serve static assets for React
 @app.route('/assets/<path:filename>')
 def serve_react_assets(filename):
-    import os
     assets_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend', 'dist', 'assets'))
     return send_from_directory(assets_dir, filename)
 
@@ -35,13 +46,30 @@ def serve_react_assets(filename):
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve_react(path):
-    # If the request is for an API or known Flask route, let Flask handle it
-    if path.startswith('api') or path.startswith('user_') or path.startswith('admin_') or path in ['user_login', 'user_signup', 'admin_login']:
-        return render_template('404.html'), 404
-    # Otherwise, serve the React app using an absolute path
-    import os
-    dist_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend', 'dist'))
-    return send_from_directory(dist_dir, 'index.html')
+    # API requests should stay JSON-based.
+    if path.startswith('api'):
+        return jsonify({'error': 'Not found'}), 404
+
+    # Known backend form endpoints should not be routed through the SPA shell.
+    if path.startswith('user_') or path.startswith('admin_'):
+        return jsonify({'error': 'Not found'}), 404
+
+    # Otherwise, serve the React app using an absolute path.
+    return serve_frontend_index()
+
+
+@app.errorhandler(404)
+def handle_not_found(error):
+    if request.path.startswith('/api'):
+        return jsonify({'error': 'Not found'}), 404
+    return serve_frontend_index(404)
+
+
+@app.errorhandler(500)
+def handle_server_error(error):
+    if request.path.startswith('/api'):
+        return jsonify({'error': 'Internal server error'}), 500
+    return serve_frontend_index(500)
 
 if __name__ == "__main__":
     app.run(debug=True)

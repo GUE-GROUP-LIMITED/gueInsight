@@ -1,27 +1,69 @@
 import React, { createContext, useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
+import { api } from '../services/api';
 
 export const AuthContext = createContext();
 
+export const normalizeRole = (roleLike) => {
+  if (!roleLike) return null;
+  const rawRole = typeof roleLike === 'string' ? roleLike : roleLike?.value || roleLike;
+  if (typeof rawRole !== 'string') return null;
+  const normalized = rawRole.includes('.') ? rawRole.split('.').pop() : rawRole;
+  return normalized.toLowerCase();
+};
+
+const normalizeUser = (sessionUser) => {
+  if (!sessionUser) return null;
+  const role = normalizeRole(
+    sessionUser?.role || sessionUser?.app_metadata?.role || sessionUser?.user_metadata?.role || null
+  );
+  return { ...sessionUser, role };
+};
+
+const normalizeUserUpdater = (updater) => (previous) => {
+  const nextValue = typeof updater === 'function' ? updater(previous) : updater;
+  return normalizeUser(nextValue);
+};
+
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setRawUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const setUser = (updater) => {
+    setRawUser(normalizeUserUpdater(updater));
+  };
+
   useEffect(() => {
-    const session = supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user || null);
-      setLoading(false);
-    });
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user || null);
-    });
+    let isMounted = true;
+
+    const fetchSession = async () => {
+      try {
+        const response = await api.get('/auth/session', { validateStatus: () => true });
+        if (!isMounted) return;
+        if (response.status >= 200 && response.status < 300) {
+          setUser(response.data?.user || null);
+        } else {
+          setUser(null);
+        }
+      } catch (error) {
+        if (isMounted) {
+          setUser(null);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchSession();
+
     return () => {
-      listener.subscription.unsubscribe();
+      isMounted = false;
     };
   }, []);
 
   const logout = async () => {
-    await supabase.auth.signOut();
+    await api.post('/auth/logout', {});
     setUser(null);
   };
 

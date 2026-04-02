@@ -1,7 +1,7 @@
 import json
 import logging
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
-from flask_login import login_required, current_user, login_user
+from flask_login import login_required, current_user, login_user, logout_user
 import stripe
 from datetime import datetime, timedelta
 from app.models import User, Subscription, UserRole, db, Alert, AlertRule
@@ -21,9 +21,41 @@ from werkzeug.utils import secure_filename
 import datetime
 from app.config import Config
 from app.utils.utils import generate_report, OutputHandler
+from sqlalchemy import inspect, text
 
 # Create blueprint for user routes
 users_bp = Blueprint('users', __name__)
+
+_USER_SCHEMA_SYNCED = False
+
+
+def _sync_user_profile_columns():
+    """Add newly introduced optional profile columns for legacy databases."""
+    global _USER_SCHEMA_SYNCED
+    if _USER_SCHEMA_SYNCED:
+        return
+
+    columns_to_add = {
+        'company': 'VARCHAR(255)',
+        'job_title': 'VARCHAR(255)',
+        'team_size': 'VARCHAR(50)',
+        'primary_use_case': 'VARCHAR(255)',
+        'newsletter_opt_in': 'BOOLEAN DEFAULT FALSE',
+    }
+
+    inspector = inspect(db.engine)
+    existing_columns = {column['name'] for column in inspector.get_columns('user')}
+    missing_columns = {name: ddl for name, ddl in columns_to_add.items() if name not in existing_columns}
+
+    if not missing_columns:
+        _USER_SCHEMA_SYNCED = True
+        return
+
+    with db.engine.begin() as connection:
+        for column_name, column_ddl in missing_columns.items():
+            connection.execute(text(f'ALTER TABLE "user" ADD COLUMN {column_name} {column_ddl}'))
+
+    _USER_SCHEMA_SYNCED = True
 
 
 
@@ -399,3 +431,142 @@ def upgrade_subscription():
 
     # All Flask-Login, Flask-Mail, and user/password management logic removed for Supabase Auth migration.
     return render_template('subscription.html')
+
+
+def _serialize_auth_user(user):
+    _sync_user_profile_columns()
+    role = getattr(user, 'role', None)
+    role_value = getattr(role, 'value', role)
+    latest_subscription = (
+        Subscription.query
+        .filter_by(user_id=user.id)
+        .order_by(Subscription.end_date.desc())
+        .first()
+    )
+    current_plan = getattr(latest_subscription, 'plan', None) or 'Free'
+    return {
+        'id': user.id,
+        'email': user.email,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'phone_number': user.phone_number,
+        'company': getattr(user, 'company', None),
+        'job_title': getattr(user, 'job_title', None),
+        'team_size': getattr(user, 'team_size', None),
+        'primary_use_case': getattr(user, 'primary_use_case', None),
+        'newsletter_opt_in': bool(getattr(user, 'newsletter_opt_in', False)),
+        'role': role_value,
+        'current_plan': current_plan,
+        'plan_expires_at': latest_subscription.end_date.isoformat() if latest_subscription and latest_subscription.end_date else None,
+    }
+
+
+@users_bp.route('/auth/session', methods=['GET'])
+def auth_session():
+    if not current_user.is_authenticated:
+        return {'authenticated': False, 'user': None}, 200
+    return {'authenticated': True, 'user': _serialize_auth_user(current_user)}, 200
+
+
+@users_bp.route('/auth/login', methods=['POST'])
+def auth_login():
+    payload = request.get_json(silent=True) or request.form
+    email = (payload.get('email') or '').strip().lower()
+    password = payload.get('password') or ''
+
+    if not email or not password:
+        return {'error': 'Email and password are required.'}, 400
+
+    user = User.query.filter_by(email=email).first()
+    if not user or not user.check_password(password):
+        return {'error': 'Invalid credentials.'}, 401
+
+    login_user(user)
+    return {'message': 'Login successful.', 'user': _serialize_auth_user(user)}, 200
+
+
+@users_bp.route('/auth/signup', methods=['POST'])
+def auth_signup():
+    _sync_user_profile_columns()
+    payload = request.get_json(silent=True) or request.form
+    email = (payload.get('email') or '').strip().lower()
+    password = payload.get('password') or ''
+    first_name = (payload.get('first_name') or '').strip() or 'New'
+    last_name = (payload.get('last_name') or '').strip() or 'User'
+    phone_number = (payload.get('phone_number') or '').strip() or '0000000000'
+    company = (payload.get('company') or '').strip() or None
+    job_title = (payload.get('job_title') or '').strip() or None
+    team_size = (payload.get('team_size') or '').strip() or None
+    primary_use_case = (payload.get('primary_use_case') or '').strip() or None
+    newsletter_opt_in = bool(payload.get('newsletter') or payload.get('newsletter_opt_in'))
+
+    if not email or not password:
+        return {'error': 'Email and password are required.'}, 400
+
+    if len(password) < 6:
+        return {'error': 'Password must be at least 6 characters.'}, 400
+
+    existing_user = User.query.filter_by(email=email).first()
+    if existing_user:
+        return {'error': 'An account with this email already exists.'}, 400
+
+    hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
+    new_user = User(
+        email=email,
+        password=hashed_password,
+        first_name=first_name,
+        last_name=last_name,
+        phone_number=phone_number,
+        company=company,
+        job_title=job_title,
+        team_size=team_size,
+        primary_use_case=primary_use_case,
+        newsletter_opt_in=newsletter_opt_in,
+        role=UserRole.USER,
+    )
+    db.session.add(new_user)
+    db.session.commit()
+
+    login_user(new_user)
+    return {'message': 'Signup successful.', 'user': _serialize_auth_user(new_user)}, 201
+
+
+@users_bp.route('/auth/logout', methods=['POST'])
+def auth_logout():
+    if current_user.is_authenticated:
+        logout_user()
+    return {'message': 'Logged out.'}, 200
+
+
+@users_bp.route('/auth/profile', methods=['PATCH'])
+@login_required
+def auth_update_profile():
+    _sync_user_profile_columns()
+    payload = request.get_json(silent=True) or {}
+
+    editable_fields = {
+        'first_name': (payload.get('first_name') or '').strip(),
+        'last_name': (payload.get('last_name') or '').strip(),
+        'phone_number': (payload.get('phone_number') or '').strip(),
+        'company': (payload.get('company') or '').strip() or None,
+        'job_title': (payload.get('job_title') or '').strip() or None,
+        'primary_use_case': (payload.get('primary_use_case') or '').strip() or None,
+        'newsletter_opt_in': bool(payload.get('newsletter_opt_in')),
+    }
+
+    if not editable_fields['first_name'] or not editable_fields['last_name']:
+        return {'error': 'First name and last name are required.'}, 400
+
+    if not editable_fields['phone_number']:
+        return {'error': 'Phone number is required.'}, 400
+
+    current_user.first_name = editable_fields['first_name']
+    current_user.last_name = editable_fields['last_name']
+    current_user.phone_number = editable_fields['phone_number']
+    current_user.company = editable_fields['company']
+    current_user.job_title = editable_fields['job_title']
+    current_user.primary_use_case = editable_fields['primary_use_case']
+    current_user.newsletter_opt_in = editable_fields['newsletter_opt_in']
+    db.session.commit()
+
+    return {'message': 'Profile updated.', 'user': _serialize_auth_user(current_user)}, 200

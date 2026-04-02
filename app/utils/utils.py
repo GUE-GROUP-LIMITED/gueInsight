@@ -13,7 +13,7 @@ from reportlab.pdfgen import canvas
 import html
 from itsdangerous import URLSafeTimedSerializer
 from app.config import Config
-from flask import flash, redirect, url_for, current_app
+from flask import flash, redirect, url_for, current_app, abort
 from flask_login import current_user, login_required
 from flask_mail import Mail, Message
 from app import db  # Add this line to import the db object
@@ -236,9 +236,10 @@ def get_serializer(secret_key, salt):
     return URLSafeTimedSerializer(secret_key, salt=salt)
 
 def check_admin_role(user):
-    if user.role != 'admin':
-        flash('Access denied!', 'danger')
-        return redirect(url_for('index'))
+    role = getattr(user, 'role', None)
+    role_value = getattr(role, 'value', role)
+    if role_value != 'admin':
+        abort(403)
 
 
 def generate_reset_token(email):

@@ -1,7 +1,12 @@
-import React, { useState } from 'react';
-import { supabase } from '../supabaseClient';
+import { useContext, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { api } from '../services/api';
+import { AuthContext, normalizeRole } from '../context/AuthContext';
+import './AuthPricing.css';
 
 const Login = () => {
+	const navigate = useNavigate();
+	const { setUser } = useContext(AuthContext);
 	const [email, setEmail] = useState('');
 	const [password, setPassword] = useState('');
 	const [error, setError] = useState('');
@@ -11,33 +16,59 @@ const Login = () => {
 		e.preventDefault();
 		setLoading(true);
 		setError('');
-		const { error } = await supabase.auth.signInWithPassword({ email, password });
-		if (error) setError(error.message);
+		try {
+			const response = await api.post('/auth/login', { email, password });
+			const authenticatedUser = response.data?.user || null;
+			setUser(authenticatedUser);
+			const role = normalizeRole(
+				authenticatedUser?.role || authenticatedUser?.app_metadata?.role || authenticatedUser?.user_metadata?.role
+			);
+			navigate(role === 'admin' ? '/admin' : '/dashboard');
+		} catch (err) {
+			setError(err?.response?.data?.error || 'Login failed.');
+		}
 		setLoading(false);
 	};
 
 	return (
-		<div>
-			<h2>Login</h2>
-			<form onSubmit={handleSubmit}>
-				<input
-					type="email"
-					placeholder="Email"
-					value={email}
-					onChange={e => setEmail(e.target.value)}
-					required
-				/>
-				<input
-					type="password"
-					placeholder="Password"
-					value={password}
-					onChange={e => setPassword(e.target.value)}
-					required
-				/>
-				<button type="submit" disabled={loading}>{loading ? 'Logging in...' : 'Login'}</button>
-				{error && <div style={{ color: 'red' }}>{error}</div>}
-			</form>
-		</div>
+		<main className="auth-pricing-page auth-pricing-page--auth">
+			<section className="auth-pricing-card">
+				<div className="auth-pricing-card__head">
+					<p className="auth-pricing-card__eyebrow">Welcome back</p>
+					<h1>Sign in to GueInsight</h1>
+					<p>Access your threat analysis dashboard and continue your investigations.</p>
+				</div>
+
+				<form className="auth-pricing-form" onSubmit={handleSubmit}>
+					<label htmlFor="login-email">Email</label>
+					<input
+						id="login-email"
+						type="email"
+						placeholder="you@company.com"
+						value={email}
+						onChange={(e) => setEmail(e.target.value)}
+						required
+					/>
+
+					<label htmlFor="login-password">Password</label>
+					<input
+						id="login-password"
+						type="password"
+						placeholder="Enter your password"
+						value={password}
+						onChange={(e) => setPassword(e.target.value)}
+						required
+					/>
+
+					<button type="submit" disabled={loading}>
+						{loading ? 'Signing you in...' : 'Log in'}
+					</button>
+
+					{error && <p className="auth-pricing-message auth-pricing-message--error">{error}</p>}
+				</form>
+
+			</section>
+		</main>
 	);
 };
 

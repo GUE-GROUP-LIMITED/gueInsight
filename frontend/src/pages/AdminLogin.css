@@ -1,0 +1,118 @@
+.admin-login {
+  min-height: calc(100vh - 40px);
+  display: grid;
+  place-items: center;
+  padding: 24px 16px 48px;
+  color: #edf2ff;
+}
+
+.admin-login__card {
+  width: min(100%, 560px);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 30px;
+  padding: 28px;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.94), rgba(15, 23, 42, 0.78));
+  box-shadow: 0 24px 60px rgba(2, 6, 23, 0.28);
+  backdrop-filter: blur(18px);
+}
+
+.admin-login__brand-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.admin-login__eyebrow {
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.74rem;
+  color: #8ea7ff;
+}
+
+.admin-login h1,
+.admin-login p {
+  margin-top: 0;
+}
+
+.admin-login__lead {
+  color: #c7d2fe;
+  line-height: 1.7;
+  margin-bottom: 20px;
+}
+
+.admin-login__home-link,
+.admin-login__footer a {
+  color: #c4b5fd;
+  text-decoration: none;
+}
+
+.admin-login__form {
+  display: grid;
+  gap: 16px;
+}
+
+.admin-login__field {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-login__field span {
+  color: #dbe4ff;
+  font-size: 0.92rem;
+}
+
+.admin-login__field input {
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.82);
+  color: #edf2ff;
+  padding: 0.95rem 1rem;
+}
+
+.admin-login__error {
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: rgba(127, 29, 29, 0.9);
+  color: #fee2e2;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+}
+
+.admin-login__submit {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.95rem 1.2rem;
+  background: linear-gradient(135deg, #93c5fd, #c4b5fd);
+  color: #09111f;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.admin-login__submit:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.admin-login__footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 18px;
+  color: #c7d2fe;
+}
+
+@media (max-width: 640px) {
+  .admin-login__card {
+    padding: 22px;
+    border-radius: 24px;
+  }
+
+  .admin-login__brand-row,
+  .admin-login__footer {
+    flex-direction: column;
+  }
+}
