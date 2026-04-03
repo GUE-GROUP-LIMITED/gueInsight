@@ -16,8 +16,19 @@ const Profile = () => {
 	const { user, setUser, loading } = useContext(AuthContext);
 	const location = useLocation();
 	const [submitting, setSubmitting] = useState(false);
+	const [savingPreferences, setSavingPreferences] = useState(false);
 	const [message, setMessage] = useState('');
 	const [error, setError] = useState('');
+	const [billingTransactions, setBillingTransactions] = useState([]);
+	const [preferenceMessage, setPreferenceMessage] = useState('');
+	const [preferences, setPreferences] = useState({
+		avatar_url: '',
+		theme: 'system',
+		timezone: 'UTC',
+		language: 'en',
+		notification_email_enabled: true,
+		notification_inapp_enabled: true,
+	});
 	const [form, setForm] = useState({
 		first_name: '',
 		last_name: '',
@@ -41,6 +52,52 @@ const Profile = () => {
 			primary_use_case: user.primary_use_case || useCaseOptions[0],
 			newsletter_opt_in: Boolean(user.newsletter_opt_in),
 		});
+		setPreferences({
+			avatar_url: user.avatar_url || '',
+			theme: user.preferences?.theme || 'system',
+			timezone: user.preferences?.timezone || 'UTC',
+			language: user.preferences?.language || 'en',
+			notification_email_enabled: user.preferences?.notification_email_enabled ?? true,
+			notification_inapp_enabled: user.preferences?.notification_inapp_enabled ?? true,
+		});
+	}, [user]);
+
+	useEffect(() => {
+		let active = true;
+
+		const loadProfileExtras = async () => {
+			if (!user) return;
+			try {
+				const [prefResponse, txResponse] = await Promise.all([
+					api.get('/auth/preferences'),
+					api.get('/auth/transactions?limit=12'),
+				]);
+				if (!active) return;
+
+				const pref = prefResponse.data?.preferences || {};
+				setPreferences((current) => ({
+					...current,
+					avatar_url: pref.avatar_url || current.avatar_url,
+					theme: pref.theme || current.theme,
+					timezone: pref.timezone || current.timezone,
+					language: pref.language || current.language,
+					notification_email_enabled: pref.notification_email_enabled ?? current.notification_email_enabled,
+					notification_inapp_enabled: pref.notification_inapp_enabled ?? current.notification_inapp_enabled,
+				}));
+
+				setBillingTransactions(Array.isArray(txResponse.data?.billing_transactions) ? txResponse.data.billing_transactions : []);
+			} catch {
+				if (active) {
+					setBillingTransactions([]);
+				}
+			}
+		};
+
+		loadProfileExtras();
+
+		return () => {
+			active = false;
+		};
 	}, [user]);
 
 	const readOnlyMeta = useMemo(() => {
@@ -56,6 +113,11 @@ const Profile = () => {
 	const updateField = (field) => (event) => {
 		const value = field === 'newsletter_opt_in' ? event.target.checked : event.target.value;
 		setForm((current) => ({ ...current, [field]: value }));
+	};
+
+	const updatePreferenceField = (field) => (event) => {
+		const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
+		setPreferences((current) => ({ ...current, [field]: value }));
 	};
 
 	const handleSubmit = async (event) => {
@@ -74,6 +136,25 @@ const Profile = () => {
 			setSubmitting(false);
 		}
 	};
+
+	const handleSavePreferences = async (event) => {
+		event.preventDefault();
+		setSavingPreferences(true);
+		setPreferenceMessage('');
+		setError('');
+
+		try {
+			const response = await api.patch('/auth/preferences', preferences);
+			setUser(response.data?.user || user);
+			setPreferenceMessage('Preferences saved successfully.');
+		} catch (requestError) {
+			setError(requestError?.response?.data?.error || 'Unable to save preferences right now.');
+		} finally {
+			setSavingPreferences(false);
+		}
+	};
+
+	const currentPlanLabel = String(user?.current_plan || 'free').replaceAll('_', ' ');
 
 	if (loading) {
 		return <main className="profile-page"><p>Loading your profile...</p></main>;
@@ -106,6 +187,22 @@ const Profile = () => {
 								<strong>{item.value}</strong>
 							</div>
 						))}
+					</div>
+
+					<div className="profile-page__meta-grid" style={{ marginTop: '12px' }}>
+						<div className="profile-page__meta-item">
+							<span>Current plan</span>
+							<strong>{currentPlanLabel}</strong>
+						</div>
+						<div className="profile-page__meta-item">
+							<span>Plan expires</span>
+							<strong>{user?.plan_expires_at ? new Date(user.plan_expires_at).toLocaleString() : 'N/A'}</strong>
+						</div>
+					</div>
+
+					<div className="profile-page__grid" style={{ marginTop: '12px' }}>
+						<Link to="/subscription" className="profile-page__back-link">Manage plan</Link>
+						<Link to="/support" className="profile-page__back-link">Open support</Link>
 					</div>
 				</article>
 
@@ -165,6 +262,65 @@ const Profile = () => {
 							{submitting ? 'Saving...' : 'Save profile'}
 						</button>
 					</form>
+				</article>
+
+				<article className="profile-page__card">
+					<h2>Preferences</h2>
+					<form className="profile-page__form" onSubmit={handleSavePreferences}>
+						<div className="profile-page__grid">
+							<label>
+								<span>Avatar URL</span>
+								<input type="url" value={preferences.avatar_url} onChange={updatePreferenceField('avatar_url')} placeholder="https://..." />
+							</label>
+							<label>
+								<span>Theme</span>
+								<select value={preferences.theme} onChange={updatePreferenceField('theme')}>
+									<option value="system">System</option>
+									<option value="light">Light</option>
+									<option value="dark">Dark</option>
+								</select>
+							</label>
+						</div>
+
+						<div className="profile-page__grid">
+							<label>
+								<span>Timezone</span>
+								<input type="text" value={preferences.timezone} onChange={updatePreferenceField('timezone')} />
+							</label>
+							<label>
+								<span>Language</span>
+								<input type="text" value={preferences.language} onChange={updatePreferenceField('language')} />
+							</label>
+						</div>
+
+						<label className="profile-page__checkbox">
+							<input type="checkbox" checked={preferences.notification_inapp_enabled} onChange={updatePreferenceField('notification_inapp_enabled')} />
+							<span>Enable in-app notifications.</span>
+						</label>
+
+						<label className="profile-page__checkbox">
+							<input type="checkbox" checked={preferences.notification_email_enabled} onChange={updatePreferenceField('notification_email_enabled')} />
+							<span>Enable email notifications.</span>
+						</label>
+
+						{preferenceMessage ? <p className="profile-page__message profile-page__message--success">{preferenceMessage}</p> : null}
+						<button type="submit" disabled={savingPreferences}>
+							{savingPreferences ? 'Saving...' : 'Save preferences'}
+						</button>
+					</form>
+				</article>
+
+				<article className="profile-page__card">
+					<h2>Billing transactions</h2>
+					<div className="profile-page__meta-grid">
+						{billingTransactions.length ? billingTransactions.map((tx) => (
+							<div className="profile-page__meta-item" key={tx.id}>
+								<span>{tx.status}</span>
+								<strong>{tx.amount_minor} {String(tx.currency || '').toUpperCase()}</strong>
+								<p>{tx.created_at ? new Date(tx.created_at).toLocaleString() : 'N/A'}</p>
+							</div>
+						)) : <p>No billing transactions yet.</p>}
+					</div>
 				</article>
 			</section>
 		</main>

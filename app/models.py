@@ -141,6 +141,181 @@ class SupportTicket(db.Model):
             'resolved_at': self.resolved_at.isoformat() if self.resolved_at else None,
             'closed_at': self.closed_at.isoformat() if self.closed_at else None,
         }
+
+
+class NotificationSeverity(PyEnum):
+    INFO = "info"
+    WARNING = "warning"
+    CRITICAL = "critical"
+
+
+class AnalysisStatus(PyEnum):
+    QUEUED = "queued"
+    RUNNING = "running"
+    SUCCESS = "success"
+    FAILED = "failed"
+    BLOCKED_BY_PLAN = "blocked_by_plan"
+
+
+class BillingStatus(PyEnum):
+    PENDING = "pending"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    REFUNDED = "refunded"
+
+
+class UserPreference(db.Model):
+    __tablename__ = 'user_preference'
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('user.id'), nullable=False, unique=True)
+    avatar_url = Column(String(500), nullable=True)
+    theme = Column(String(20), nullable=False, default='system')
+    timezone = Column(String(80), nullable=False, default='UTC')
+    language = Column(String(20), nullable=False, default='en')
+    notification_email_enabled = Column(Boolean, nullable=False, default=True)
+    notification_inapp_enabled = Column(Boolean, nullable=False, default=True)
+    dashboard_layout = Column(String(2000), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('preference', uselist=False, lazy=True))
+
+    def to_dict(self):
+        return {
+            'avatar_url': self.avatar_url,
+            'theme': self.theme,
+            'timezone': self.timezone,
+            'language': self.language,
+            'notification_email_enabled': bool(self.notification_email_enabled),
+            'notification_inapp_enabled': bool(self.notification_inapp_enabled),
+            'dashboard_layout': self.dashboard_layout,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class UserNotification(db.Model):
+    __tablename__ = 'user_notification'
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+    type = Column(String(50), nullable=False)
+    title = Column(String(200), nullable=False)
+    message = Column(String(2000), nullable=False)
+    severity = Column(SQLAlchemyEnum(NotificationSeverity), nullable=False, default=NotificationSeverity.INFO)
+    action_url = Column(String(500), nullable=True)
+    is_read = Column(Boolean, nullable=False, default=False)
+    read_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('notifications', lazy=True))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'type': self.type,
+            'title': self.title,
+            'message': self.message,
+            'severity': self.severity.value if hasattr(self.severity, 'value') else self.severity,
+            'action_url': self.action_url,
+            'is_read': bool(self.is_read),
+            'read_at': self.read_at.isoformat() if self.read_at else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class AnalysisTransaction(db.Model):
+    __tablename__ = 'analysis_transaction'
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+    source_type = Column(String(30), nullable=False)
+    input_ref = Column(String(1000), nullable=True)
+    status = Column(SQLAlchemyEnum(AnalysisStatus), nullable=False, default=AnalysisStatus.QUEUED)
+    plan_at_time = Column(String(50), nullable=False, default='free')
+    items_count = Column(Integer, nullable=False, default=1)
+    input_size_bytes = Column(Integer, nullable=True)
+    processing_ms = Column(Integer, nullable=True)
+    result_summary = Column(String(2000), nullable=True)
+    error_message = Column(String(2000), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
+
+    user = db.relationship('User', backref=db.backref('analysis_transactions', lazy=True))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'source_type': self.source_type,
+            'input_ref': self.input_ref,
+            'status': self.status.value if hasattr(self.status, 'value') else self.status,
+            'plan_at_time': self.plan_at_time,
+            'items_count': self.items_count,
+            'input_size_bytes': self.input_size_bytes,
+            'processing_ms': self.processing_ms,
+            'result_summary': self.result_summary,
+            'error_message': self.error_message,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'completed_at': self.completed_at.isoformat() if self.completed_at else None,
+        }
+
+
+class UserActivityEvent(db.Model):
+    __tablename__ = 'user_activity_event'
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+    event_type = Column(String(100), nullable=False)
+    entity_type = Column(String(100), nullable=True)
+    entity_id = Column(Integer, nullable=True)
+    description = Column(String(500), nullable=False)
+    event_metadata = Column('metadata', String(2000), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('activity_events', lazy=True))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'event_type': self.event_type,
+            'entity_type': self.entity_type,
+            'entity_id': self.entity_id,
+            'description': self.description,
+            'metadata': self.event_metadata,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class BillingTransaction(db.Model):
+    __tablename__ = 'billing_transaction'
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+    subscription_id = Column(Integer, ForeignKey('subscription.id'), nullable=True)
+    provider = Column(String(50), nullable=False, default='internal')
+    provider_txn_id = Column(String(120), nullable=True)
+    amount_minor = Column(Integer, nullable=False, default=0)
+    currency = Column(String(10), nullable=False, default='usd')
+    status = Column(SQLAlchemyEnum(BillingStatus), nullable=False, default=BillingStatus.PENDING)
+    period_start = Column(DateTime, nullable=True)
+    period_end = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('billing_transactions', lazy=True))
+    subscription = db.relationship('Subscription', backref=db.backref('billing_transactions', lazy=True))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'provider': self.provider,
+            'provider_txn_id': self.provider_txn_id,
+            'amount_minor': self.amount_minor,
+            'currency': self.currency,
+            'status': self.status.value if hasattr(self.status, 'value') else self.status,
+            'period_start': self.period_start.isoformat() if self.period_start else None,
+            'period_end': self.period_end.isoformat() if self.period_end else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
   
 
 class FileUpload(db.Model):

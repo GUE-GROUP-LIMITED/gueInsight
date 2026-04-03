@@ -4,7 +4,24 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user, login_user, logout_user
 import stripe
 from datetime import datetime, timedelta
-from app.models import User, Subscription, UserRole, SupportTicket, SupportTicketStatus, db, Alert, AlertRule
+from app.models import (
+    User,
+    Subscription,
+    UserRole,
+    SupportTicket,
+    SupportTicketStatus,
+    UserPreference,
+    UserNotification,
+    NotificationSeverity,
+    AnalysisTransaction,
+    AnalysisStatus,
+    UserActivityEvent,
+    BillingTransaction,
+    BillingStatus,
+    db,
+    Alert,
+    AlertRule,
+)
 from app.forms import LoginForm, ResetPasswordForm, SignupForm, SubmitCloudLinkForm, SubmitTextForm, UploadFileForm, LogoutForm, ProfileForm, AlertRuleForm
 from app.subscription_service import SubscriptionService
 from app.src.analysis.file_analysis import analyze_text_for_security, analyze_cloud_link
@@ -100,6 +117,45 @@ def _count_analysis_items(input_data):
     for separator in separators:
         normalized = normalized.replace(separator, ' ')
     return len([chunk for chunk in normalized.split(' ') if chunk.strip()])
+
+def _get_or_create_user_preference(user_id):
+    preference = UserPreference.query.filter_by(user_id=user_id).first()
+    if preference:
+        return preference
+
+    preference = UserPreference(user_id=user_id)
+    db.session.add(preference)
+    db.session.commit()
+    return preference
+
+def _create_user_notification(user_id, notification_type, title, message, severity='info', action_url=None):
+    severity_lookup = {
+        'info': NotificationSeverity.INFO,
+        'warning': NotificationSeverity.WARNING,
+        'critical': NotificationSeverity.CRITICAL,
+    }
+    notification = UserNotification(
+        user_id=user_id,
+        type=notification_type,
+        title=title,
+        message=message,
+        severity=severity_lookup.get(str(severity).lower(), NotificationSeverity.INFO),
+        action_url=action_url,
+    )
+    db.session.add(notification)
+    return notification
+
+def _log_user_activity(user_id, event_type, description, entity_type=None, entity_id=None, metadata=None):
+    activity = UserActivityEvent(
+        user_id=user_id,
+        event_type=event_type,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        description=description,
+        event_metadata=json.dumps(metadata) if metadata else None,
+    )
+    db.session.add(activity)
+    return activity
 
 
 def _sync_user_profile_columns():
@@ -286,12 +342,26 @@ def upload_file():
     # Handle File Upload
     if file_upload_form.validate_on_submit() and file_upload_form.file.data:
         uploaded_file = file_upload_form.file.data
+        file_analysis_started_at = datetime.datetime.utcnow()
 
         # Check the file type
         allowed_extensions = Config.ALLOWED_EXTENSIONS  # Get allowed file types from config
         file_extension = secure_filename(uploaded_file.filename).split('.')[-1].lower()
 
         if file_extension not in allowed_extensions:
+            file_tx = AnalysisTransaction(
+                user_id=current_user.id,
+                source_type='file',
+                input_ref=uploaded_file.filename,
+                status=AnalysisStatus.FAILED,
+                plan_at_time=plan_key,
+                items_count=1,
+                error_message='Invalid file type.',
+                created_at=file_analysis_started_at,
+                completed_at=datetime.datetime.utcnow(),
+            )
+            db.session.add(file_tx)
+            db.session.commit()
             flash("Invalid file type. Please upload a valid file.", "danger")
             return redirect(url_for('users.user_dashboard'))
 
@@ -300,6 +370,20 @@ def upload_file():
         max_plan_file_size_bytes = analysis_limits['max_file_size_mb'] * 1024 * 1024
         max_allowed_bytes = min(Config.MAX_CONTENT_LENGTH, max_plan_file_size_bytes)
         if file_size_bytes > max_allowed_bytes:
+            file_tx = AnalysisTransaction(
+                user_id=current_user.id,
+                source_type='file',
+                input_ref=uploaded_file.filename,
+                status=AnalysisStatus.BLOCKED_BY_PLAN,
+                plan_at_time=plan_key,
+                items_count=1,
+                input_size_bytes=file_size_bytes,
+                error_message='File exceeds plan limit.',
+                created_at=file_analysis_started_at,
+                completed_at=datetime.datetime.utcnow(),
+            )
+            db.session.add(file_tx)
+            db.session.commit()
             flash(
                 f"File exceeds your plan limit of {analysis_limits['max_file_size_mb']}MB per analysis.",
                 "danger",
@@ -338,12 +422,50 @@ def upload_file():
            
             OutputHandler.save_to_user_dashboard(current_user.id, report_file, file_path)
 
+            completed_at = datetime.datetime.utcnow()
+            file_tx = AnalysisTransaction(
+                user_id=current_user.id,
+                source_type='file',
+                input_ref=file_path,
+                status=AnalysisStatus.SUCCESS,
+                plan_at_time=plan_key,
+                items_count=1,
+                input_size_bytes=file_size_bytes,
+                processing_ms=max(1, int((completed_at - file_analysis_started_at).total_seconds() * 1000)),
+                result_summary='File analysis completed successfully.',
+                created_at=file_analysis_started_at,
+                completed_at=completed_at,
+            )
+            db.session.add(file_tx)
+            _log_user_activity(
+                current_user.id,
+                event_type='analysis.file.success',
+                description='Completed a file analysis.',
+                entity_type='analysis_transaction',
+                metadata={'source_type': 'file', 'status': 'success'},
+            )
+            db.session.commit()
+
             # Render the results page
             return render_template('results.html', 
                                    results=analysis_results, 
                                    visualization=visualization_result,
                                    report_link='/Users/gabrielaloho/gueInsight/app/user_reports')  # Replace with actual path
         except Exception as e:
+            file_tx = AnalysisTransaction(
+                user_id=current_user.id,
+                source_type='file',
+                input_ref=uploaded_file.filename,
+                status=AnalysisStatus.FAILED,
+                plan_at_time=plan_key,
+                items_count=1,
+                input_size_bytes=file_size_bytes,
+                error_message=str(e),
+                created_at=file_analysis_started_at,
+                completed_at=datetime.datetime.utcnow(),
+            )
+            db.session.add(file_tx)
+            db.session.commit()
             flash(f"Error processing file: {str(e)}", "danger")
             return redirect(url_for('users.user_dashboard'))
 
@@ -352,7 +474,22 @@ def upload_file():
 
     elif url_submission_form.validate_on_submit() and url_submission_form.cloud_link.data:
         cloud_link = url_submission_form.cloud_link.data
+        url_analysis_started_at = datetime.datetime.utcnow()
         if len(cloud_link) > analysis_limits['max_url_length']:
+            url_tx = AnalysisTransaction(
+                user_id=current_user.id,
+                source_type='url',
+                input_ref=cloud_link[:500],
+                status=AnalysisStatus.BLOCKED_BY_PLAN,
+                plan_at_time=plan_key,
+                items_count=1,
+                input_size_bytes=len(cloud_link.encode('utf-8')),
+                error_message='URL exceeds plan input length limit.',
+                created_at=url_analysis_started_at,
+                completed_at=datetime.datetime.utcnow(),
+            )
+            db.session.add(url_tx)
+            db.session.commit()
             return jsonify({
                 'status': 'error',
                 'message': (
@@ -365,6 +502,30 @@ def upload_file():
             enrichment = enrich_url(cloud_link)
             # Process the cloud link (analysis)
             analysis_results = analyze_cloud_link(cloud_link)
+
+            completed_at = datetime.datetime.utcnow()
+            url_tx = AnalysisTransaction(
+                user_id=current_user.id,
+                source_type='url',
+                input_ref=cloud_link[:500],
+                status=AnalysisStatus.SUCCESS,
+                plan_at_time=plan_key,
+                items_count=1,
+                input_size_bytes=len(cloud_link.encode('utf-8')),
+                processing_ms=max(1, int((completed_at - url_analysis_started_at).total_seconds() * 1000)),
+                result_summary='URL analysis completed successfully.',
+                created_at=url_analysis_started_at,
+                completed_at=completed_at,
+            )
+            db.session.add(url_tx)
+            _log_user_activity(
+                current_user.id,
+                event_type='analysis.url.success',
+                description='Completed a URL analysis.',
+                entity_type='analysis_transaction',
+                metadata={'source_type': 'url', 'status': 'success'},
+            )
+            db.session.commit()
             return jsonify({
                 'status': 'success',
                 'message': 'Cloud link processed successfully.',
@@ -373,6 +534,20 @@ def upload_file():
             })
 
         except Exception as e:
+            url_tx = AnalysisTransaction(
+                user_id=current_user.id,
+                source_type='url',
+                input_ref=cloud_link[:500],
+                status=AnalysisStatus.FAILED,
+                plan_at_time=plan_key,
+                items_count=1,
+                input_size_bytes=len(cloud_link.encode('utf-8')),
+                error_message=str(e),
+                created_at=url_analysis_started_at,
+                completed_at=datetime.datetime.utcnow(),
+            )
+            db.session.add(url_tx)
+            db.session.commit()
             flash(f"Error processing cloud link: {str(e)}", "danger")
             return redirect(url_for('users.user_dashboard'))
 
@@ -380,10 +555,25 @@ def upload_file():
 
     elif text_submission_form.validate_on_submit() and text_submission_form.pasted_input.data:
         input_data = text_submission_form.pasted_input.data
+        text_analysis_started_at = datetime.datetime.utcnow()
         input_length = len(input_data)
         analysis_item_count = _count_analysis_items(input_data)
 
         if input_length > analysis_limits['max_text_chars']:
+            text_tx = AnalysisTransaction(
+                user_id=current_user.id,
+                source_type='text',
+                input_ref=input_data[:500],
+                status=AnalysisStatus.BLOCKED_BY_PLAN,
+                plan_at_time=plan_key,
+                items_count=analysis_item_count,
+                input_size_bytes=len(input_data.encode('utf-8')),
+                error_message='Text exceeds plan input length limit.',
+                created_at=text_analysis_started_at,
+                completed_at=datetime.datetime.utcnow(),
+            )
+            db.session.add(text_tx)
+            db.session.commit()
             return jsonify({
                 'status': 'error',
                 'message': (
@@ -392,6 +582,20 @@ def upload_file():
             }), 400
 
         if analysis_item_count > analysis_limits['max_items_per_analysis']:
+            text_tx = AnalysisTransaction(
+                user_id=current_user.id,
+                source_type='text',
+                input_ref=input_data[:500],
+                status=AnalysisStatus.BLOCKED_BY_PLAN,
+                plan_at_time=plan_key,
+                items_count=analysis_item_count,
+                input_size_bytes=len(input_data.encode('utf-8')),
+                error_message='Input item count exceeds plan limit.',
+                created_at=text_analysis_started_at,
+                completed_at=datetime.datetime.utcnow(),
+            )
+            db.session.add(text_tx)
+            db.session.commit()
             return jsonify({
                 'status': 'error',
                 'message': (
@@ -405,6 +609,30 @@ def upload_file():
             enrichment = enrich_event({'hash': input_data, 'ip': input_data, 'url': input_data})
             # Process the text/hash input (analysis)
             analysis_results = analyze_text_for_security(input_data)
+
+            completed_at = datetime.datetime.utcnow()
+            text_tx = AnalysisTransaction(
+                user_id=current_user.id,
+                source_type='text',
+                input_ref=input_data[:500],
+                status=AnalysisStatus.SUCCESS,
+                plan_at_time=plan_key,
+                items_count=analysis_item_count,
+                input_size_bytes=len(input_data.encode('utf-8')),
+                processing_ms=max(1, int((completed_at - text_analysis_started_at).total_seconds() * 1000)),
+                result_summary='Text analysis completed successfully.',
+                created_at=text_analysis_started_at,
+                completed_at=completed_at,
+            )
+            db.session.add(text_tx)
+            _log_user_activity(
+                current_user.id,
+                event_type='analysis.text.success',
+                description='Completed a text analysis.',
+                entity_type='analysis_transaction',
+                metadata={'source_type': 'text', 'status': 'success'},
+            )
+            db.session.commit()
             return jsonify({
                 'status': 'success',
                 'message': 'Text processed successfully.',
@@ -413,6 +641,20 @@ def upload_file():
             })
 
         except Exception as e:
+            text_tx = AnalysisTransaction(
+                user_id=current_user.id,
+                source_type='text',
+                input_ref=input_data[:500],
+                status=AnalysisStatus.FAILED,
+                plan_at_time=plan_key,
+                items_count=analysis_item_count,
+                input_size_bytes=len(input_data.encode('utf-8')),
+                error_message=str(e),
+                created_at=text_analysis_started_at,
+                completed_at=datetime.datetime.utcnow(),
+            )
+            db.session.add(text_tx)
+            db.session.commit()
             flash(f"Error processing text input: {str(e)}", "danger")
             return redirect(url_for('users.user_dashboard'))
 
@@ -548,6 +790,8 @@ def _serialize_auth_user(user):
     active_plan_key = _get_active_plan_key(user.id)
     current_plan = active_plan_key if active_plan_key != 'free' else 'Free'
     analysis_limits = _get_analysis_limits_for_plan(active_plan_key)
+    preference = UserPreference.query.filter_by(user_id=user.id).first()
+    unread_notification_count = UserNotification.query.filter_by(user_id=user.id, is_read=False).count()
     return {
         'id': user.id,
         'email': user.email,
@@ -562,6 +806,9 @@ def _serialize_auth_user(user):
         'role': role_value,
         'current_plan': current_plan,
         'analysis_limits': analysis_limits,
+        'avatar_url': getattr(preference, 'avatar_url', None),
+        'preferences': preference.to_dict() if preference else None,
+        'unread_notifications': unread_notification_count,
         'plan_expires_at': latest_subscription.end_date.isoformat() if latest_subscription and latest_subscription.end_date else None,
     }
 
@@ -632,6 +879,24 @@ def auth_signup():
     db.session.add(new_user)
     db.session.commit()
 
+    _get_or_create_user_preference(new_user.id)
+    _log_user_activity(
+        new_user.id,
+        event_type='account.created',
+        description='Created account.',
+        entity_type='user',
+        entity_id=new_user.id,
+    )
+    _create_user_notification(
+        new_user.id,
+        notification_type='system',
+        title='Welcome to GueInsight',
+        message='Your account is ready. Complete your profile preferences to personalize your dashboard.',
+        severity='info',
+        action_url='/profile',
+    )
+    db.session.commit()
+
     login_user(new_user)
     return {'message': 'Signup successful.', 'user': _serialize_auth_user(new_user)}, 201
 
@@ -674,7 +939,133 @@ def auth_update_profile():
     current_user.newsletter_opt_in = editable_fields['newsletter_opt_in']
     db.session.commit()
 
+    _log_user_activity(
+        current_user.id,
+        event_type='profile.updated',
+        description='Updated profile details.',
+        entity_type='profile',
+    )
+    db.session.commit()
+
     return {'message': 'Profile updated.', 'user': _serialize_auth_user(current_user)}, 200
+
+
+@users_bp.route('/auth/preferences', methods=['GET', 'PATCH'])
+@login_required
+def auth_preferences():
+    preference = _get_or_create_user_preference(current_user.id)
+
+    if request.method == 'GET':
+        return {'preferences': preference.to_dict()}, 200
+
+    payload = request.get_json(silent=True) or {}
+    allowed_fields = {
+        'avatar_url',
+        'theme',
+        'timezone',
+        'language',
+        'notification_email_enabled',
+        'notification_inapp_enabled',
+        'dashboard_layout',
+    }
+
+    for field_name in allowed_fields:
+        if field_name in payload:
+            setattr(preference, field_name, payload.get(field_name))
+
+    db.session.commit()
+    _log_user_activity(
+        current_user.id,
+        event_type='preferences.updated',
+        description='Updated profile preferences.',
+        entity_type='profile',
+    )
+    db.session.commit()
+
+    return {'message': 'Preferences updated.', 'preferences': preference.to_dict(), 'user': _serialize_auth_user(current_user)}, 200
+
+
+@users_bp.route('/auth/notifications', methods=['GET'])
+@login_required
+def auth_notifications():
+    unread_only = str(request.args.get('unread_only') or '').lower() in {'1', 'true', 'yes'}
+    limit = request.args.get('limit', default=25, type=int)
+    limit = max(1, min(limit, 100))
+
+    query = UserNotification.query.filter_by(user_id=current_user.id)
+    if unread_only:
+        query = query.filter_by(is_read=False)
+
+    notifications = query.order_by(UserNotification.created_at.desc()).limit(limit).all()
+    unread_count = UserNotification.query.filter_by(user_id=current_user.id, is_read=False).count()
+
+    return {
+        'notifications': [notification.to_dict() for notification in notifications],
+        'unread_count': unread_count,
+    }, 200
+
+
+@users_bp.route('/auth/notifications/<int:notification_id>/read', methods=['PATCH'])
+@login_required
+def auth_notifications_mark_read(notification_id):
+    notification = UserNotification.query.filter_by(id=notification_id, user_id=current_user.id).first()
+    if not notification:
+        return {'error': 'Notification not found.'}, 404
+
+    notification.is_read = True
+    notification.read_at = datetime.datetime.utcnow()
+    db.session.commit()
+
+    unread_count = UserNotification.query.filter_by(user_id=current_user.id, is_read=False).count()
+    return {'message': 'Notification marked as read.', 'notification': notification.to_dict(), 'unread_count': unread_count}, 200
+
+
+@users_bp.route('/auth/notifications/read_all', methods=['POST'])
+@login_required
+def auth_notifications_mark_all_read():
+    now = datetime.datetime.utcnow()
+    notifications = UserNotification.query.filter_by(user_id=current_user.id, is_read=False).all()
+    for notification in notifications:
+        notification.is_read = True
+        notification.read_at = now
+    db.session.commit()
+
+    return {'message': 'All notifications marked as read.', 'unread_count': 0}, 200
+
+
+@users_bp.route('/auth/transactions', methods=['GET'])
+@login_required
+def auth_transactions():
+    limit = request.args.get('limit', default=20, type=int)
+    limit = max(1, min(limit, 100))
+
+    analysis_rows = (
+        AnalysisTransaction.query
+        .filter_by(user_id=current_user.id)
+        .order_by(AnalysisTransaction.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    activity_rows = (
+        UserActivityEvent.query
+        .filter_by(user_id=current_user.id)
+        .order_by(UserActivityEvent.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    billing_rows = (
+        BillingTransaction.query
+        .filter_by(user_id=current_user.id)
+        .order_by(BillingTransaction.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+    return {
+        'analysis_transactions': [row.to_dict() for row in analysis_rows],
+        'activity_events': [row.to_dict() for row in activity_rows],
+        'billing_transactions': [row.to_dict() for row in billing_rows],
+    }, 200
 
 
 @users_bp.route('/auth/subscription/upgrade', methods=['POST'])
@@ -720,6 +1111,40 @@ def auth_upgrade_subscription():
         end_date=start_date + timedelta(days=30),
     )
     db.session.add(new_subscription)
+
+    plan_amount_minor = {
+        'premium_individual': 1900,
+        'premium_small_business': 5900,
+        'premium_large_business': 14900,
+    }
+    billing_transaction = BillingTransaction(
+        user_id=current_user.id,
+        subscription=new_subscription,
+        provider='internal',
+        provider_txn_id=f"local-{current_user.id}-{int(now.timestamp())}",
+        amount_minor=plan_amount_minor.get(normalized_plan, 0),
+        currency='usd',
+        status=BillingStatus.SUCCEEDED,
+        period_start=start_date,
+        period_end=start_date + timedelta(days=30),
+    )
+    db.session.add(billing_transaction)
+
+    _log_user_activity(
+        current_user.id,
+        event_type='subscription.upgraded',
+        description=f'Upgraded to {normalized_plan}.',
+        entity_type='subscription',
+        metadata={'plan': normalized_plan},
+    )
+    _create_user_notification(
+        current_user.id,
+        notification_type='plan',
+        title='Plan upgrade successful',
+        message=f'Your plan is now {normalized_plan}.',
+        severity='info',
+        action_url='/profile',
+    )
     db.session.commit()
 
     return {
