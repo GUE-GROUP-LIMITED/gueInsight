@@ -90,6 +90,57 @@ class Subscription(db.Model):
 
     # Relationship with User
     user = db.relationship("User", backref="subscriptions")
+
+
+class SupportTicketStatus(PyEnum):
+    OPEN = "open"
+    IN_PROGRESS = "in_progress"
+    WAITING_ON_USER = "waiting_on_user"
+    RESOLVED = "resolved"
+    CLOSED = "closed"
+
+
+class SupportTicket(db.Model):
+    __tablename__ = 'support_ticket'
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+    subject = Column(String(200), nullable=False)
+    description = Column(String(2000), nullable=False)
+    category = Column(String(80), nullable=True)
+    priority = Column(String(20), nullable=False, default='medium')
+    status = Column(SQLAlchemyEnum(SupportTicketStatus), nullable=False, default=SupportTicketStatus.OPEN)
+    assigned_admin_id = Column(Integer, ForeignKey('user.id'), nullable=True)
+    attended_by_id = Column(Integer, ForeignKey('user.id'), nullable=True)
+    resolution_summary = Column(String(2000), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    attended_at = Column(DateTime, nullable=True)
+    resolved_at = Column(DateTime, nullable=True)
+    closed_at = Column(DateTime, nullable=True)
+
+    user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('support_tickets', lazy=True))
+    assigned_admin = db.relationship('User', foreign_keys=[assigned_admin_id], post_update=True)
+    attended_by = db.relationship('User', foreign_keys=[attended_by_id], post_update=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'subject': self.subject,
+            'description': self.description,
+            'category': self.category,
+            'priority': self.priority,
+            'status': self.status.value if hasattr(self.status, 'value') else self.status,
+            'assigned_admin_id': self.assigned_admin_id,
+            'attended_by_id': self.attended_by_id,
+            'resolution_summary': self.resolution_summary,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'attended_at': self.attended_at.isoformat() if self.attended_at else None,
+            'resolved_at': self.resolved_at.isoformat() if self.resolved_at else None,
+            'closed_at': self.closed_at.isoformat() if self.closed_at else None,
+        }
   
 
 class FileUpload(db.Model):

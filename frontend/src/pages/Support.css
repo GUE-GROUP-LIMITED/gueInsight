@@ -1,0 +1,309 @@
+.support-page {
+  --panel: rgba(6, 18, 35, 0.84);
+  --line: rgba(110, 236, 229, 0.34);
+  --text-main: #e0f9ff;
+  --text-soft: #96bbca;
+  --accent: #6eece5;
+  --accent-2: #67b4ff;
+  width: min(1200px, calc(100vw - 26px));
+  margin: 0 auto;
+  padding: 22px 0 50px;
+  color: var(--text-main);
+}
+
+.support-page__hero,
+.support-page__card,
+.support-page__footer-note {
+  border: 1px solid var(--line);
+  background: linear-gradient(150deg, var(--panel), rgba(4, 12, 25, 0.92));
+  box-shadow: 0 24px 52px rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(14px);
+  border-radius: 18px;
+}
+
+.support-page__hero {
+  padding: 22px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.support-page__eyebrow,
+.support-page__section-label {
+  margin: 0 0 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent-2);
+  font-size: 0.72rem;
+}
+
+.support-page h1,
+.support-page h2,
+.support-page p {
+  margin-top: 0;
+}
+
+.support-page__hero p {
+  color: var(--text-soft);
+  line-height: 1.6;
+}
+
+.support-page__hero-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.support-page__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.85rem 1rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.support-page__button--primary {
+  color: #021319;
+  background: linear-gradient(132deg, var(--accent), var(--accent-2));
+}
+
+.support-page__button--ghost {
+  color: var(--text-main);
+  border: 1px solid rgba(110, 236, 229, 0.35);
+  background: rgba(8, 25, 41, 0.72);
+}
+
+.support-page__stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.support-page__stat-card {
+  padding: 18px;
+  border-radius: 18px;
+  background: linear-gradient(150deg, var(--panel), rgba(4, 12, 25, 0.92));
+  border: 1px solid var(--line);
+}
+
+.support-page__stat-card p {
+  margin: 0 0 8px;
+  color: var(--text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.75rem;
+}
+
+.support-page__stat-card strong {
+  display: block;
+  font-size: clamp(1.7rem, 3vw, 2.3rem);
+}
+
+.support-page__stat-card span {
+  color: var(--text-soft);
+}
+
+.support-page__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.support-page__card {
+  padding: 18px;
+}
+
+.support-page__card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.support-page__form {
+  display: grid;
+  gap: 12px;
+}
+
+.support-page__form label {
+  display: grid;
+  gap: 8px;
+}
+
+.support-page__form span,
+.support-page__ticket-meta dt,
+.support-page__ticket-top p,
+.support-page__hint,
+.support-page__footer-note p {
+  color: var(--text-soft);
+}
+
+.support-page__form input,
+.support-page__form select,
+.support-page__form textarea {
+  width: 100%;
+  border: 1px solid rgba(103, 180, 255, 0.35);
+  border-radius: 12px;
+  background: rgba(7, 24, 45, 0.72);
+  color: #f2fcff;
+  padding: 0.82rem 0.92rem;
+}
+
+.support-page__form textarea {
+  resize: vertical;
+  min-height: 150px;
+}
+
+.support-page__form input:focus,
+.support-page__form select:focus,
+.support-page__form textarea:focus {
+  outline: none;
+  border-color: rgba(110, 236, 229, 0.95);
+  box-shadow: 0 0 0 3px rgba(110, 236, 229, 0.16);
+}
+
+.support-page__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.support-page__message {
+  margin: 0;
+  border-radius: 12px;
+  padding: 0.72rem 0.82rem;
+}
+
+.support-page__message--error {
+  color: #fecaca;
+  border: 1px solid rgba(248, 113, 113, 0.45);
+  background: rgba(127, 29, 29, 0.28);
+}
+
+.support-page__message--success {
+  color: #bbf7d0;
+  border: 1px solid rgba(74, 222, 128, 0.45);
+  background: rgba(21, 128, 61, 0.24);
+}
+
+.support-page__ticket-list {
+  display: grid;
+  gap: 12px;
+}
+
+.support-page__ticket-card {
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(110, 236, 229, 0.18);
+  background: rgba(7, 24, 45, 0.72);
+}
+
+.support-page__ticket-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.support-page__ticket-top strong {
+  font-size: 1rem;
+}
+
+.support-page__status {
+  border-radius: 999px;
+  padding: 0.28rem 0.72rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.support-page__status--open { background: rgba(59, 130, 246, 0.18); color: #a5d8ff; }
+.support-page__status--in_progress { background: rgba(245, 158, 11, 0.18); color: #ffd59e; }
+.support-page__status--waiting_on_user { background: rgba(168, 85, 247, 0.18); color: #dfb9ff; }
+.support-page__status--resolved { background: rgba(34, 197, 94, 0.18); color: #b6f0c0; }
+.support-page__status--closed { background: rgba(148, 163, 184, 0.18); color: #d2dae7; }
+
+.support-page__ticket-description {
+  margin: 10px 0 0;
+  line-height: 1.6;
+}
+
+.support-page__ticket-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0 0;
+}
+
+.support-page__ticket-meta div {
+  border-radius: 12px;
+  border: 1px solid rgba(103, 180, 255, 0.22);
+  background: rgba(4, 12, 25, 0.5);
+  padding: 10px 12px;
+}
+
+.support-page__ticket-meta dt {
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.68rem;
+}
+
+.support-page__ticket-meta dd {
+  margin: 0;
+  color: #f2fcff;
+  font-weight: 600;
+}
+
+.support-page__resolution {
+  margin-top: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(74, 222, 128, 0.35);
+  background: rgba(21, 128, 61, 0.16);
+  padding: 10px 12px;
+}
+
+.support-page__resolution span {
+  display: block;
+  color: #bbf7d0;
+  margin-bottom: 4px;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.support-page__resolution p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.support-page__hint {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.support-page__footer-note {
+  margin-top: 12px;
+  padding: 16px 18px;
+}
+
+@media (max-width: 960px) {
+  .support-page__layout,
+  .support-page__stats,
+  .support-page__grid,
+  .support-page__ticket-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .support-page__hero {
+    flex-direction: column;
+  }
+}

@@ -1,10 +1,17 @@
 # app/__init__.py
 
-from flask import Flask
+import os
+
+from flask import Flask, request
+from flask_cors import CORS
+from dotenv import load_dotenv
 
 from flask_sqlalchemy import SQLAlchemy
 from flask_mail import Mail
 from flask_migrate import Migrate
+
+load_dotenv()
+
 from app.config import Config
 
 
@@ -20,6 +27,28 @@ def create_app():
     app = Flask(__name__)
     # Load configuration from Config class
     app.config.from_object(Config)
+
+    # Allow browser calls from the local Vite frontend while keeping cookies enabled.
+    configured_origins = os.getenv('FRONTEND_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173')
+    allowed_origins = [origin.strip() for origin in configured_origins.split(',') if origin.strip()]
+    CORS(
+        app,
+        resources={r"/.*": {"origins": allowed_origins}},
+        supports_credentials=True,
+        methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["Content-Type", "Authorization"],
+    )
+
+    @app.after_request
+    def add_cors_headers(response):
+        origin = request.headers.get('Origin')
+        if origin and origin in allowed_origins:
+            response.headers['Access-Control-Allow-Origin'] = origin
+            response.headers['Vary'] = 'Origin'
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, PATCH, DELETE, OPTIONS'
+        return response
 
     
 

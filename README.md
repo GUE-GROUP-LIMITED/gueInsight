@@ -134,6 +134,18 @@ GueInsight follows a modular architecture:
    ```
 5. Access the app at `http://127.0.0.1:5000/`.
 
+## Local Configuration
+
+Create a `.env` file in the repository root based on `.env.example` and set the trusted staff owner account:
+
+```bash
+SUPER_ADMIN_EMAIL=you@yourcompany.com
+```
+
+This account is the only one that can view and manage other admin accounts. Regular admins only see subscriber accounts.
+
+If you want to use a different local database or frontend origin, set `SQLALCHEMY_DATABASE_URI` and `FRONTEND_ORIGINS` in the same `.env` file.
+
 ---
 
 ## License

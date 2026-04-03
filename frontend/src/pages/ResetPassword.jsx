@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import './AuthPricing.css';
 
 const ResetPassword = () => {
+  const location = useLocation();
+  const isAdminFlow = location.pathname.startsWith('/admin');
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -19,21 +23,38 @@ const ResetPassword = () => {
   };
 
   return (
-    <div>
-      <h2>Reset Password</h2>
-      <form onSubmit={handleSubmit}>
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          required
-        />
-        <button type="submit" disabled={loading}>{loading ? 'Sending...' : 'Send Reset Email'}</button>
-        {error && <div style={{ color: 'red' }}>{error}</div>}
-        {success && <div style={{ color: 'green' }}>{success}</div>}
-      </form>
-    </div>
+    <main className="auth-pricing-page auth-pricing-page--auth">
+      <section className="auth-pricing-card">
+        <div className="auth-pricing-card__head">
+          <p className="auth-pricing-card__eyebrow">{isAdminFlow ? 'Staff Access' : 'Credential Recovery'}</p>
+          <h1>{isAdminFlow ? 'Change your password' : 'Reset your password'}</h1>
+          <p>
+            {isAdminFlow
+              ? 'Enter your account email and we will send a secure staff password reset link.'
+              : 'Enter your account email and we will send a secure reset link.'}
+          </p>
+        </div>
+
+        <form className="auth-pricing-form" onSubmit={handleSubmit}>
+          <label htmlFor="reset-email">Email</label>
+          <input
+            id="reset-email"
+            type="email"
+            placeholder="you@company.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+
+          <button type="submit" disabled={loading}>
+            {loading ? 'Sending...' : isAdminFlow ? 'Send staff reset link' : 'Send reset email'}
+          </button>
+
+          {error ? <p className="auth-pricing-message auth-pricing-message--error">{error}</p> : null}
+          {success ? <p className="auth-pricing-message auth-pricing-message--success">{success}</p> : null}
+        </form>
+      </section>
+    </main>
   );
 };
 
