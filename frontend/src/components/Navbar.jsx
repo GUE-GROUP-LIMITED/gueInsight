@@ -1,4 +1,4 @@
-import React, { useContext, useMemo, useState } from 'react';
+import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import './Navbar.css';
@@ -6,6 +6,8 @@ import './Navbar.css';
 const Navbar = () => {
   const { user, logout } = useContext(AuthContext);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const accountMenuRef = useRef(null);
   const homePath = user?.role === 'admin' ? '/admin' : user ? '/dashboard' : '/';
 
   const navLinks = useMemo(() => {
@@ -36,9 +38,24 @@ const Navbar = () => {
   const handleLogout = async () => {
     await logout();
     setMenuOpen(false);
+    setAccountMenuOpen(false);
   };
 
-  const closeMenu = () => setMenuOpen(false);
+  const closeMenu = () => {
+    setMenuOpen(false);
+    setAccountMenuOpen(false);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!accountMenuRef.current?.contains(event.target)) {
+        setAccountMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const roleLabel = user?.role === 'admin' ? 'Staff' : user ? 'Subscriber' : 'Guest';
   const firstName = user?.first_name || user?.user_metadata?.first_name || '';
@@ -102,9 +119,53 @@ const Navbar = () => {
                 </NavLink>
               </>
             ) : (
-              <button type="button" className="app-navbar__logout" onClick={handleLogout}>
-                Logout
-              </button>
+              <div className="app-navbar__account" ref={accountMenuRef}>
+                <button
+                  type="button"
+                  className="app-navbar__account-trigger"
+                  onClick={() => setAccountMenuOpen((prev) => !prev)}
+                  aria-expanded={accountMenuOpen}
+                  aria-haspopup="menu"
+                >
+                  {displayName || 'Account'}
+                </button>
+                {accountMenuOpen ? (
+                  <div className="app-navbar__account-menu" role="menu">
+                    <NavLink
+                      to="/support"
+                      className="app-navbar__account-item"
+                      role="menuitem"
+                      onClick={closeMenu}
+                    >
+                      Open support
+                    </NavLink>
+                    <NavLink
+                      to="/subscription"
+                      className="app-navbar__account-item"
+                      role="menuitem"
+                      onClick={closeMenu}
+                    >
+                      Manage plan
+                    </NavLink>
+                    <NavLink
+                      to="/profile"
+                      className="app-navbar__account-item"
+                      role="menuitem"
+                      onClick={closeMenu}
+                    >
+                      Account settings
+                    </NavLink>
+                    <button
+                      type="button"
+                      className="app-navbar__account-item app-navbar__account-item--danger"
+                      onClick={handleLogout}
+                      role="menuitem"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                ) : null}
+              </div>
             )}
           </div>
         </div>

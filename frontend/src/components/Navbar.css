@@ -128,14 +128,55 @@
   gap: 10px;
 }
 
-.app-navbar__logout {
-  border: none;
+.app-navbar__account {
+  position: relative;
+}
+
+.app-navbar__account-trigger {
+  border: 1px solid rgba(125, 211, 252, 0.28);
   border-radius: 999px;
   padding: 0.54rem 0.98rem;
   background: linear-gradient(135deg, #67e8f9, #60a5fa);
   color: #082032;
   font-weight: 700;
   cursor: pointer;
+}
+
+.app-navbar__account-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  min-width: 180px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 12px;
+  background: rgba(2, 6, 23, 0.98);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.35);
+  padding: 6px;
+  z-index: 20;
+  display: grid;
+  gap: 4px;
+}
+
+.app-navbar__account-item {
+  border: none;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  padding: 0.52rem 0.6rem;
+  border-radius: 8px;
+  color: #dbeafe;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.app-navbar__account-item:hover {
+  background: rgba(14, 116, 144, 0.2);
+}
+
+.app-navbar__account-item--danger {
+  color: #fecaca;
 }
 
 .app-navbar__toggle {
@@ -199,8 +240,13 @@
   }
 
   .app-navbar__links a,
-  .app-navbar__logout {
+  .app-navbar__account-trigger {
     text-align: center;
+  }
+
+  .app-navbar__account-menu {
+    right: auto;
+    left: 0;
   }
 
   .app-navbar__email {

@@ -277,11 +277,97 @@
   background: rgba(8, 45, 62, 0.8);
 }
 
+.user-dashboard__transactions-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.user-dashboard__transactions-controls label {
+  display: grid;
+  gap: 6px;
+}
+
+.user-dashboard__transactions-controls span {
+  color: #b8deea;
+  font-size: 0.82rem;
+}
+
+.user-dashboard__transactions-controls select {
+  border: 1px solid rgba(105, 184, 255, 0.34);
+  border-radius: 10px;
+  background: rgba(6, 24, 49, 0.7);
+  color: #f5feff;
+  padding: 0.62rem 0.72rem;
+}
+
+.user-dashboard__transactions-table-wrap {
+  overflow-x: auto;
+}
+
+.user-dashboard__transactions-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid rgba(105, 184, 255, 0.3);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.user-dashboard__transactions-table th,
+.user-dashboard__transactions-table td {
+  text-align: left;
+  padding: 10px;
+  border-bottom: 1px solid rgba(105, 184, 255, 0.2);
+  color: #d8f7ff;
+  white-space: nowrap;
+}
+
+.user-dashboard__transactions-table th {
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #9ed0e2;
+}
+
+.user-dashboard__transactions-table tbody tr {
+  cursor: pointer;
+}
+
+.user-dashboard__transactions-table tbody tr:hover {
+  background: rgba(9, 37, 58, 0.72);
+}
+
+.user-dashboard__transactions-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.user-dashboard__transactions-pagination span {
+  color: #b6dbe7;
+  font-size: 0.84rem;
+}
+
+.user-dashboard__transaction-detail {
+  margin-top: 10px;
+  border: 1px solid rgba(105, 184, 255, 0.3);
+  border-radius: 12px;
+  background: rgba(7, 27, 48, 0.72);
+  padding: 10px;
+}
+
 @media (max-width: 920px) {
   .user-dashboard__hero,
   .user-dashboard__stats,
   .user-dashboard__grid,
   .user-dashboard__action-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .user-dashboard__transactions-controls {
     grid-template-columns: 1fr;
   }
 
