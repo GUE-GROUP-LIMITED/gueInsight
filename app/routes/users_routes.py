@@ -4,7 +4,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user, login_user, logout_user
 import stripe
 from datetime import datetime, timedelta
-from app.models import User, Subscription, UserRole, db, Alert, AlertRule
+from app.models import User, Subscription, UserRole, SupportTicket, SupportTicketStatus, db, Alert, AlertRule
 from app.forms import LoginForm, ResetPasswordForm, SignupForm, SubmitCloudLinkForm, SubmitTextForm, UploadFileForm, LogoutForm, ProfileForm, AlertRuleForm
 from app.subscription_service import SubscriptionService
 from app.src.analysis.file_analysis import analyze_text_for_security, analyze_cloud_link
@@ -27,6 +27,79 @@ from sqlalchemy import inspect, text
 users_bp = Blueprint('users', __name__)
 
 _USER_SCHEMA_SYNCED = False
+
+PLAN_ANALYSIS_LIMITS = {
+    'free': {
+        'max_file_size_mb': 2,
+        'max_text_chars': 1000,
+        'max_items_per_analysis': 5,
+        'max_url_length': 300,
+    },
+    'premium_individual': {
+        'max_file_size_mb': 8,
+        'max_text_chars': 10000,
+        'max_items_per_analysis': 30,
+        'max_url_length': 1200,
+    },
+    'premium_small_business': {
+        'max_file_size_mb': 16,
+        'max_text_chars': 50000,
+        'max_items_per_analysis': 150,
+        'max_url_length': 2500,
+    },
+    'premium_large_business': {
+        'max_file_size_mb': 16,
+        'max_text_chars': 150000,
+        'max_items_per_analysis': 500,
+        'max_url_length': 4000,
+    },
+}
+
+
+def _normalize_plan_key(plan_like):
+    value = str(plan_like or 'free').strip().lower()
+    if value in {'starter', 'premium'}:
+        return 'premium_individual'
+    if value == 'growth':
+        return 'premium_small_business'
+    if value == 'scale':
+        return 'premium_large_business'
+    if value in PLAN_ANALYSIS_LIMITS:
+        return value
+    return 'free'
+
+
+def _get_latest_subscription(user_id):
+    return (
+        Subscription.query
+        .filter_by(user_id=user_id)
+        .order_by(Subscription.end_date.desc())
+        .first()
+    )
+
+
+def _get_active_plan_key(user_id):
+    latest_subscription = _get_latest_subscription(user_id)
+    if not latest_subscription:
+        return 'free'
+
+    now = datetime.datetime.utcnow()
+    if latest_subscription.end_date and latest_subscription.end_date < now:
+        return 'free'
+    return _normalize_plan_key(getattr(latest_subscription, 'plan', None))
+
+
+def _get_analysis_limits_for_plan(plan_key):
+    normalized = _normalize_plan_key(plan_key)
+    return PLAN_ANALYSIS_LIMITS.get(normalized, PLAN_ANALYSIS_LIMITS['free'])
+
+
+def _count_analysis_items(input_data):
+    separators = ['\n', ',', ';', '\t']
+    normalized = str(input_data or '')
+    for separator in separators:
+        normalized = normalized.replace(separator, ' ')
+    return len([chunk for chunk in normalized.split(' ') if chunk.strip()])
 
 
 def _sync_user_profile_columns():
@@ -177,6 +250,8 @@ def upload_file():
     subscription_service = SubscriptionService(current_user.id)
     subscription_status = subscription_service.get_subscription_status(current_user)
     subscription = subscription_service.subscription
+    plan_key = _get_active_plan_key(current_user.id)
+    analysis_limits = _get_analysis_limits_for_plan(plan_key)
 
     # Check the subscription status and upload limits
     if subscription_status == "Inactive" or subscription_status == "Expired":
@@ -220,9 +295,15 @@ def upload_file():
             flash("Invalid file type. Please upload a valid file.", "danger")
             return redirect(url_for('users.user_dashboard'))
 
-        # Check if the file size is within the allowed limit
-        if len(uploaded_file.read()) > Config.MAX_CONTENT_LENGTH:
-            flash("File size exceeds the 16MB limit. Please upload a smaller file.", "danger")
+        # Check if the file size is within both global and plan-specific limits.
+        file_size_bytes = len(uploaded_file.read())
+        max_plan_file_size_bytes = analysis_limits['max_file_size_mb'] * 1024 * 1024
+        max_allowed_bytes = min(Config.MAX_CONTENT_LENGTH, max_plan_file_size_bytes)
+        if file_size_bytes > max_allowed_bytes:
+            flash(
+                f"File exceeds your plan limit of {analysis_limits['max_file_size_mb']}MB per analysis.",
+                "danger",
+            )
             return redirect(url_for('users.user_dashboard'))
 
         # Reset the file pointer after checking the size
@@ -271,6 +352,13 @@ def upload_file():
 
     elif url_submission_form.validate_on_submit() and url_submission_form.cloud_link.data:
         cloud_link = url_submission_form.cloud_link.data
+        if len(cloud_link) > analysis_limits['max_url_length']:
+            return jsonify({
+                'status': 'error',
+                'message': (
+                    f"URL input exceeds your plan limit of {analysis_limits['max_url_length']} characters per analysis."
+                )
+            }), 400
         try:
             # Threat intelligence enrichment
             from app.integrations.rapidapi import enrich_url
@@ -292,6 +380,25 @@ def upload_file():
 
     elif text_submission_form.validate_on_submit() and text_submission_form.pasted_input.data:
         input_data = text_submission_form.pasted_input.data
+        input_length = len(input_data)
+        analysis_item_count = _count_analysis_items(input_data)
+
+        if input_length > analysis_limits['max_text_chars']:
+            return jsonify({
+                'status': 'error',
+                'message': (
+                    f"Text input exceeds your plan limit of {analysis_limits['max_text_chars']} characters per analysis."
+                )
+            }), 400
+
+        if analysis_item_count > analysis_limits['max_items_per_analysis']:
+            return jsonify({
+                'status': 'error',
+                'message': (
+                    f"This request has {analysis_item_count} items, but your plan allows "
+                    f"up to {analysis_limits['max_items_per_analysis']} items per analysis."
+                )
+            }), 400
         try:
             # Threat intelligence enrichment (try as hash, IP, or URL)
             from app.integrations.rapidapi import enrich_event
@@ -437,13 +544,10 @@ def _serialize_auth_user(user):
     _sync_user_profile_columns()
     role = getattr(user, 'role', None)
     role_value = getattr(role, 'value', role)
-    latest_subscription = (
-        Subscription.query
-        .filter_by(user_id=user.id)
-        .order_by(Subscription.end_date.desc())
-        .first()
-    )
-    current_plan = getattr(latest_subscription, 'plan', None) or 'Free'
+    latest_subscription = _get_latest_subscription(user.id)
+    active_plan_key = _get_active_plan_key(user.id)
+    current_plan = active_plan_key if active_plan_key != 'free' else 'Free'
+    analysis_limits = _get_analysis_limits_for_plan(active_plan_key)
     return {
         'id': user.id,
         'email': user.email,
@@ -457,6 +561,7 @@ def _serialize_auth_user(user):
         'newsletter_opt_in': bool(getattr(user, 'newsletter_opt_in', False)),
         'role': role_value,
         'current_plan': current_plan,
+        'analysis_limits': analysis_limits,
         'plan_expires_at': latest_subscription.end_date.isoformat() if latest_subscription and latest_subscription.end_date else None,
     }
 
@@ -570,3 +675,100 @@ def auth_update_profile():
     db.session.commit()
 
     return {'message': 'Profile updated.', 'user': _serialize_auth_user(current_user)}, 200
+
+
+@users_bp.route('/auth/subscription/upgrade', methods=['POST'])
+@login_required
+def auth_upgrade_subscription():
+    payload = request.get_json(silent=True) or request.form
+    requested_plan = str(payload.get('plan') or '').strip().lower()
+
+    plan_aliases = {
+        'starter': 'premium_individual',
+        'growth': 'premium_small_business',
+        'scale': 'premium_large_business',
+        'premium': 'premium_individual',
+    }
+    normalized_plan = plan_aliases.get(requested_plan, requested_plan)
+    allowed_plans = {'premium_individual', 'premium_small_business', 'premium_large_business'}
+
+    if normalized_plan not in allowed_plans:
+        return {
+            'error': 'Invalid plan. Use premium_individual, premium_small_business, or premium_large_business.'
+        }, 400
+
+    now = datetime.datetime.utcnow()
+    current_subscription = (
+        Subscription.query
+        .filter_by(user_id=current_user.id)
+        .order_by(Subscription.end_date.desc())
+        .first()
+    )
+
+    current_plan = str(getattr(current_subscription, 'plan', '') or '').lower()
+    if current_subscription and current_plan == normalized_plan and current_subscription.end_date and current_subscription.end_date >= now:
+        return {'error': 'You are already on this active plan.'}, 400
+
+    start_date = now
+    if current_subscription and current_subscription.end_date and current_subscription.end_date > now:
+        start_date = current_subscription.end_date
+
+    new_subscription = Subscription(
+        user_id=current_user.id,
+        plan=normalized_plan,
+        start_date=start_date,
+        end_date=start_date + timedelta(days=30),
+    )
+    db.session.add(new_subscription)
+    db.session.commit()
+
+    return {
+        'message': 'Plan upgraded successfully.',
+        'subscription': {
+            'id': new_subscription.id,
+            'plan': new_subscription.plan,
+            'start_date': new_subscription.start_date.isoformat() if new_subscription.start_date else None,
+            'end_date': new_subscription.end_date.isoformat() if new_subscription.end_date else None,
+        },
+        'user': _serialize_auth_user(current_user),
+    }, 200
+
+
+@users_bp.route('/support_tickets', methods=['GET', 'POST'])
+@login_required
+def support_tickets():
+    if request.method == 'GET':
+        tickets = (
+            SupportTicket.query
+            .filter_by(user_id=current_user.id)
+            .order_by(SupportTicket.created_at.desc())
+            .all()
+        )
+        return {
+            'tickets': [ticket.to_dict() for ticket in tickets],
+        }, 200
+
+    payload = request.get_json(silent=True) or request.form
+    subject = (payload.get('subject') or '').strip()
+    description = (payload.get('description') or '').strip()
+    category = (payload.get('category') or '').strip() or None
+    priority = (payload.get('priority') or 'medium').strip().lower()
+
+    if not subject or not description:
+        return {'error': 'Subject and description are required.'}, 400
+
+    if priority not in {'low', 'medium', 'high', 'urgent'}:
+        return {'error': 'Priority must be low, medium, high, or urgent.'}, 400
+
+    ticket = SupportTicket(
+        user_id=current_user.id,
+        subject=subject,
+        description=description,
+        category=category,
+        priority=priority,
+        status=SupportTicketStatus.OPEN,
+    )
+    db.session.add(ticket)
+    db.session.commit()
+
+    return {'message': 'Support ticket created.', 'ticket': ticket.to_dict()}, 201

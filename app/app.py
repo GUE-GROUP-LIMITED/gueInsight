@@ -34,6 +34,10 @@ def get_frontend_dist_dir():
 def serve_frontend_index(status_code=200):
     response = send_from_directory(get_frontend_dist_dir(), 'index.html')
     response.status_code = status_code
+    # Avoid stale SPA shell caching during local updates.
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
     return response
 
 # Serve static assets for React

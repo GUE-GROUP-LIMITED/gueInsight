@@ -21,6 +21,7 @@ const Navbar = () => {
       return [
         { to: homePath, label: 'Home' },
         { to: '/dashboard', label: 'Dashboard' },
+        { to: '/support', label: 'Support' },
         { to: '/profile', label: 'Profile' },
         { to: '/subscription', label: 'Plans' },
       ];

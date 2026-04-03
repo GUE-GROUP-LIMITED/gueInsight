@@ -1,4 +1,5 @@
 import { useContext, useEffect, useMemo, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { api } from '../services/api';
 import './Profile.css';
@@ -13,6 +14,7 @@ const useCaseOptions = [
 
 const Profile = () => {
 	const { user, setUser, loading } = useContext(AuthContext);
+	const location = useLocation();
 	const [submitting, setSubmitting] = useState(false);
 	const [message, setMessage] = useState('');
 	const [error, setError] = useState('');
@@ -25,6 +27,8 @@ const Profile = () => {
 		primary_use_case: useCaseOptions[0],
 		newsletter_opt_in: false,
 	});
+	const isAdminProfile = location.pathname.startsWith('/admin');
+	const backLinkHref = isAdminProfile ? '/admin' : '/dashboard';
 
 	useEffect(() => {
 		if (!user) return;
@@ -78,9 +82,18 @@ const Profile = () => {
 	return (
 		<main className="profile-page">
 			<section className="profile-page__header">
-				<p className="profile-page__eyebrow">Account</p>
-				<h1>Profile settings</h1>
-				<p>View your account details and update the fields your team can manage.</p>
+				<div className="profile-page__header-row">
+					<div>
+						<p className="profile-page__eyebrow">Operator Identity</p>
+						<h1>Profile control panel</h1>
+						<p>Review immutable account attributes and manage team-editable profile fields.</p>
+					</div>
+					{user ? (
+						<Link to={backLinkHref} className="profile-page__back-link">
+							Back to dashboard
+						</Link>
+					) : null}
+				</div>
 			</section>
 
 			<section className="profile-page__layout">

@@ -1,5 +1,5 @@
 import React, { useContext, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { AuthContext, normalizeRole } from '../context/AuthContext';
 import './AdminLogin.css';
@@ -7,7 +7,6 @@ import './AdminLogin.css';
 const AdminLogin = () => {
   const navigate = useNavigate();
   const { setUser } = useContext(AuthContext);
-  const adminSignupUrl = `${api.defaults.baseURL}/admin_signup`;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -54,18 +53,10 @@ const AdminLogin = () => {
       <section className="admin-login__card">
         <div className="admin-login__brand-row">
           <div>
-            <p className="admin-login__eyebrow">Staff access</p>
-            <h1>Admin login</h1>
+            <p className="admin-login__eyebrow">Staff Command Access</p>
+            <h1>Admin control login</h1>
           </div>
-          <Link to="/" className="admin-login__home-link">
-            Home
-          </Link>
         </div>
-
-        <p className="admin-login__lead">
-          Sign in with your company staff account. Subscriber accounts stay on the user side of the product, even when
-          they manage multiple sub-users underneath them.
-        </p>
 
         <form className="admin-login__form" onSubmit={handleSubmit}>
           <label className="admin-login__field">
@@ -98,11 +89,6 @@ const AdminLogin = () => {
             {loading ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
-
-        <div className="admin-login__footer">
-          <Link to="/login">User login</Link>
-          <a href={adminSignupUrl}>Create staff account</a>
-        </div>
       </section>
     </div>
   );

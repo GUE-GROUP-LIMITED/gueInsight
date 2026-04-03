@@ -10,9 +10,13 @@ const ProtectedRoute = ({ children, adminOnly, userOnly }) => {
   }
 
   const role = normalizeRole(user?.role || user?.app_metadata?.role || user?.user_metadata?.role);
-  if (!user) return <Navigate to="/login" />;
-  if (adminOnly && role !== 'admin') return <Navigate to="/dashboard" />;
-  if (userOnly && role === 'admin') return <Navigate to="/admin" />;
+  if (!user) {
+    const loginPath = adminOnly ? '/admin/login' : '/login';
+    return <Navigate to={loginPath} replace />;
+  }
+
+  if (adminOnly && role !== 'admin') return <Navigate to="/dashboard" replace />;
+  if (userOnly && role === 'admin') return <Navigate to="/admin" replace />;
   return children;
 };
 export default ProtectedRoute;

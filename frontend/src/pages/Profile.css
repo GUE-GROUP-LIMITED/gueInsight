@@ -1,30 +1,60 @@
 .profile-page {
-  width: min(1100px, calc(100vw - 32px));
+  --panel: rgba(6, 18, 35, 0.84);
+  --line: rgba(110, 236, 229, 0.34);
+  --text-main: #e0f9ff;
+  --text-soft: #96bbca;
+  --accent: #6eece5;
+  --accent-2: #67b4ff;
+  width: min(1100px, calc(100vw - 26px));
   margin: 0 auto;
-  padding: 28px 0 52px;
-  color: #e2e8f0;
+  padding: 22px 0 50px;
+  color: var(--text-main);
+  position: relative;
+  overflow: hidden;
 }
 
 .profile-page__header,
 .profile-page__card {
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.94), rgba(15, 23, 42, 0.82));
-  box-shadow: 0 20px 50px rgba(2, 6, 23, 0.3);
+  border: 1px solid var(--line);
+  background: linear-gradient(150deg, var(--panel), rgba(4, 12, 25, 0.92));
+  box-shadow: 0 24px 52px rgba(0, 0, 0, 0.42);
   backdrop-filter: blur(14px);
-  border-radius: 24px;
+  border-radius: 18px;
 }
 
 .profile-page__header {
-  padding: 24px;
-  margin-bottom: 16px;
+  padding: 22px;
+  margin-bottom: 12px;
+}
+
+.profile-page__header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
 }
 
 .profile-page__eyebrow {
   margin: 0 0 10px;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: #7dd3fc;
-  font-size: 0.74rem;
+  color: var(--accent-2);
+  font-size: 0.72rem;
+}
+
+.profile-page__back-link {
+  flex: 0 0 auto;
+  text-decoration: none;
+  color: #0b1d2f;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border-radius: 999px;
+  padding: 0.8rem 1rem;
+  font-weight: 700;
+  align-self: center;
+}
+
+.profile-page__back-link:hover {
+  filter: brightness(1.04);
 }
 
 .profile-page h1,
@@ -36,11 +66,11 @@
 .profile-page__layout {
   display: grid;
   grid-template-columns: minmax(260px, 0.9fr) minmax(0, 1.5fr);
-  gap: 16px;
+  gap: 12px;
 }
 
 .profile-page__card {
-  padding: 22px;
+  padding: 18px;
 }
 
 .profile-page__meta-grid {
@@ -49,15 +79,15 @@
 }
 
 .profile-page__meta-item {
-  border-radius: 14px;
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 12px;
+  border: 1px solid rgba(103, 180, 255, 0.28);
   padding: 10px 12px;
-  background: rgba(15, 23, 42, 0.5);
+  background: rgba(7, 24, 45, 0.7);
 }
 
 .profile-page__meta-item span {
   display: block;
-  color: #94a3b8;
+  color: var(--text-soft);
   font-size: 0.82rem;
   margin-bottom: 4px;
 }
@@ -79,25 +109,25 @@
 }
 
 .profile-page__form span {
-  color: #cbd5e1;
+  color: #c4e7f4;
   font-size: 0.9rem;
 }
 
 .profile-page__form input,
 .profile-page__form select {
   width: 100%;
-  border: 1px solid rgba(148, 163, 184, 0.3);
-  border-radius: 12px;
-  background: rgba(15, 23, 42, 0.6);
-  color: #f8fafc;
+  border: 1px solid rgba(103, 180, 255, 0.35);
+  border-radius: 10px;
+  background: rgba(7, 24, 45, 0.72);
+  color: #f2fcff;
   padding: 0.78rem 0.88rem;
 }
 
 .profile-page__form input:focus,
 .profile-page__form select:focus {
   outline: none;
-  border-color: rgba(56, 189, 248, 0.9);
-  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.16);
+  border-color: rgba(110, 236, 229, 0.95);
+  box-shadow: 0 0 0 3px rgba(110, 236, 229, 0.16);
 }
 
 .profile-page__checkbox {
@@ -135,8 +165,8 @@
   border-radius: 999px;
   padding: 0.8rem 1rem;
   font-weight: 700;
-  color: #071220;
-  background: linear-gradient(135deg, #67e8f9, #60a5fa);
+  color: #021319;
+  background: linear-gradient(132deg, var(--accent), var(--accent-2));
   cursor: pointer;
 }
 
@@ -149,5 +179,13 @@
   .profile-page__layout,
   .profile-page__grid {
     grid-template-columns: 1fr;
+  }
+
+  .profile-page__header-row {
+    flex-direction: column;
+  }
+
+  .profile-page__back-link {
+    align-self: flex-start;
   }
 }
