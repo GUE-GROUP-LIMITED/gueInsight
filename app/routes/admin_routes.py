@@ -1,6 +1,6 @@
 
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import Blueprint, request, redirect, url_for, flash, abort
 from flask_login import login_required, current_user, login_user, logout_user
 from werkzeug.security import generate_password_hash
@@ -14,6 +14,10 @@ from app.utils.decorators import admin_required
 
 # Blueprint for admin routes
 admin_bp = Blueprint('admin', __name__)
+
+
+def _utc_now():
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 def _is_admin(user):
@@ -448,7 +452,7 @@ def admin_user_detail(user_id):
         return {"error": "Only super admin can view other admin accounts."}, 403
 
     if request.method == 'GET':
-        now = datetime.utcnow()
+        now = _utc_now()
         recent_logs = (
             Logs.query
             .filter_by(user_id=user.id)
@@ -600,20 +604,20 @@ def admin_support_ticket_detail(ticket_id):
         ticket.status = status_lookup[status_value]
         if ticket.attended_by_id is None and status_lookup[status_value] != SupportTicketStatus.OPEN:
             ticket.attended_by_id = current_user.id
-            ticket.attended_at = ticket.attended_at or datetime.utcnow()
+            ticket.attended_at = ticket.attended_at or _utc_now()
         if status_lookup[status_value] in {SupportTicketStatus.RESOLVED, SupportTicketStatus.CLOSED}:
             ticket.attended_by_id = ticket.attended_by_id or current_user.id
-            ticket.attended_at = ticket.attended_at or datetime.utcnow()
-            ticket.resolved_at = datetime.utcnow()
+            ticket.attended_at = ticket.attended_at or _utc_now()
+            ticket.resolved_at = _utc_now()
             if status_lookup[status_value] == SupportTicketStatus.CLOSED:
-                ticket.closed_at = datetime.utcnow()
+                ticket.closed_at = _utc_now()
         updates_made = True
 
     if 'resolution_summary' in payload:
         ticket.resolution_summary = (payload.get('resolution_summary') or '').strip() or None
         if ticket.resolution_summary:
             ticket.attended_by_id = ticket.attended_by_id or current_user.id
-            ticket.attended_at = ticket.attended_at or datetime.utcnow()
+            ticket.attended_at = ticket.attended_at or _utc_now()
         updates_made = True
 
     if not updates_made:
@@ -669,7 +673,7 @@ def admin_update_deletion_request(request_id):
     deletion_request = DataDeletionRequest.query.get_or_404(request_id)
     deletion_request.status = new_status
     if new_status == 'processed':
-        deletion_request.processed_at = datetime.utcnow()
+        deletion_request.processed_at = _utc_now()
         deletion_request.processed_by_user_id = current_user.id
 
     db.session.commit()

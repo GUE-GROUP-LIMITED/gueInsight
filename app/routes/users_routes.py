@@ -51,6 +51,11 @@ _LOGIN_RATE_CACHE = {}
 LOGIN_MAX_ATTEMPTS = 8
 LOGIN_WINDOW_SECONDS = 300
 
+
+def _utc_now():
+    return datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
+
+
 PLAN_ANALYSIS_LIMITS = {
     'free': {
         'max_file_size_mb': 2,
@@ -106,7 +111,7 @@ def _get_active_plan_key(user_id):
     if not latest_subscription:
         return 'free'
 
-    now = datetime.datetime.utcnow()
+    now = _utc_now()
     if latest_subscription.end_date and latest_subscription.end_date < now:
         return 'free'
     return _normalize_plan_key(getattr(latest_subscription, 'plan', None))
@@ -187,7 +192,7 @@ def _log_security_event(event_type, severity='info', user_id=None, details=None)
 
 
 def _is_login_rate_limited(identifier):
-    now = int(datetime.datetime.utcnow().timestamp())
+    now = int(_utc_now().timestamp())
     window = now // LOGIN_WINDOW_SECONDS
     key = f"{identifier}:{window}"
     attempts = _LOGIN_RATE_CACHE.get(key, 0)
@@ -387,7 +392,7 @@ def upload_file():
     # Handle File Upload
     if file_upload_form.validate_on_submit() and file_upload_form.file.data:
         uploaded_file = file_upload_form.file.data
-        file_analysis_started_at = datetime.datetime.utcnow()
+        file_analysis_started_at = _utc_now()
 
         # Check the file type
         allowed_extensions = Config.ALLOWED_EXTENSIONS  # Get allowed file types from config
@@ -403,7 +408,7 @@ def upload_file():
                 items_count=1,
                 error_message='Invalid file type.',
                 created_at=file_analysis_started_at,
-                completed_at=datetime.datetime.utcnow(),
+                completed_at=_utc_now(),
             )
             db.session.add(file_tx)
             db.session.commit()
@@ -425,7 +430,7 @@ def upload_file():
                 input_size_bytes=file_size_bytes,
                 error_message='File exceeds plan limit.',
                 created_at=file_analysis_started_at,
-                completed_at=datetime.datetime.utcnow(),
+                completed_at=_utc_now(),
             )
             db.session.add(file_tx)
             db.session.commit()
@@ -467,7 +472,7 @@ def upload_file():
            
             OutputHandler.save_to_user_dashboard(current_user.id, report_file, file_path)
 
-            completed_at = datetime.datetime.utcnow()
+            completed_at = _utc_now()
             file_tx = AnalysisTransaction(
                 user_id=current_user.id,
                 source_type='file',
@@ -507,7 +512,7 @@ def upload_file():
                 input_size_bytes=file_size_bytes,
                 error_message=str(e),
                 created_at=file_analysis_started_at,
-                completed_at=datetime.datetime.utcnow(),
+                completed_at=_utc_now(),
             )
             db.session.add(file_tx)
             db.session.commit()
@@ -519,7 +524,7 @@ def upload_file():
 
     elif url_submission_form.validate_on_submit() and url_submission_form.cloud_link.data:
         cloud_link = url_submission_form.cloud_link.data
-        url_analysis_started_at = datetime.datetime.utcnow()
+        url_analysis_started_at = _utc_now()
         if len(cloud_link) > analysis_limits['max_url_length']:
             url_tx = AnalysisTransaction(
                 user_id=current_user.id,
@@ -531,7 +536,7 @@ def upload_file():
                 input_size_bytes=len(cloud_link.encode('utf-8')),
                 error_message='URL exceeds plan input length limit.',
                 created_at=url_analysis_started_at,
-                completed_at=datetime.datetime.utcnow(),
+                completed_at=_utc_now(),
             )
             db.session.add(url_tx)
             db.session.commit()
@@ -548,7 +553,7 @@ def upload_file():
             # Process the cloud link (analysis)
             analysis_results = analyze_cloud_link(cloud_link)
 
-            completed_at = datetime.datetime.utcnow()
+            completed_at = _utc_now()
             url_tx = AnalysisTransaction(
                 user_id=current_user.id,
                 source_type='url',
@@ -589,7 +594,7 @@ def upload_file():
                 input_size_bytes=len(cloud_link.encode('utf-8')),
                 error_message=str(e),
                 created_at=url_analysis_started_at,
-                completed_at=datetime.datetime.utcnow(),
+                completed_at=_utc_now(),
             )
             db.session.add(url_tx)
             db.session.commit()
@@ -600,7 +605,7 @@ def upload_file():
 
     elif text_submission_form.validate_on_submit() and text_submission_form.pasted_input.data:
         input_data = text_submission_form.pasted_input.data
-        text_analysis_started_at = datetime.datetime.utcnow()
+        text_analysis_started_at = _utc_now()
         input_length = len(input_data)
         analysis_item_count = _count_analysis_items(input_data)
 
@@ -615,7 +620,7 @@ def upload_file():
                 input_size_bytes=len(input_data.encode('utf-8')),
                 error_message='Text exceeds plan input length limit.',
                 created_at=text_analysis_started_at,
-                completed_at=datetime.datetime.utcnow(),
+                completed_at=_utc_now(),
             )
             db.session.add(text_tx)
             db.session.commit()
@@ -637,7 +642,7 @@ def upload_file():
                 input_size_bytes=len(input_data.encode('utf-8')),
                 error_message='Input item count exceeds plan limit.',
                 created_at=text_analysis_started_at,
-                completed_at=datetime.datetime.utcnow(),
+                completed_at=_utc_now(),
             )
             db.session.add(text_tx)
             db.session.commit()
@@ -655,7 +660,7 @@ def upload_file():
             # Process the text/hash input (analysis)
             analysis_results = analyze_text_for_security(input_data)
 
-            completed_at = datetime.datetime.utcnow()
+            completed_at = _utc_now()
             text_tx = AnalysisTransaction(
                 user_id=current_user.id,
                 source_type='text',
@@ -696,7 +701,7 @@ def upload_file():
                 input_size_bytes=len(input_data.encode('utf-8')),
                 error_message=str(e),
                 created_at=text_analysis_started_at,
-                completed_at=datetime.datetime.utcnow(),
+                completed_at=_utc_now(),
             )
             db.session.add(text_tx)
             db.session.commit()
@@ -911,7 +916,7 @@ def auth_login():
         db.session.commit()
         return {'error': 'This account is deactivated.'}, 403
 
-    user.last_login_at = datetime.datetime.utcnow()
+    user.last_login_at = _utc_now()
     _log_security_event(
         event_type='auth.login.success',
         severity='info',
@@ -954,7 +959,7 @@ def auth_signup():
         return {'error': 'An account with this email already exists.'}, 400
 
     hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
-    now = datetime.datetime.utcnow()
+    now = _utc_now()
     policy_version = current_app.config.get('GDPR_POLICY_VERSION', '2026-04')
     terms_version = current_app.config.get('TERMS_VERSION', policy_version)
     new_user = User(
@@ -1035,7 +1040,7 @@ def auth_privacy_consent():
         }, 200
 
     payload = request.get_json(silent=True) or {}
-    now = datetime.datetime.utcnow()
+    now = _utc_now()
 
     if 'newsletter_opt_in' in payload:
         newsletter_opt_in = _parse_bool(payload.get('newsletter_opt_in'))
@@ -1071,11 +1076,11 @@ def auth_privacy_consent():
 @users_bp.route('/auth/privacy/export', methods=['POST'])
 @login_required
 def auth_privacy_export():
-    export_request = DataExportRequest(user_id=current_user.id, status='completed', requested_at=datetime.datetime.utcnow())
+    export_request = DataExportRequest(user_id=current_user.id, status='completed', requested_at=_utc_now())
     db.session.add(export_request)
 
     export_payload = {
-        'exported_at': datetime.datetime.utcnow().isoformat(),
+        'exported_at': _utc_now().isoformat(),
         'user': _serialize_auth_user(current_user),
         'preferences': current_user.preference.to_dict() if current_user.preference else None,
         'subscriptions': [
@@ -1132,7 +1137,7 @@ def auth_privacy_delete_request():
         user_id=current_user.id,
         reason=reason,
         status='pending',
-        requested_at=datetime.datetime.utcnow(),
+        requested_at=_utc_now(),
     )
     current_user.is_active = False
     db.session.add(deletion_request)
@@ -1262,7 +1267,7 @@ def auth_notifications_mark_read(notification_id):
         return {'error': 'Notification not found.'}, 404
 
     notification.is_read = True
-    notification.read_at = datetime.datetime.utcnow()
+    notification.read_at = _utc_now()
     db.session.commit()
 
     unread_count = UserNotification.query.filter_by(user_id=current_user.id, is_read=False).count()
@@ -1272,7 +1277,7 @@ def auth_notifications_mark_read(notification_id):
 @users_bp.route('/auth/notifications/read_all', methods=['POST'])
 @login_required
 def auth_notifications_mark_all_read():
-    now = datetime.datetime.utcnow()
+    now = _utc_now()
     notifications = UserNotification.query.filter_by(user_id=current_user.id, is_read=False).all()
     for notification in notifications:
         notification.is_read = True
@@ -1337,7 +1342,7 @@ def auth_upgrade_subscription():
             'error': 'Invalid plan. Use premium_individual, premium_small_business, or premium_large_business.'
         }, 400
 
-    now = datetime.datetime.utcnow()
+    now = _utc_now()
     current_subscription = (
         Subscription.query
         .filter_by(user_id=current_user.id)
