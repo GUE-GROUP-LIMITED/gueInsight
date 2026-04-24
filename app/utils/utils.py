@@ -16,7 +16,6 @@ from app.config import Config
 from flask import flash, redirect, url_for, current_app, abort
 from flask_login import current_user, login_required
 from flask_mail import Mail, Message
-from app import db  # Add this line to import the db object
 
 mail = Mail()
 
@@ -28,7 +27,7 @@ class OutputHandler:
     @staticmethod
     def fetch_user_results(user_id):
         """Fetch analysis results for a specific user."""
-        results_dir = '/Users/gabrielaloho/gueInsight/app/output/user_reports'
+        results_dir = os.path.join(current_app.instance_path, 'user_reports')
         user_results_file = os.path.join(results_dir, f'user_{user_id}_results.json')
 
         if os.path.exists(user_results_file):
@@ -39,22 +38,33 @@ class OutputHandler:
                 logging.error(f"Error decoding JSON for user {user_id}")
         return []
 
-class OutputHandler:
     @staticmethod
     def save_to_user_dashboard(user_id, report_file, file_path=None):
-        # Save the analysis results and report to a database or file system
-        report_path = f"reports/{user_id}_analysis_report.pdf"
-        
-        # Save the report path in the database for the user (e.g., adding it to the 'UserReports' table)
-        db.save_user_report(user_id, report_path)
+        results_dir = os.path.join(current_app.instance_path, 'user_reports')
+        os.makedirs(results_dir, exist_ok=True)
 
-        # Optionally, save the file in the file system
+        report_path = os.path.join(results_dir, f'user_{user_id}_analysis_report.pdf')
+
+        if hasattr(report_file, 'read'):
+            report_content = report_file.read()
+        elif isinstance(report_file, str):
+            report_content = report_file.encode('utf-8')
+        else:
+            report_content = report_file
+
         with open(report_path, 'wb') as file:
-            file.write(report_file)
-        
-        # Optionally, save other analysis details (visualization, etc.)
-        if file_path:
-            db.save_analysis(file_path)
+            file.write(report_content)
+
+        metadata_path = os.path.join(results_dir, f'user_{user_id}_results.json')
+        metadata = {
+            'user_id': user_id,
+            'report_path': report_path,
+            'source_file_path': file_path,
+        }
+        with open(metadata_path, 'w', encoding='utf-8') as json_file:
+            json.dump(metadata, json_file, indent=4)
+
+        return report_path
 
     @staticmethod
     def export_to_json(data, filename):
