@@ -1,0 +1,173 @@
+.admin-compliance-page {
+  min-height: 100vh;
+  background: #f4f7fb;
+  padding: 22px;
+  color: #344767;
+  display: grid;
+  gap: 18px;
+}
+
+.admin-compliance-page__header {
+  border-radius: 16px;
+  padding: 18px;
+  background: #ffffff;
+  border: 1px solid #dbe4f2;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.admin-compliance-page__eyebrow {
+  margin: 0 0 6px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  color: #5f7cbb;
+}
+
+.admin-compliance-page__header h1 {
+  margin: 0 0 8px;
+  font-size: clamp(1.4rem, 2vw, 1.9rem);
+}
+
+.admin-compliance-page__header p {
+  margin: 0;
+  color: #5a6b8d;
+}
+
+.admin-compliance-page__link {
+  text-decoration: none;
+  font-weight: 700;
+  color: #2f4f9d;
+  padding: 0.65rem 0.95rem;
+  border-radius: 999px;
+  border: 1px solid #c9d6ee;
+  background: #f8fbff;
+}
+
+.admin-compliance-page__stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-compliance-page__stats article {
+  border-radius: 14px;
+  padding: 14px;
+  background: #fff;
+  border: 1px solid #dbe4f2;
+}
+
+.admin-compliance-page__stats span {
+  display: block;
+  font-size: 0.8rem;
+  color: #66789f;
+}
+
+.admin-compliance-page__stats strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 1.4rem;
+}
+
+.admin-compliance-page__feedback {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #eaf1fb;
+  color: #2f4f9d;
+}
+
+.admin-compliance-page__feedback--error {
+  background: #ffe8e8;
+  color: #9e2f2f;
+}
+
+.admin-compliance-page__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.admin-compliance-card {
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid #dbe4f2;
+  padding: 16px;
+}
+
+.admin-compliance-card h2 {
+  margin: 0 0 12px;
+}
+
+.admin-compliance-table-wrap {
+  overflow-x: auto;
+}
+
+.admin-compliance-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-compliance-table th,
+.admin-compliance-table td {
+  text-align: left;
+  padding: 10px 8px;
+  border-bottom: 1px solid #edf1f8;
+  font-size: 0.9rem;
+  vertical-align: top;
+}
+
+.admin-compliance-pill {
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 0.25rem 0.5rem;
+  text-transform: uppercase;
+}
+
+.admin-compliance-pill--critical {
+  background: #ffe0e0;
+  color: #a12525;
+}
+
+.admin-compliance-pill--warning {
+  background: #fff3dd;
+  color: #8f6400;
+}
+
+.admin-compliance-pill--info {
+  background: #e1efff;
+  color: #1e4f9a;
+}
+
+.admin-compliance-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.admin-compliance-actions button {
+  border: 1px solid #c9d6ee;
+  border-radius: 8px;
+  background: #f8fbff;
+  color: #2f4f9d;
+  font-weight: 700;
+  padding: 0.4rem 0.65rem;
+  cursor: pointer;
+}
+
+.admin-compliance-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 960px) {
+  .admin-compliance-page__stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-compliance-page {
+    padding: 14px;
+  }
+}

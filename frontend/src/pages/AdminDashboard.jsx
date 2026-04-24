@@ -7,6 +7,7 @@ import './AdminDashboard.css';
 
 const sidebarItems = [
   { label: 'Home', href: '#dashboard', active: true, icon: 'home' },
+  { label: 'Compliance', href: '/admin/compliance', icon: 'shield' },
   { label: 'Widgets', href: '#widgets', icon: 'widgets' },
   { label: 'Tables', href: '#tables', icon: 'table' },
   { label: 'Charts', href: '#charts', icon: 'chart' },
@@ -51,6 +52,14 @@ const SidebarIcon = ({ type }) => {
     return (
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="M4 20V4h2v14h14v2H4Zm4-3V9h2v8H8Zm4 0V6h2v11h-2Zm4 0v-5h2v5h-2Z" />
+      </svg>
+    );
+  }
+
+  if (type === 'shield') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 2 4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5l-8-3Zm0 5a3 3 0 1 1 0 6 3 3 0 0 1 0-6Zm0 13c-1.92-.72-3.77-2.5-4.83-4.66A6.88 6.88 0 0 1 12 13c1.83 0 3.53.72 4.83 2.34C15.77 17.5 13.92 19.28 12 20Z" />
       </svg>
     );
   }

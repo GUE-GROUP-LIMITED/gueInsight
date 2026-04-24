@@ -6,7 +6,7 @@ from flask_login import login_required, current_user, login_user, logout_user
 from werkzeug.security import generate_password_hash
 from sqlalchemy import true
 from app import db
-from app.models import User, Logs, FileUpload, UserRole, Alert, AlertRule, Subscription, SupportTicket, SupportTicketStatus
+from app.models import User, Logs, FileUpload, UserRole, Alert, AlertRule, Subscription, SupportTicket, SupportTicketStatus, DataDeletionRequest, SecurityEvent
 from app.forms import AdminLoginForm, AdminSignupForm, AlertRuleForm
 from app.utils.utils import check_admin_role  
 from app.admin_services import some_condition_for_critical_alert
@@ -113,6 +113,33 @@ def _serialize_support_ticket(ticket):
         'attended_at': ticket.attended_at.isoformat() if ticket.attended_at else None,
         'resolved_at': ticket.resolved_at.isoformat() if ticket.resolved_at else None,
         'closed_at': ticket.closed_at.isoformat() if ticket.closed_at else None,
+    }
+
+
+def _serialize_deletion_request(item):
+    return {
+        'id': item.id,
+        'user_id': item.user_id,
+        'user_email': item.user.email if item.user else None,
+        'reason': item.reason,
+        'status': item.status,
+        'requested_at': item.requested_at.isoformat() if item.requested_at else None,
+        'processed_at': item.processed_at.isoformat() if item.processed_at else None,
+        'processed_by_user_id': item.processed_by_user_id,
+    }
+
+
+def _serialize_security_event(event):
+    return {
+        'id': event.id,
+        'user_id': event.user_id,
+        'user_email': event.user.email if event.user else None,
+        'event_type': event.event_type,
+        'severity': event.severity,
+        'ip_address': event.ip_address,
+        'user_agent': event.user_agent,
+        'details': event.details,
+        'created_at': event.created_at.isoformat() if event.created_at else None,
     }
 
 
@@ -595,6 +622,59 @@ def admin_support_ticket_detail(ticket_id):
     db.session.commit()
     Logs.log_action(current_user, f"Updated support ticket #{ticket.id} for user #{ticket.user_id}")
     return {'message': 'Ticket updated.', 'ticket': _serialize_support_ticket(ticket)}
+
+
+@admin_bp.route('/admin/security_events', methods=['GET'])
+@login_required
+def admin_security_events():
+    check_admin_role(current_user)
+
+    severity_filter = (request.args.get('severity') or '').strip().lower()
+    limit = request.args.get('limit', default=100, type=int)
+    limit = max(1, min(limit, 500))
+
+    query = SecurityEvent.query
+    if severity_filter:
+        query = query.filter(SecurityEvent.severity == severity_filter)
+
+    events = query.order_by(SecurityEvent.created_at.desc()).limit(limit).all()
+    return {'security_events': [_serialize_security_event(event) for event in events]}, 200
+
+
+@admin_bp.route('/admin/deletion_requests', methods=['GET'])
+@login_required
+def admin_deletion_requests():
+    check_admin_role(current_user)
+    status_filter = (request.args.get('status') or '').strip().lower()
+
+    query = DataDeletionRequest.query
+    if status_filter:
+        query = query.filter(DataDeletionRequest.status == status_filter)
+
+    rows = query.order_by(DataDeletionRequest.requested_at.desc()).all()
+    return {'deletion_requests': [_serialize_deletion_request(row) for row in rows]}, 200
+
+
+@admin_bp.route('/admin/deletion_requests/<int:request_id>', methods=['PATCH'])
+@login_required
+def admin_update_deletion_request(request_id):
+    check_admin_role(current_user)
+    payload = request.get_json(silent=True) or {}
+    new_status = (payload.get('status') or '').strip().lower()
+    allowed_statuses = {'pending', 'in_review', 'rejected', 'processed'}
+
+    if new_status not in allowed_statuses:
+        return {'error': 'Invalid status.'}, 400
+
+    deletion_request = DataDeletionRequest.query.get_or_404(request_id)
+    deletion_request.status = new_status
+    if new_status == 'processed':
+        deletion_request.processed_at = datetime.utcnow()
+        deletion_request.processed_by_user_id = current_user.id
+
+    db.session.commit()
+    Logs.log_action(current_user, f"Updated deletion request #{deletion_request.id} to {new_status}")
+    return {'message': 'Deletion request updated.', 'request': _serialize_deletion_request(deletion_request)}, 200
 
 
 # View logs (Only accessible to admins)

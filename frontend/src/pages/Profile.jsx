@@ -21,6 +21,9 @@ const Profile = () => {
 	const [error, setError] = useState('');
 	const [billingTransactions, setBillingTransactions] = useState([]);
 	const [preferenceMessage, setPreferenceMessage] = useState('');
+	const [privacyMessage, setPrivacyMessage] = useState('');
+	const [privacyError, setPrivacyError] = useState('');
+	const [privacyBusy, setPrivacyBusy] = useState(false);
 	const [preferences, setPreferences] = useState({
 		avatar_url: '',
 		theme: 'system',
@@ -151,6 +154,64 @@ const Profile = () => {
 			setError(requestError?.response?.data?.error || 'Unable to save preferences right now.');
 		} finally {
 			setSavingPreferences(false);
+		}
+	};
+
+	const refreshLegalConsent = async () => {
+		setPrivacyBusy(true);
+		setPrivacyError('');
+		setPrivacyMessage('');
+		try {
+			const response = await api.patch('/auth/privacy/consent', { refresh_legal_consent: true });
+			setUser(response.data?.user || user);
+			setPrivacyMessage('Legal consent refreshed successfully.');
+		} catch (requestError) {
+			setPrivacyError(requestError?.response?.data?.error || 'Unable to refresh consent right now.');
+		} finally {
+			setPrivacyBusy(false);
+		}
+	};
+
+	const exportPersonalData = async () => {
+		setPrivacyBusy(true);
+		setPrivacyError('');
+		setPrivacyMessage('');
+		try {
+			const response = await api.post('/auth/privacy/export', {});
+			const payload = response.data?.export || {};
+			const json = JSON.stringify(payload, null, 2);
+			const blob = new Blob([json], { type: 'application/json' });
+			const url = URL.createObjectURL(blob);
+			const anchor = document.createElement('a');
+			anchor.href = url;
+			anchor.download = `gueinsight-data-export-${new Date().toISOString().slice(0, 10)}.json`;
+			document.body.appendChild(anchor);
+			anchor.click();
+			anchor.remove();
+			URL.revokeObjectURL(url);
+			setPrivacyMessage('Data export generated and downloaded.');
+		} catch (requestError) {
+			setPrivacyError(requestError?.response?.data?.error || 'Unable to export data right now.');
+		} finally {
+			setPrivacyBusy(false);
+		}
+	};
+
+	const requestAccountDeletion = async () => {
+		const confirmed = window.confirm('Submit account deletion request and deactivate this account now?');
+		if (!confirmed) return;
+
+		setPrivacyBusy(true);
+		setPrivacyError('');
+		setPrivacyMessage('');
+		try {
+			await api.post('/auth/privacy/delete-request', { reason: 'Requested via profile privacy controls.' });
+			setUser(null);
+			setPrivacyMessage('Deletion request submitted. Your account has been deactivated.');
+		} catch (requestError) {
+			setPrivacyError(requestError?.response?.data?.error || 'Unable to submit deletion request right now.');
+		} finally {
+			setPrivacyBusy(false);
 		}
 	};
 
@@ -321,6 +382,26 @@ const Profile = () => {
 							</div>
 						)) : <p>No billing transactions yet.</p>}
 					</div>
+				</article>
+
+				<article className="profile-page__card">
+					<h2>Privacy and compliance</h2>
+					<p>Manage GDPR consent records and submit data subject requests.</p>
+					<div className="profile-page__grid" style={{ marginTop: '12px' }}>
+						<button type="button" onClick={refreshLegalConsent} disabled={privacyBusy}>
+							Refresh legal consent
+						</button>
+						<button type="button" onClick={exportPersonalData} disabled={privacyBusy}>
+							Export my data
+						</button>
+					</div>
+					<div className="profile-page__grid" style={{ marginTop: '12px' }}>
+						<button type="button" onClick={requestAccountDeletion} disabled={privacyBusy}>
+							Request account deletion
+						</button>
+					</div>
+					{privacyError ? <p className="profile-page__message profile-page__message--error">{privacyError}</p> : null}
+					{privacyMessage ? <p className="profile-page__message profile-page__message--success">{privacyMessage}</p> : null}
 				</article>
 			</section>
 		</main>
