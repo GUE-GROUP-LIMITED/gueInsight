@@ -1,6 +1,19 @@
 import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const getDefaultApiBase = () => {
+  const configured = import.meta.env.VITE_API_URL;
+  if (configured) {
+    return configured;
+  }
+
+  if (import.meta.env.PROD) {
+    return 'https://kuber.insights.guecyber.com';
+  }
+
+  return 'http://localhost:5000';
+};
+
+const API_BASE = getDefaultApiBase();
 
 export const api = axios.create({
   baseURL: API_BASE,

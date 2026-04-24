@@ -39,7 +39,7 @@ const AdminLogin = () => {
         message = 'Server error while signing in. Please try again shortly.';
       }
       if (!message) {
-        const baseUrl = api?.defaults?.baseURL || 'http://localhost:5000';
+        const baseUrl = api?.defaults?.baseURL || 'configured backend endpoint';
         message = `Cannot reach staff auth service. Confirm backend is running at ${baseUrl}.`;
       }
       setError(message);
