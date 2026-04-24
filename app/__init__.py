@@ -5,6 +5,7 @@ import os
 from flask import Flask, request
 from flask_cors import CORS
 from dotenv import load_dotenv
+from flask_login import LoginManager
 
 from flask_sqlalchemy import SQLAlchemy
 from flask_mail import Mail
@@ -22,6 +23,7 @@ from app.config import Config
 db = SQLAlchemy()
 mail = Mail()  # Initialize Mail here without passing an app
 migrate = Migrate()
+login_manager = LoginManager()
 
 def create_app():
     app = Flask(__name__)
@@ -63,6 +65,17 @@ def create_app():
     db.init_app(app)  # Bind SQLAlchemy to the app
     mail.init_app(app)  # Bind Flask-Mail to the app
     migrate.init_app(app, db)  # Bind Flask-Migrate to the app
+    login_manager.init_app(app)
+    login_manager.login_view = 'users.user_login'
+
+    @login_manager.user_loader
+    def load_user(user_id):
+        from app.models import User
+
+        try:
+            return User.query.get(int(user_id))
+        except (TypeError, ValueError):
+            return None
     #csrf = CSRFProtect(app)
     #csrf.init_app(app)
     from app.routes.users_routes import users_bp

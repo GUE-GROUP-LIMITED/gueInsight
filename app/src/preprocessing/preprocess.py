@@ -1,12 +1,16 @@
 import os
 import re
-import pyshark
 import sqlite3
 import pdfplumber
 import math
 import hashlib
 import logging
 from collections import Counter
+
+try:
+    import pyshark
+except Exception:  # pragma: no cover - optional dependency in some deploy targets
+    pyshark = None
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -120,6 +124,9 @@ def extract_text_from_pdf(pdf_path):
 def extract_from_pcap(pcap_path):
     """Extract relevant IoCs from a PCAP file (e.g., IP addresses, URLs)."""
     ip_addresses, urls = set(), set()
+    if pyshark is None:
+        logging.warning("pyshark/tshark is unavailable; skipping PCAP parsing.")
+        return ip_addresses, urls
     try:
         if not os.path.exists(pcap_path):
             raise FileNotFoundError(f"File not found: {pcap_path}")
