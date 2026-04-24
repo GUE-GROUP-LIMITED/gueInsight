@@ -65,6 +65,12 @@ class User(db.Model, UserMixin):
     team_size = Column(String(50), nullable=True)
     primary_use_case = Column(String(255), nullable=True)
     newsletter_opt_in = Column(Boolean, nullable=False, default=False)
+    gdpr_consent_at = Column(DateTime, nullable=True)
+    gdpr_consent_version = Column(String(50), nullable=True)
+    privacy_policy_version = Column(String(50), nullable=True)
+    terms_accepted_at = Column(DateTime, nullable=True)
+    marketing_consent_at = Column(DateTime, nullable=True)
+    last_login_at = Column(DateTime, nullable=True)
     role = Column(SQLAlchemyEnum(UserRole), nullable=False, default=UserRole.USER)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -314,6 +320,80 @@ class BillingTransaction(db.Model):
             'status': self.status.value if hasattr(self.status, 'value') else self.status,
             'period_start': self.period_start.isoformat() if self.period_start else None,
             'period_end': self.period_end.isoformat() if self.period_end else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class DataExportRequest(db.Model):
+    __tablename__ = 'data_export_request'
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+    status = Column(String(30), nullable=False, default='queued')
+    requested_at = Column(DateTime, default=datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
+    download_token = Column(String(120), nullable=True)
+
+    user = db.relationship('User', backref=db.backref('data_export_requests', lazy=True))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'status': self.status,
+            'requested_at': self.requested_at.isoformat() if self.requested_at else None,
+            'completed_at': self.completed_at.isoformat() if self.completed_at else None,
+        }
+
+
+class DataDeletionRequest(db.Model):
+    __tablename__ = 'data_deletion_request'
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+    reason = Column(String(500), nullable=True)
+    status = Column(String(30), nullable=False, default='pending')
+    requested_at = Column(DateTime, default=datetime.utcnow)
+    processed_at = Column(DateTime, nullable=True)
+    processed_by_user_id = Column(Integer, ForeignKey('user.id'), nullable=True)
+
+    user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('data_deletion_requests', lazy=True))
+    processed_by = db.relationship('User', foreign_keys=[processed_by_user_id], post_update=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'reason': self.reason,
+            'status': self.status,
+            'requested_at': self.requested_at.isoformat() if self.requested_at else None,
+            'processed_at': self.processed_at.isoformat() if self.processed_at else None,
+            'processed_by_user_id': self.processed_by_user_id,
+        }
+
+
+class SecurityEvent(db.Model):
+    __tablename__ = 'security_event'
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('user.id'), nullable=True)
+    event_type = Column(String(120), nullable=False)
+    severity = Column(String(20), nullable=False, default='info')
+    ip_address = Column(String(64), nullable=True)
+    user_agent = Column(String(500), nullable=True)
+    details = Column(String(2000), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('security_events', lazy=True))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'event_type': self.event_type,
+            'severity': self.severity,
+            'ip_address': self.ip_address,
+            'user_agent': self.user_agent,
+            'details': self.details,
             'created_at': self.created_at.isoformat() if self.created_at else None,
         }
   

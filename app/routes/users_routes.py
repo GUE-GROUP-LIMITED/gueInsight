@@ -18,6 +18,9 @@ from app.models import (
     UserActivityEvent,
     BillingTransaction,
     BillingStatus,
+    DataExportRequest,
+    DataDeletionRequest,
+    SecurityEvent,
     db,
     Alert,
     AlertRule,
@@ -44,6 +47,9 @@ from sqlalchemy import inspect, text
 users_bp = Blueprint('users', __name__)
 
 _USER_SCHEMA_SYNCED = False
+_LOGIN_RATE_CACHE = {}
+LOGIN_MAX_ATTEMPTS = 8
+LOGIN_WINDOW_SECONDS = 300
 
 PLAN_ANALYSIS_LIMITS = {
     'free': {
@@ -118,6 +124,15 @@ def _count_analysis_items(input_data):
         normalized = normalized.replace(separator, ' ')
     return len([chunk for chunk in normalized.split(' ') if chunk.strip()])
 
+
+def _parse_bool(value):
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    text = str(value or '').strip().lower()
+    return text in {'1', 'true', 'yes', 'on'}
+
 def _get_or_create_user_preference(user_id):
     preference = UserPreference.query.filter_by(user_id=user_id).first()
     if preference:
@@ -158,6 +173,30 @@ def _log_user_activity(user_id, event_type, description, entity_type=None, entit
     return activity
 
 
+def _log_security_event(event_type, severity='info', user_id=None, details=None):
+    event = SecurityEvent(
+        user_id=user_id,
+        event_type=event_type,
+        severity=severity,
+        ip_address=request.remote_addr,
+        user_agent=(request.headers.get('User-Agent') or '')[:500],
+        details=(json.dumps(details) if details else None),
+    )
+    db.session.add(event)
+    return event
+
+
+def _is_login_rate_limited(identifier):
+    now = int(datetime.datetime.utcnow().timestamp())
+    window = now // LOGIN_WINDOW_SECONDS
+    key = f"{identifier}:{window}"
+    attempts = _LOGIN_RATE_CACHE.get(key, 0)
+    if attempts >= LOGIN_MAX_ATTEMPTS:
+        return True
+    _LOGIN_RATE_CACHE[key] = attempts + 1
+    return False
+
+
 def _sync_user_profile_columns():
     """Add newly introduced optional profile columns for legacy databases."""
     global _USER_SCHEMA_SYNCED
@@ -170,6 +209,12 @@ def _sync_user_profile_columns():
         'team_size': 'VARCHAR(50)',
         'primary_use_case': 'VARCHAR(255)',
         'newsletter_opt_in': 'BOOLEAN DEFAULT FALSE',
+        'gdpr_consent_at': 'TIMESTAMP NULL',
+        'gdpr_consent_version': 'VARCHAR(50) NULL',
+        'privacy_policy_version': 'VARCHAR(50) NULL',
+        'terms_accepted_at': 'TIMESTAMP NULL',
+        'marketing_consent_at': 'TIMESTAMP NULL',
+        'last_login_at': 'TIMESTAMP NULL',
     }
 
     inspector = inspect(db.engine)
@@ -803,6 +848,11 @@ def _serialize_auth_user(user):
         'team_size': getattr(user, 'team_size', None),
         'primary_use_case': getattr(user, 'primary_use_case', None),
         'newsletter_opt_in': bool(getattr(user, 'newsletter_opt_in', False)),
+        'gdpr_consent_at': user.gdpr_consent_at.isoformat() if getattr(user, 'gdpr_consent_at', None) else None,
+        'gdpr_consent_version': getattr(user, 'gdpr_consent_version', None),
+        'privacy_policy_version': getattr(user, 'privacy_policy_version', None),
+        'terms_accepted_at': user.terms_accepted_at.isoformat() if getattr(user, 'terms_accepted_at', None) else None,
+        'marketing_consent_at': user.marketing_consent_at.isoformat() if getattr(user, 'marketing_consent_at', None) else None,
         'role': role_value,
         'current_plan': current_plan,
         'analysis_limits': analysis_limits,
@@ -825,14 +875,50 @@ def auth_login():
     payload = request.get_json(silent=True) or request.form
     email = (payload.get('email') or '').strip().lower()
     password = payload.get('password') or ''
+    ip_address = request.remote_addr or 'unknown'
+    rate_key = f"{email}:{ip_address}"
 
     if not email or not password:
         return {'error': 'Email and password are required.'}, 400
 
+    if _is_login_rate_limited(rate_key):
+        _log_security_event(
+            event_type='auth.login.rate_limited',
+            severity='warning',
+            details={'email': email},
+        )
+        db.session.commit()
+        return {'error': 'Too many login attempts. Please try again later.'}, 429
+
     user = User.query.filter_by(email=email).first()
     if not user or not user.check_password(password):
+        _log_security_event(
+            event_type='auth.login.failed',
+            severity='warning',
+            user_id=getattr(user, 'id', None),
+            details={'email': email},
+        )
+        db.session.commit()
         return {'error': 'Invalid credentials.'}, 401
 
+    if not bool(getattr(user, 'is_active', True)):
+        _log_security_event(
+            event_type='auth.login.deactivated_account',
+            severity='warning',
+            user_id=user.id,
+            details={'email': email},
+        )
+        db.session.commit()
+        return {'error': 'This account is deactivated.'}, 403
+
+    user.last_login_at = datetime.datetime.utcnow()
+    _log_security_event(
+        event_type='auth.login.success',
+        severity='info',
+        user_id=user.id,
+        details={'email': email},
+    )
+    db.session.commit()
     login_user(user)
     return {'message': 'Login successful.', 'user': _serialize_auth_user(user)}, 200
 
@@ -850,7 +936,12 @@ def auth_signup():
     job_title = (payload.get('job_title') or '').strip() or None
     team_size = (payload.get('team_size') or '').strip() or None
     primary_use_case = (payload.get('primary_use_case') or '').strip() or None
-    newsletter_opt_in = bool(payload.get('newsletter') or payload.get('newsletter_opt_in'))
+    newsletter_opt_in = _parse_bool(payload.get('newsletter') or payload.get('newsletter_opt_in'))
+    agreed_to_terms = _parse_bool(payload.get('agree_to_terms') or payload.get('agreed_to_terms'))
+    gdpr_consent = _parse_bool(payload.get('gdpr_consent'))
+
+    if not agreed_to_terms or not gdpr_consent:
+        return {'error': 'You must accept the Terms and Privacy Policy and provide GDPR consent.'}, 400
 
     if not email or not password:
         return {'error': 'Email and password are required.'}, 400
@@ -863,6 +954,9 @@ def auth_signup():
         return {'error': 'An account with this email already exists.'}, 400
 
     hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
+    now = datetime.datetime.utcnow()
+    policy_version = current_app.config.get('GDPR_POLICY_VERSION', '2026-04')
+    terms_version = current_app.config.get('TERMS_VERSION', policy_version)
     new_user = User(
         email=email,
         password=hashed_password,
@@ -874,6 +968,11 @@ def auth_signup():
         team_size=team_size,
         primary_use_case=primary_use_case,
         newsletter_opt_in=newsletter_opt_in,
+        gdpr_consent_at=now,
+        gdpr_consent_version=policy_version,
+        privacy_policy_version=policy_version,
+        terms_accepted_at=now,
+        marketing_consent_at=now if newsletter_opt_in else None,
         role=UserRole.USER,
     )
     db.session.add(new_user)
@@ -895,6 +994,12 @@ def auth_signup():
         severity='info',
         action_url='/profile',
     )
+    _log_security_event(
+        event_type='auth.account.created',
+        severity='info',
+        user_id=new_user.id,
+        details={'policy_version': policy_version, 'terms_version': terms_version},
+    )
     db.session.commit()
 
     login_user(new_user)
@@ -904,8 +1009,152 @@ def auth_signup():
 @users_bp.route('/auth/logout', methods=['POST'])
 def auth_logout():
     if current_user.is_authenticated:
+        _log_security_event(
+            event_type='auth.logout',
+            severity='info',
+            user_id=current_user.id,
+        )
+        db.session.commit()
         logout_user()
     return {'message': 'Logged out.'}, 200
+
+
+@users_bp.route('/auth/privacy/consent', methods=['GET', 'PATCH'])
+@login_required
+def auth_privacy_consent():
+    if request.method == 'GET':
+        return {
+            'consent': {
+                'newsletter_opt_in': bool(current_user.newsletter_opt_in),
+                'gdpr_consent_at': current_user.gdpr_consent_at.isoformat() if current_user.gdpr_consent_at else None,
+                'gdpr_consent_version': current_user.gdpr_consent_version,
+                'privacy_policy_version': current_user.privacy_policy_version,
+                'terms_accepted_at': current_user.terms_accepted_at.isoformat() if current_user.terms_accepted_at else None,
+                'marketing_consent_at': current_user.marketing_consent_at.isoformat() if current_user.marketing_consent_at else None,
+            }
+        }, 200
+
+    payload = request.get_json(silent=True) or {}
+    now = datetime.datetime.utcnow()
+
+    if 'newsletter_opt_in' in payload:
+        newsletter_opt_in = _parse_bool(payload.get('newsletter_opt_in'))
+        current_user.newsletter_opt_in = newsletter_opt_in
+        current_user.marketing_consent_at = now if newsletter_opt_in else None
+
+    if _parse_bool(payload.get('refresh_legal_consent')):
+        policy_version = current_app.config.get('GDPR_POLICY_VERSION', '2026-04')
+        current_user.gdpr_consent_at = now
+        current_user.gdpr_consent_version = policy_version
+        current_user.privacy_policy_version = policy_version
+        current_user.terms_accepted_at = now
+
+    _log_user_activity(
+        current_user.id,
+        event_type='privacy.consent.updated',
+        description='Updated privacy consent settings.',
+        entity_type='privacy',
+    )
+    _log_security_event(
+        event_type='privacy.consent.updated',
+        severity='info',
+        user_id=current_user.id,
+    )
+    db.session.commit()
+
+    return {
+        'message': 'Consent settings updated.',
+        'user': _serialize_auth_user(current_user),
+    }, 200
+
+
+@users_bp.route('/auth/privacy/export', methods=['POST'])
+@login_required
+def auth_privacy_export():
+    export_request = DataExportRequest(user_id=current_user.id, status='completed', requested_at=datetime.datetime.utcnow())
+    db.session.add(export_request)
+
+    export_payload = {
+        'exported_at': datetime.datetime.utcnow().isoformat(),
+        'user': _serialize_auth_user(current_user),
+        'preferences': current_user.preference.to_dict() if current_user.preference else None,
+        'subscriptions': [
+            {
+                'id': sub.id,
+                'plan': sub.plan,
+                'start_date': sub.start_date.isoformat() if sub.start_date else None,
+                'end_date': sub.end_date.isoformat() if sub.end_date else None,
+            }
+            for sub in current_user.subscriptions
+        ],
+        'billing_transactions': [tx.to_dict() for tx in current_user.billing_transactions],
+        'analysis_transactions': [tx.to_dict() for tx in current_user.analysis_transactions],
+        'support_tickets': [ticket.to_dict() for ticket in current_user.support_tickets],
+        'activity_events': [event.to_dict() for event in current_user.activity_events],
+    }
+
+    _log_user_activity(
+        current_user.id,
+        event_type='privacy.data_exported',
+        description='Exported personal account data.',
+        entity_type='privacy',
+    )
+    _log_security_event(
+        event_type='privacy.data_exported',
+        severity='info',
+        user_id=current_user.id,
+    )
+    db.session.commit()
+
+    return {
+        'message': 'Data export generated.',
+        'export': export_payload,
+        'request': export_request.to_dict(),
+    }, 200
+
+
+@users_bp.route('/auth/privacy/delete-request', methods=['POST'])
+@login_required
+def auth_privacy_delete_request():
+    payload = request.get_json(silent=True) or {}
+    reason = (payload.get('reason') or '').strip() or None
+
+    existing_pending = (
+        DataDeletionRequest.query
+        .filter_by(user_id=current_user.id, status='pending')
+        .order_by(DataDeletionRequest.requested_at.desc())
+        .first()
+    )
+    if existing_pending:
+        return {'error': 'A deletion request is already pending for this account.'}, 409
+
+    deletion_request = DataDeletionRequest(
+        user_id=current_user.id,
+        reason=reason,
+        status='pending',
+        requested_at=datetime.datetime.utcnow(),
+    )
+    current_user.is_active = False
+    db.session.add(deletion_request)
+
+    _log_user_activity(
+        current_user.id,
+        event_type='privacy.deletion_requested',
+        description='Submitted account deletion request.',
+        entity_type='privacy',
+    )
+    _log_security_event(
+        event_type='privacy.deletion_requested',
+        severity='warning',
+        user_id=current_user.id,
+    )
+    db.session.commit()
+
+    logout_user()
+    return {
+        'message': 'Deletion request submitted. Account has been deactivated pending review.',
+        'request': deletion_request.to_dict(),
+    }, 202
 
 
 @users_bp.route('/auth/profile', methods=['PATCH'])

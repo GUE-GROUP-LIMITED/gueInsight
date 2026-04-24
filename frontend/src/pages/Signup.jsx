@@ -32,6 +32,7 @@ const Signup = () => {
 	const [teamSize, setTeamSize] = useState(teamSizeOptions[0]);
 	const [primaryUseCase, setPrimaryUseCase] = useState(useCaseOptions[0]);
 	const [agreedToTerms, setAgreedToTerms] = useState(false);
+	const [gdprConsent, setGdprConsent] = useState(false);
 	const [newsletter, setNewsletter] = useState(true);
 	const [password, setPassword] = useState('');
 	const [error, setError] = useState('');
@@ -44,8 +45,8 @@ const Signup = () => {
 		setError('');
 		setSuccess('');
 
-		if (!agreedToTerms) {
-			setError('Please accept the Terms and Privacy Policy to continue.');
+		if (!agreedToTerms || !gdprConsent) {
+			setError('Please accept legal terms and GDPR consent to continue.');
 			setLoading(false);
 			return;
 		}
@@ -62,6 +63,8 @@ const Signup = () => {
 				team_size: teamSize,
 				primary_use_case: primaryUseCase,
 				newsletter,
+				agree_to_terms: agreedToTerms,
+				gdpr_consent: gdprConsent,
 			});
 			setUser(response.data?.user || null);
 			setSuccess('Account created successfully.');
@@ -209,6 +212,16 @@ const Signup = () => {
 							required
 						/>
 						<span>I agree to the Terms of Service and Privacy Policy.</span>
+					</label>
+
+					<label className="auth-pricing-checkbox auth-pricing-checkbox--required">
+						<input
+							type="checkbox"
+							checked={gdprConsent}
+							onChange={(e) => setGdprConsent(e.target.checked)}
+							required
+						/>
+						<span>I consent to personal data processing for account and security operations.</span>
 					</label>
 
 					<button type="submit" disabled={loading}>

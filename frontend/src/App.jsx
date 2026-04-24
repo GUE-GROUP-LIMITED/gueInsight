@@ -13,6 +13,7 @@ import Subscription from './pages/Subscription';
 import Payment from './pages/Payment';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
+import AdminCompliance from './pages/AdminCompliance';
 import UserManagement from './pages/UserManagement';
 import Support from './pages/Support';
 import AdminSupport from './pages/AdminSupport';
@@ -36,6 +37,7 @@ const AppShell = () => {
         <Route path="/subscription" element={<Subscription />} />
         <Route path="/payment" element={<ProtectedRoute><Payment /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute adminOnly={true}><AdminDashboard /></ProtectedRoute>} />
+        <Route path="/admin/compliance" element={<ProtectedRoute adminOnly={true}><AdminCompliance /></ProtectedRoute>} />
         <Route path="/admin/support" element={<ProtectedRoute adminOnly={true}><AdminSupport /></ProtectedRoute>} />
         <Route path="/admin/profile" element={<ProtectedRoute adminOnly={true}><Profile /></ProtectedRoute>} />
         <Route path="/admin/change-password" element={<ProtectedRoute adminOnly={true}><ResetPassword /></ProtectedRoute>} />
