@@ -1,22 +1,22 @@
-from app.models import AlertRule, Alert, Event, db
-from app.notifications.alerts import send_slack_alert, send_teams_alert
-import re
 import json
-from transformers import pipeline
-import numpy as np
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.feature_extraction.text import CountVectorizer
-from transformers import pipeline
-from transformers import pipeline
-from transformers import pipeline
-import numpy as np
-from sklearn.ensemble import RandomForestClassifier
 import logging
 import mimetypes
-from pypdf import PdfReader
-import docx
 import os
 import re
+from datetime import datetime, timezone
+
+import docx
+from pypdf import PdfReader
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.feature_extraction.text import CountVectorizer
+
+from app.models import Alert, AlertRule, Event, db
+from app.notifications.alerts import send_slack_alert, send_teams_alert
+from transformers import pipeline
+
+
+def _utc_now():
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 class Analyzer:
     def __init__(self):
@@ -78,7 +78,7 @@ class Analyzer:
             if triggered_flag:
                 # Create Event if not already
                 event = Event(
-                    timestamp=datetime.datetime.utcnow(),
+                    timestamp=_utc_now(),
                     source='analysis',
                     event_type='alert',
                     raw_data=json.dumps(analysis_results),
@@ -90,7 +90,7 @@ class Analyzer:
                 alert = Alert(
                     event_id=event.id,
                     rule_id=rule.id,
-                    triggered_at=datetime.datetime.utcnow(),
+                    triggered_at=_utc_now(),
                     description=desc
                 )
                 db.session.add(alert)
@@ -102,7 +102,7 @@ class Analyzer:
         if triggered:
             analysis_results['alerts_triggered'] = triggered
 
-        return results
+        return analysis_results
 
     def get_file_type(self, file_path: str) -> str:
         try:
@@ -166,11 +166,9 @@ class Analyzer:
 
 # Lazy-load transformer models only when needed
 def get_ner_pipeline():
-    from transformers import pipeline
     return pipeline("ner", model="dbmdz/bert-large-cased-finetuned-conll03-english")
 
 def get_classifier_pipeline():
-    from transformers import pipeline
     return pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
 
 # Define IoC extraction methods
@@ -215,8 +213,8 @@ def extract_features_from_entity(entities):
 
 # ML classification methods
 def classify_text(text, candidate_labels):
-    result = classifier_pipeline(text, candidate_labels)
-    return result
+    classifier = get_classifier_pipeline()
+    return classifier(text, candidate_labels)
 
 def train_classifier(data, labels):
     vectorizer = CountVectorizer()
@@ -231,7 +229,7 @@ def analyze_text_for_security(text):
     iocs = extract_iocs(text)
     
     # Use the NER pipeline for named entity recognition
-    entities = ner_pipeline(text)
+    entities = get_ner_pipeline()(text)
     
     # Prepare the data for feature extraction
     features = extract_features_from_entity([entity['word'] for entity in entities])
@@ -250,7 +248,7 @@ def analyze_cloud_link(link):
     iocs = extract_iocs(link)
     
     # Use the NER pipeline for named entity recognition
-    entities = ner_pipeline(link)
+    entities = get_ner_pipeline()(link)
     
     # Prepare the data for feature extraction
     features = extract_features_from_entity([entity['word'] for entity in entities])
