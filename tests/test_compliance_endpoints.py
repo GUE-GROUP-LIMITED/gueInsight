@@ -127,6 +127,7 @@ def test_admin_can_view_compliance_endpoints(client):
 
     client.post('/auth/login', json={'email': 'member@example.com', 'password': 'bad'})
     client.post('/auth/login', json={'email': 'member@example.com', 'password': 'Password123!'})
+    _login(client, email='admin@example.com')
 
     db.session.add(DataDeletionRequest(user_id=user.id, reason='test', status='pending'))
     db.session.commit()
