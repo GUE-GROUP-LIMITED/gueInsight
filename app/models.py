@@ -1,12 +1,15 @@
 
 
 from app import db
-from datetime import datetime
+from datetime import datetime, timezone
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey
 from enum import Enum as PyEnum
 from sqlalchemy.types import Enum as SQLAlchemyEnum
+
+def _utc_now():
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 
@@ -15,7 +18,7 @@ from sqlalchemy.types import Enum as SQLAlchemyEnum
 class Event(db.Model):
     __tablename__ = 'event'
     id = db.Column(db.Integer, primary_key=True)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    timestamp = db.Column(db.DateTime, default=_utc_now, nullable=False)
     source = db.Column(db.String(100))  # e.g., 'api', 'manual', etc.
     event_type = db.Column(db.String(100))  # e.g., 'alert', 'log', etc.
     raw_data = db.Column(db.Text, nullable=False)  # JSON string of the event
@@ -39,7 +42,7 @@ class Alert(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     event_id = db.Column(db.Integer, db.ForeignKey('event.id'), nullable=False)
     rule_id = db.Column(db.Integer, db.ForeignKey('alert_rule.id'), nullable=False)
-    triggered_at = db.Column(db.DateTime, default=datetime.utcnow)
+    triggered_at = db.Column(db.DateTime, default=_utc_now)
     description = db.Column(db.String(255))
     event = db.relationship('Event', backref=db.backref('alerts', lazy=True))
     rule = db.relationship('AlertRule', backref=db.backref('alerts', lazy=True))
@@ -73,7 +76,7 @@ class User(db.Model, UserMixin):
     last_login_at = Column(DateTime, nullable=True)
     role = Column(SQLAlchemyEnum(UserRole), nullable=False, default=UserRole.USER)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utc_now)
 
     # Method to set password for User
     def set_password(self, password):
@@ -119,8 +122,8 @@ class SupportTicket(db.Model):
     assigned_admin_id = Column(Integer, ForeignKey('user.id'), nullable=True)
     attended_by_id = Column(Integer, ForeignKey('user.id'), nullable=True)
     resolution_summary = Column(String(2000), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=_utc_now)
+    updated_at = Column(DateTime, default=_utc_now, onupdate=_utc_now)
     attended_at = Column(DateTime, nullable=True)
     resolved_at = Column(DateTime, nullable=True)
     closed_at = Column(DateTime, nullable=True)
@@ -182,8 +185,8 @@ class UserPreference(db.Model):
     notification_email_enabled = Column(Boolean, nullable=False, default=True)
     notification_inapp_enabled = Column(Boolean, nullable=False, default=True)
     dashboard_layout = Column(String(2000), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=_utc_now)
+    updated_at = Column(DateTime, default=_utc_now, onupdate=_utc_now)
 
     user = db.relationship('User', backref=db.backref('preference', uselist=False, lazy=True))
 
@@ -212,7 +215,7 @@ class UserNotification(db.Model):
     action_url = Column(String(500), nullable=True)
     is_read = Column(Boolean, nullable=False, default=False)
     read_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utc_now)
 
     user = db.relationship('User', backref=db.backref('notifications', lazy=True))
 
@@ -244,7 +247,7 @@ class AnalysisTransaction(db.Model):
     processing_ms = Column(Integer, nullable=True)
     result_summary = Column(String(2000), nullable=True)
     error_message = Column(String(2000), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utc_now)
     completed_at = Column(DateTime, nullable=True)
 
     user = db.relationship('User', backref=db.backref('analysis_transactions', lazy=True))
@@ -276,7 +279,7 @@ class UserActivityEvent(db.Model):
     entity_id = Column(Integer, nullable=True)
     description = Column(String(500), nullable=False)
     event_metadata = Column('metadata', String(2000), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utc_now)
 
     user = db.relationship('User', backref=db.backref('activity_events', lazy=True))
 
@@ -305,7 +308,7 @@ class BillingTransaction(db.Model):
     status = Column(SQLAlchemyEnum(BillingStatus), nullable=False, default=BillingStatus.PENDING)
     period_start = Column(DateTime, nullable=True)
     period_end = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utc_now)
 
     user = db.relationship('User', backref=db.backref('billing_transactions', lazy=True))
     subscription = db.relationship('Subscription', backref=db.backref('billing_transactions', lazy=True))
@@ -330,7 +333,7 @@ class DataExportRequest(db.Model):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
     status = Column(String(30), nullable=False, default='queued')
-    requested_at = Column(DateTime, default=datetime.utcnow)
+    requested_at = Column(DateTime, default=_utc_now)
     completed_at = Column(DateTime, nullable=True)
     download_token = Column(String(120), nullable=True)
 
@@ -352,7 +355,7 @@ class DataDeletionRequest(db.Model):
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
     reason = Column(String(500), nullable=True)
     status = Column(String(30), nullable=False, default='pending')
-    requested_at = Column(DateTime, default=datetime.utcnow)
+    requested_at = Column(DateTime, default=_utc_now)
     processed_at = Column(DateTime, nullable=True)
     processed_by_user_id = Column(Integer, ForeignKey('user.id'), nullable=True)
 
@@ -381,7 +384,7 @@ class SecurityEvent(db.Model):
     ip_address = Column(String(64), nullable=True)
     user_agent = Column(String(500), nullable=True)
     details = Column(String(2000), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utc_now)
 
     user = db.relationship('User', backref=db.backref('security_events', lazy=True))
 
@@ -402,7 +405,7 @@ class FileUpload(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     file_path = db.Column(db.String(255), nullable=False)
-    upload_date = db.Column(db.DateTime, default=datetime.utcnow)
+    upload_date = db.Column(db.DateTime, default=_utc_now)
 
     user = db.relationship('User', backref=db.backref('file_uploads', lazy=True))
 
@@ -413,7 +416,7 @@ class Logs(db.Model):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
     action = Column(String(200), nullable=False)
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    timestamp = Column(DateTime, default=_utc_now)
 
     # Relationship with User
     user = db.relationship("User", backref="logs")
@@ -424,7 +427,8 @@ class Logs(db.Model):
         log_entry = Logs(
             user_id=user.id,
             action=action_description,
-            timestamp=datetime.utcnow()
+            timestamp=_utc_now()
         )
         db.session.add(log_entry)
         db.session.commit()
+

@@ -13,7 +13,7 @@ import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 import logging
 import mimetypes
-from PyPDF2 import PdfReader
+from pypdf import PdfReader
 import docx
 import os
 import re

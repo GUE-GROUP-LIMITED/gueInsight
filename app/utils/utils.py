@@ -7,7 +7,7 @@ import hashlib
 import logging
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from PyPDF2 import PdfReader
+from pypdf import PdfReader
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 import html
