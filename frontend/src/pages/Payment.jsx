@@ -54,7 +54,7 @@ const Payment = () => {
 			}
 
 			setErrorMessage(response.data?.error || 'Unable to complete this upgrade right now.');
-		} catch (error) {
+		} catch {
 			setErrorMessage('Unable to complete this upgrade right now.');
 		} finally {
 			setSubmitting(false);

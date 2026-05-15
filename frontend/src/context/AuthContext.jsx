@@ -44,7 +44,7 @@ export const AuthProvider = ({ children }) => {
         } else {
           setUser(null);
         }
-      } catch (error) {
+      } catch {
         if (isMounted) {
           setUser(null);
         }

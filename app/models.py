@@ -399,6 +399,68 @@ class SecurityEvent(db.Model):
             'details': self.details,
             'created_at': self.created_at.isoformat() if self.created_at else None,
         }
+
+
+class EvidenceArtifact(db.Model):
+    """Normalized evidence artifacts for ISO27001 / audit readiness."""
+    __tablename__ = 'evidence_artifact'
+
+    id = Column(Integer, primary_key=True)
+    source = Column(String(100), nullable=False)  # e.g., 'm365', 'gws', 'app'
+    artifact_type = Column(String(100), nullable=False)  # e.g., 'audit_log', 'access_control_matrix'
+    raw_payload = Column(db.Text, nullable=False)  # JSON string of raw artifact
+    indexed_fields = Column(db.Text, nullable=True)  # JSON string of extracted/indexed fields for search
+    control_mappings = Column(db.String(500), nullable=True)  # ISO control ids mapped
+    processed = Column(Boolean, nullable=False, default=False)
+    collected_at = Column(DateTime, default=_utc_now)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'source': self.source,
+            'artifact_type': self.artifact_type,
+            'processed': bool(self.processed),
+            'collected_at': self.collected_at.isoformat() if self.collected_at else None,
+        }
+
+
+class NIS2IncidentReport(db.Model):
+    """NIS2 Directive critical infrastructure incident reporting model."""
+    __tablename__ = 'nis2_incident_report'
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+    incident_type = Column(String(100), nullable=False)  # e.g., 'ransomware', 'data_breach', 'ddos', 'supply_chain'
+    severity = Column(String(20), nullable=False)  # 'critical', 'high', 'medium', 'low'
+    affected_systems = Column(String(500), nullable=True)  # Comma-separated system names
+    initial_detection_at = Column(DateTime, nullable=False)
+    description = Column(String(2000), nullable=False)
+    actions_taken = Column(String(2000), nullable=True)  # Remediation steps
+    notification_sent_at = Column(DateTime, nullable=True)
+    notification_recipient = Column(String(200), nullable=True)  # Competent authority email/agency
+    status = Column(String(50), nullable=False, default='reported')  # 'draft', 'reported', 'under_investigation', 'resolved'
+    created_at = Column(DateTime, default=_utc_now)
+    updated_at = Column(DateTime, default=_utc_now, onupdate=_utc_now)
+
+    user = db.relationship('User', backref=db.backref('nis2_incident_reports', lazy=True))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'incident_type': self.incident_type,
+            'severity': self.severity,
+            'affected_systems': self.affected_systems,
+            'initial_detection_at': self.initial_detection_at.isoformat() if self.initial_detection_at else None,
+            'description': self.description,
+            'actions_taken': self.actions_taken,
+            'notification_sent_at': self.notification_sent_at.isoformat() if self.notification_sent_at else None,
+            'notification_recipient': self.notification_recipient,
+            'status': self.status,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+
   
 
 class FileUpload(db.Model):
