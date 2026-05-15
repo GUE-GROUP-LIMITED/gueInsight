@@ -67,22 +67,7 @@ const Landing = () => {
 				<Link to="/support">Need urgent support?</Link>
 			</div>
 
-			<header className="landing-page__topbar">
-				<Link to="/" className="landing-page__brand">
-					<span className="landing-page__brand-mark">GI</span>
-					<span>GueInsight</span>
-				</Link>
-				<nav className="landing-page__nav" aria-label="Primary">
-					<Link to="/">Platform</Link>
-					<Link to="/subscription">Solutions</Link>
-					<Link to="/support">Resources</Link>
-					<Link to="/profile">Company</Link>
-				</nav>
-				<div className="landing-page__top-actions">
-					<Link to="/login" className="landing-page__secondary-action">Log in</Link>
-					<Link to="/signup" className="landing-page__primary-action">Start free trial</Link>
-				</div>
-			</header>
+			{/* Top navigation is provided by the shared `Navbar` component rendered by `App.jsx` */}
 
 			<section className="landing-page__hero">
 				<div className="landing-page__hero-copy">

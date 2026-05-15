@@ -14,6 +14,7 @@ import Payment from './pages/Payment';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminCompliance from './pages/AdminCompliance';
+import Documentation from './pages/Documentation';
 import UserManagement from './pages/UserManagement';
 import Support from './pages/Support';
 import AdminSupport from './pages/AdminSupport';
@@ -21,7 +22,7 @@ import NotFound from './pages/NotFound';
 
 const AppShell = () => {
   const location = useLocation();
-  const showNavbar = location.pathname !== '/' && !location.pathname.startsWith('/admin');
+  const showNavbar = !location.pathname.startsWith('/admin');
 
   return (
     <>
@@ -35,6 +36,7 @@ const AppShell = () => {
         <Route path="/support" element={<ProtectedRoute userOnly={true}><Support /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/subscription" element={<Subscription />} />
+        <Route path="/docs" element={<Documentation />} />
         <Route path="/payment" element={<ProtectedRoute><Payment /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute adminOnly={true}><AdminDashboard /></ProtectedRoute>} />
         <Route path="/admin/compliance" element={<ProtectedRoute adminOnly={true}><AdminCompliance /></ProtectedRoute>} />

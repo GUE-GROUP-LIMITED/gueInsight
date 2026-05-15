@@ -1,5 +1,5 @@
 import { useContext, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { AuthContext } from '../context/AuthContext';
 import './AuthPricing.css';
@@ -82,6 +82,9 @@ const Signup = () => {
 					<p className="auth-pricing-card__eyebrow">Get started</p>
 					<h1>Create your GueInsight account</h1>
 					<p>Tell us about your team so we can tailor your onboarding and recommended setup.</p>
+					<p className="auth-pricing-card__note">
+						Already have an account? <Link to="/login">Log in instead</Link>.
+					</p>
 				</div>
 
 				<form className="auth-pricing-form" onSubmit={handleSubmit}>

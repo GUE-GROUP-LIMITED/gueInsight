@@ -1,5 +1,5 @@
 import { useContext, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { AuthContext, normalizeRole } from '../context/AuthContext';
 import './AuthPricing.css';
@@ -10,6 +10,7 @@ const Login = () => {
 	const [email, setEmail] = useState('');
 	const [password, setPassword] = useState('');
 	const [error, setError] = useState('');
+	const [showResetPassword, setShowResetPassword] = useState(false);
 	const [loading, setLoading] = useState(false);
 
 	const handleSubmit = async (e) => {
@@ -20,12 +21,14 @@ const Login = () => {
 			const response = await api.post('/auth/login', { email, password });
 			const authenticatedUser = response.data?.user || null;
 			setUser(authenticatedUser);
+			setShowResetPassword(false);
 			const role = normalizeRole(
 				authenticatedUser?.role || authenticatedUser?.app_metadata?.role || authenticatedUser?.user_metadata?.role
 			);
 			navigate(role === 'admin' ? '/admin' : '/dashboard');
 		} catch (err) {
 			setError(err?.response?.data?.error || 'Login failed.');
+			setShowResetPassword(true);
 		}
 		setLoading(false);
 	};
@@ -65,6 +68,11 @@ const Login = () => {
 					</button>
 
 					{error && <p className="auth-pricing-message auth-pricing-message--error">{error}</p>}
+
+					<div className="auth-pricing-links auth-pricing-links--login">
+						<Link to="/signup">Sign up</Link>
+						{showResetPassword ? <Link to="/reset-password">Reset password</Link> : null}
+					</div>
 				</form>
 
 			</section>

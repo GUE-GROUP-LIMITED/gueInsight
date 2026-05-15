@@ -76,6 +76,21 @@
   color: var(--accent-2);
 }
 
+.auth-pricing-card__note {
+  margin-top: 12px !important;
+  color: var(--text-soft);
+}
+
+.auth-pricing-card__note a {
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.auth-pricing-card__note a:hover {
+  text-decoration: underline;
+}
+
 .auth-pricing-form {
   margin-top: 22px;
   display: grid;
@@ -192,6 +207,11 @@
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+}
+
+.auth-pricing-links--login {
+  margin-top: 4px;
+  margin-bottom: 2px;
 }
 
 .auth-pricing-links a {
