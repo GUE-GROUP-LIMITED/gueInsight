@@ -6,7 +6,7 @@ from flask_login import login_required, current_user, login_user, logout_user
 from werkzeug.security import generate_password_hash
 from sqlalchemy import true
 from app import db
-from app.models import User, Logs, FileUpload, UserRole, Alert, AlertRule, Subscription, SupportTicket, SupportTicketStatus, DataDeletionRequest, SecurityEvent
+from app.models import User, Logs, FileUpload, UserRole, Alert, AlertRule, Subscription, SupportTicket, SupportTicketStatus, DataDeletionRequest, SecurityEvent, NIS2IncidentReport
 from app.forms import AdminLoginForm, AdminSignupForm, AlertRuleForm
 from app.utils.utils import check_admin_role  
 from app.admin_services import some_condition_for_critical_alert
@@ -741,6 +741,339 @@ def edit_user(user_id):
 
     # API endpoint: return user as JSON
     return {"user": user.to_dict()}
+
+
+# ==== NIS2 Compliance Incident Reporting ====
+
+@admin_bp.route('/api/incidents/report-nis2', methods=['POST'])
+@login_required
+@admin_required
+def report_nis2_incident():
+    """
+    Report a critical infrastructure incident for NIS2 compliance.
+    Required fields: incident_type, severity, affected_systems, initial_detection_at, description
+    """
+    data = request.get_json() or {}
+
+    try:
+        incident = NIS2IncidentReport(
+            user_id=current_user.id,
+            incident_type=data.get('incident_type', ''),
+            severity=data.get('severity', 'medium'),
+            affected_systems=data.get('affected_systems', ''),
+            initial_detection_at=datetime.fromisoformat(data.get('initial_detection_at', _utc_now().isoformat())),
+            description=data.get('description', ''),
+            actions_taken=data.get('actions_taken', ''),
+            notification_recipient=data.get('notification_recipient', ''),
+            status='draft'  # Admin can mark as 'reported' after review
+        )
+        db.session.add(incident)
+        db.session.commit()
+
+        # Log the incident report in security events
+        security_event = SecurityEvent(
+            user_id=current_user.id,
+            event_type='nis2_incident_report_created',
+            severity=data.get('severity', 'medium'),
+            details=f"NIS2 incident: {data.get('incident_type', 'unknown')} - {data.get('affected_systems', 'n/a')}"
+        )
+        db.session.add(security_event)
+        db.session.commit()
+
+        return {
+            'status': 'success',
+            'message': 'NIS2 incident report created successfully',
+            'incident_id': incident.id
+        }, 201
+    except Exception as e:
+        return {'status': 'error', 'message': str(e)}, 400
+
+
+@admin_bp.route('/api/incidents/nis2', methods=['GET'])
+@login_required
+@admin_required
+def list_nis2_incidents():
+    """List all NIS2 incident reports (admin dashboard)."""
+    status_filter = request.args.get('status', None)
+    severity_filter = request.args.get('severity', None)
+    limit = request.args.get('limit', 50, type=int)
+
+    query = NIS2IncidentReport.query
+
+    if status_filter:
+        query = query.filter_by(status=status_filter)
+    if severity_filter:
+        query = query.filter_by(severity=severity_filter)
+
+    incidents = query.order_by(NIS2IncidentReport.created_at.desc()).limit(limit).all()
+
+    return {
+        'incidents': [incident.to_dict() for incident in incidents],
+        'total': len(incidents)
+    }, 200
+
+
+@admin_bp.route('/api/incidents/nis2/<int:incident_id>', methods=['GET', 'PATCH'])
+@login_required
+@admin_required
+def manage_nis2_incident(incident_id):
+    """Get or update a specific NIS2 incident report."""
+    incident = NIS2IncidentReport.query.get_or_404(incident_id)
+
+    if request.method == 'GET':
+        return incident.to_dict(), 200
+
+    if request.method == 'PATCH':
+        data = request.get_json() or {}
+
+        # Update allowed fields
+        if 'status' in data:
+            incident.status = data['status']
+        if 'actions_taken' in data:
+            incident.actions_taken = data['actions_taken']
+        if 'notification_sent_at' in data and data['notification_sent_at']:
+            incident.notification_sent_at = datetime.fromisoformat(data['notification_sent_at'])
+        if 'notification_recipient' in data:
+            incident.notification_recipient = data['notification_recipient']
+
+        incident.updated_at = _utc_now()
+        db.session.commit()
+
+        # Log the update
+        security_event = SecurityEvent(
+            user_id=current_user.id,
+            event_type='nis2_incident_updated',
+            severity=incident.severity,
+            details=f"NIS2 incident {incident_id} updated to status: {incident.status}"
+        )
+        db.session.add(security_event)
+        db.session.commit()
+
+        return {
+            'status': 'success',
+            'message': 'NIS2 incident report updated',
+            'incident': incident.to_dict()
+        }, 200
+
+
+@admin_bp.route('/api/compliance/readiness', methods=['GET'])
+@login_required
+@admin_required
+def get_compliance_readiness():
+    """
+    Return compliance readiness summary for admin dashboard.
+    Includes GDPR, NIS2, ISO27001 status based on current deployments.
+    """
+    from app.subscription_service import get_tier_info
+
+    active_subscriptions = Subscription.query.filter(
+        Subscription.end_date > _utc_now()
+    ).all()
+
+    @admin_bp.route('/api/incidents/nis2/<int:incident_id>/pdf', methods=['GET'])
+    @login_required
+    @admin_required
+    def download_nis2_incident_pdf(incident_id):
+        """Download NIS2 incident report as PDF for regulator submission."""
+        from flask import send_file
+        from app.utils.nis2_report_generator import NIS2ReportGenerator
+        from app.utils.evidence_gatherer import EvidenceGatherer
+        from app.models import EvidenceArtifact
+        from app.utils.access_control import generate_access_control_matrix
+        import io
+        import zipfile
+        from flask import send_file
+
+        incident = NIS2IncidentReport.query.get_or_404(incident_id)
+
+        # Prepare incident data with user info
+        incident_data = incident.to_dict()
+        incident_data['user'] = {
+            'email': incident.user.email,
+            'company': incident.user.company or 'N/A',
+            'first_name': incident.user.first_name,
+            'last_name': incident.user.last_name,
+        }
+
+        # Generate PDF
+        try:
+            generator = NIS2ReportGenerator(incident_data)
+            pdf_buffer = generator.generate_pdf()
+
+            # Log the PDF download
+            security_event = SecurityEvent(
+                user_id=current_user.id,
+                event_type='nis2_incident_pdf_downloaded',
+                severity=incident.severity,
+                details=f"NIS2 incident {incident_id} PDF downloaded for submission"
+            )
+            db.session.add(security_event)
+            db.session.commit()
+
+            return send_file(
+                pdf_buffer,
+                mimetype='application/pdf',
+                as_attachment=True,
+                download_name=f'NIS2_Incident_{incident_id}_{datetime.utcnow().strftime("%Y%m%d_%H%M%S")}.pdf'
+            )
+        except Exception as e:
+            return {
+                'status': 'error',
+                'message': f'Failed to generate PDF: {str(e)}'
+            }, 500
+
+
+    @admin_bp.route('/api/compliance/readiness', methods=['GET'])
+    @login_required
+    @admin_required
+    def get_compliance_readiness():
+        """
+        Return compliance readiness summary for admin dashboard.
+        Includes GDPR, NIS2, ISO27001 status based on current deployments.
+        """
+        from app.subscription_service import get_tier_info
+
+        active_subscriptions = Subscription.query.filter(
+            Subscription.end_date > _utc_now()
+        ).all()
+
+        nis2_incidents = NIS2IncidentReport.query.filter_by(status='reported').all()
+        security_events_count = SecurityEvent.query.count()
+        data_exports = DataDeletionRequest.query.count()
+
+        # Assess tier distribution
+        tier_distribution = {}
+        for sub in active_subscriptions:
+            tier = sub.plan
+            tier_distribution[tier] = tier_distribution.get(tier, 0) + 1
+
+        tier_compliance = {}
+        for tier in tier_distribution.keys():
+            tier_info = get_tier_info(tier)
+            if tier_info:
+                tier_compliance[tier] = {
+                    'users': tier_distribution[tier],
+                    'gdpr_ready': tier_info.get('gdpr_ready', False),
+                    'nis2_ready': tier_info.get('nis2_ready', False)
+                }
+
+        return {
+            'status': 'ok',
+            'compliance_overview': {
+                'gdpr': {
+                    'status': 'compliant' if security_events_count > 0 else 'configured',
+                    'export_requests': DataDeletionRequest.query.count(),
+                    'deletion_requests': DataDeletionRequest.query.count(),
+                    'audit_events': security_events_count
+                },
+                'nis2': {
+                    'status': 'active' if nis2_incidents else 'configured',
+                    'incident_reports': len(nis2_incidents),
+                    'critical_incidents': len([i for i in nis2_incidents if i.severity == 'critical']),
+                    'high_incidents': len([i for i in nis2_incidents if i.severity == 'high'])
+                },
+                'iso27001': {
+                    'status': 'in_progress',
+                    'audit_trail_events': security_events_count,
+                    'access_logs': len(active_subscriptions)
+                }
+            },
+            'tier_distribution': tier_compliance,
+            'deployment_info': {
+                'eu_residency_enforced': os.getenv('EU_ONLY_DATA_RESIDENCY', 'false').lower() in {'1', 'true', 'yes'},
+                'preferred_region': os.getenv('PREFERRED_DATA_REGION', 'eu-west-1')
+            }
+        }, 200
+
+
+
+    # Evidence gatherer endpoint for ISO27001 automation
+    @admin_bp.route('/admin/evidence/gather', methods=['POST'])
+    @login_required
+    @admin_required
+    def trigger_evidence_gather():
+        """Trigger a one-off evidence collection run (M365/GWS) and persist artifacts."""
+        gatherer = EvidenceGatherer(current_user=current_user)
+        summary = gatherer.gather_once()
+
+        # Log a security event for traceability
+        event = SecurityEvent(
+            user_id=current_user.id,
+            event_type='evidence_gather_run',
+            severity='info',
+            details=f"Evidence gather run: m365_artifacts={summary['m365']['artifacts']}, gws_artifacts={summary['gws']['artifacts']}"
+        )
+        db.session.add(event)
+        db.session.commit()
+
+        return {'status': 'ok', 'summary': summary}, 200
+
+
+
+    @admin_bp.route('/admin/evidence/generate-access-matrix', methods=['POST'])
+    @login_required
+    @admin_required
+    def generate_access_matrix():
+        """Generate access control matrix and persist as EvidenceArtifact."""
+        try:
+            result = generate_access_control_matrix()
+            # Log event
+            event = SecurityEvent(
+                user_id=current_user.id,
+                event_type='access_matrix_generated',
+                severity='info',
+                details=f"Access control matrix generated: artifact_id={result.get('artifact_id')}, rows={result.get('rows')}"
+            )
+            db.session.add(event)
+            db.session.commit()
+            return {'status': 'ok', 'result': result}, 200
+        except Exception as e:
+            current_app.logger.exception('Failed to generate access control matrix')
+            return {'status': 'error', 'message': str(e)}, 500
+
+
+    @admin_bp.route('/admin/export/evidence', methods=['GET'])
+    @login_required
+    @admin_required
+    def export_evidence():
+        """Export evidence artifacts as a ZIP. Query params: since (ISO8601), type (artifact_type)"""
+        since = request.args.get('since')
+        artifact_type = request.args.get('type')
+
+        query = EvidenceArtifact.query
+        if since:
+            try:
+                from datetime import datetime
+                dt = datetime.fromisoformat(since)
+                query = query.filter(EvidenceArtifact.collected_at >= dt)
+            except Exception:
+                pass
+        if artifact_type:
+            query = query.filter_by(artifact_type=artifact_type)
+
+        artifacts = query.order_by(EvidenceArtifact.collected_at.desc()).all()
+
+        mem = io.BytesIO()
+        with zipfile.ZipFile(mem, mode='w', compression=zipfile.ZIP_DEFLATED) as zf:
+            for art in artifacts:
+                filename = f"artifact_{art.id}_{art.source}_{art.artifact_type}"
+                # choose extension
+                ext = '.json'
+                content = art.raw_payload or ''
+                try:
+                    json.loads(content)
+                    ext = '.json'
+                except Exception:
+                    # not JSON, might be CSV
+                    if any(x in art.artifact_type for x in ['csv', 'matrix', 'access_control']):
+                        ext = '.csv'
+                    else:
+                        ext = '.txt'
+
+                zf.writestr(filename + ext, content)
+
+        mem.seek(0)
+        return send_file(mem, mimetype='application/zip', as_attachment=True, download_name='evidence_export.zip')
 
 # Logout
 @admin_bp.route('/logout')

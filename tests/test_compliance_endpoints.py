@@ -108,6 +108,12 @@ def test_export_and_delete_request_flow(client):
     assert export_response.status_code == 200
     export_payload = export_response.get_json()
     assert export_payload['export']['user']['email'] == 'privacy@example.com'
+    assert export_payload['download_url'].startswith('/auth/privacy/export/download/')
+
+    download_response = client.get(export_payload['download_url'])
+    assert download_response.status_code == 200
+    assert download_response.headers['Content-Type'].startswith('application/json')
+    assert 'attachment' in download_response.headers.get('Content-Disposition', '').lower()
 
     delete_response = client.post('/auth/privacy/delete-request', json={'reason': 'No longer needed'})
     assert delete_response.status_code == 202

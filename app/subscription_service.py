@@ -4,6 +4,92 @@ from app.models import db, User, Subscription
 from app import db
 
 
+# Compliance-focused pricing tiers with feature matrix
+COMPLIANCE_TIERS = {
+    "starter": {
+        "name": "Starter",
+        "price_monthly_eur": 0,
+        "price_annually_eur": 0,
+        "description": "Basic threat detection for individuals and small teams",
+        "features": [
+            "Manual file/text analysis",
+            "2 MB file limit",
+            "10k character text limit",
+            "Basic threat scoring",
+            "Email alerts",
+        ],
+        "compliance_level": "None",
+        "gdpr_ready": False,
+        "nis2_ready": False,
+        "storage_gb": 1,
+    },
+    "compliance_pro": {
+        "name": "Compliance Pro",
+        "price_monthly_eur": 2990,  # €29.90/month in cents
+        "price_annually_eur": 29900,
+        "description": "GDPR-focused threat detection with compliance audit trails",
+        "features": [
+            "All Starter features",
+            "GDPR data export/deletion",
+            "Audit logging (90 days)",
+            "Email + Slack alerts",
+            "8 MB file limit",
+            "50k character text limit",
+            "Threat history (30 days)",
+            "M365 basic integration",
+        ],
+        "compliance_level": "GDPR Article 5",
+        "gdpr_ready": True,
+        "nis2_ready": False,
+        "storage_gb": 10,
+    },
+    "enterprise_risk": {
+        "name": "Enterprise Risk",
+        "price_monthly_eur": 49900,  # €499/month in cents
+        "price_annually_eur": 499000,
+        "description": "NIS2 + ISO27001 critical infrastructure risk management",
+        "features": [
+            "All Compliance Pro features",
+            "NIS2 incident reporting",
+            "M365 + Google Workspace connectors",
+            "Advanced DLP policy assessment",
+            "Privilege escalation detection",
+            "Device compliance monitoring",
+            "Audit logging (1 year)",
+            "Custom alert rules",
+            "16 MB file limit",
+            "150k character text limit",
+            "Priority support",
+        ],
+        "compliance_level": "NIS2 + ISO27001",
+        "gdpr_ready": True,
+        "nis2_ready": True,
+        "storage_gb": 100,
+    },
+    "enterprise_elite": {
+        "name": "Enterprise Elite",
+        "price_monthly_eur": 99900,  # €999/month in cents (custom pricing available)
+        "price_annually_eur": 999000,
+        "description": "White-glove SOC2/ISO27001 compliance + EU-only data residency",
+        "features": [
+            "All Enterprise Risk features",
+            "EU-only data residency enforcement",
+            "SOC2 Type II readiness assessment",
+            "Custom compliance dashboards",
+            "Dedicated compliance officer support",
+            "Incident response playbooks",
+            "Unlimited file/text analysis",
+            "Real-time security alerting",
+            "Compliance training materials",
+        ],
+        "compliance_level": "SOC2 Type II + ISO27001 + GDPR + NIS2",
+        "gdpr_ready": True,
+        "nis2_ready": True,
+        "storage_gb": 1000,
+    },
+}
+
+
 class SubscriptionService:
     def __init__(self, user_id):
         self.user_id = user_id
@@ -11,25 +97,48 @@ class SubscriptionService:
         self.subscription = Subscription.query.filter_by(user_id=user_id).first()
 
     def create_subscription(self, plan_type):
-        """Creates a subscription for the user."""
+        """Creates a subscription for the user using compliance-focused tiers."""
         if not self.user:
             raise ValueError("User not found")
 
-        # Define the pricing and plans
+        # Map legacy plan types to new compliance-focused tiers
+        plan_mapping = {
+            'freemium': 'starter',
+            'premium_individual': 'compliance_pro',
+            'premium_small_business': 'enterprise_risk',
+            'premium_large_business': 'enterprise_elite',
+            # Also accept new tier names directly
+            'starter': 'starter',
+            'compliance_pro': 'compliance_pro',
+            'enterprise_risk': 'enterprise_risk',
+            'enterprise_elite': 'enterprise_elite',
+        }
+
+        normalized_plan = plan_mapping.get(plan_type)
+        if not normalized_plan:
+            raise ValueError(
+                f"Invalid plan type: {plan_type}. Valid plans: {', '.join(COMPLIANCE_TIERS.keys())}"
+            )
+
+        plan_type = normalized_plan
         plan_prices = {
-            'freemium': 0,  # Freemium is free
-            'premium_individual': 100,  # 1 EUR in cents
-            'premium_small_business': 200,  # 2 EUR in cents
-            'premium_large_business': 300  # 3 EUR in cents
+            tier: config["price_monthly_eur"]
+            for tier, config in COMPLIANCE_TIERS.items()
+        }
+
+        plan_type = normalized_plan
+        plan_prices = {
+            tier: config["price_monthly_eur"]
+            for tier, config in COMPLIANCE_TIERS.items()
         }
 
         # Check if the plan_type is valid
         if plan_type not in plan_prices:
             raise ValueError("Invalid plan type")
 
-        # Handle freemium plan separately
-        if plan_type == 'freemium':
-            # Create a freemium subscription directly
+        # Handle free tier separately
+        if plan_type == 'starter':
+            # Create a starter subscription directly
             self.subscription = Subscription(
                 user_id=self.user_id,
                 plan=plan_type,
@@ -38,7 +147,7 @@ class SubscriptionService:
             )
             db.session.add(self.subscription)
             db.session.commit()
-            return "Freemium subscription created successfully."
+            return "Starter subscription created successfully."
 
         # For premium plans, process payment
         amount = plan_prices[plan_type]
@@ -89,12 +198,16 @@ class SubscriptionService:
             return False
 
     def upgrade_subscription(self, new_plan_type):
-        """Upgrades the user's subscription to a new plan."""
+        """Upgrades the user's subscription to a new compliance tier."""
         if not self.subscription:
             raise ValueError("No existing subscription found.")
 
-        if new_plan_type not in ['premium_individual', 'premium_small_business', 'premium_large_business']:
-            raise ValueError("Invalid new plan type.")
+        # Accept both legacy and new tier names
+        valid_tiers = list(COMPLIANCE_TIERS.keys()) + [
+            'premium_individual', 'premium_small_business', 'premium_large_business'
+        ]
+        if new_plan_type not in valid_tiers:
+            raise ValueError(f"Invalid new plan type. Valid tiers: {', '.join(list(COMPLIANCE_TIERS.keys()))}")
 
         current_plan_type = self.subscription.plan
 
@@ -151,5 +264,38 @@ def get_subscription_status(user):
         elif getattr(subscription, "is_active", False):
             return 'Premium'
         else:
-            return 'Freemium'
-    return 'Freemium'
+            return 'Starter'
+    return 'Starter'
+
+
+def get_tier_info(plan_type: str) -> dict:
+    """Get tier configuration and feature list by plan type."""
+    # Handle legacy plan names
+    plan_mapping = {
+        'freemium': 'starter',
+        'premium_individual': 'compliance_pro',
+        'premium_small_business': 'enterprise_risk',
+        'premium_large_business': 'enterprise_elite',
+    }
+    normalized_plan = plan_mapping.get(plan_type, plan_type)
+
+    if normalized_plan not in COMPLIANCE_TIERS:
+        return None
+
+    return COMPLIANCE_TIERS[normalized_plan]
+
+
+def get_compliance_level(user) -> str:
+    """
+    Return compliance readiness level for user's current tier.
+    Used for dashboard badge and compliance checklists.
+    """
+    subscription = Subscription.query.filter_by(user_id=user.id).first()
+    if not subscription:
+        return "None"
+
+    tier_info = get_tier_info(subscription.plan)
+    if tier_info:
+        return tier_info.get("compliance_level", "None")
+
+    return "None"

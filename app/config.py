@@ -31,6 +31,8 @@ class Config:
     GDPR_POLICY_VERSION = os.getenv('GDPR_POLICY_VERSION', '2026-04')
     TERMS_VERSION = os.getenv('TERMS_VERSION', '2026-04')
     DATA_RETENTION_DAYS = int(os.getenv('DATA_RETENTION_DAYS', '180'))
+    EU_ONLY_DATA_RESIDENCY = str(os.getenv('EU_ONLY_DATA_RESIDENCY', 'false')).lower() in {'1', 'true', 'yes'}
+    PREFERRED_DATA_REGION = os.getenv('PREFERRED_DATA_REGION', 'eu-west-1')
     ALLOWED_EXTENSIONS = {
         'txt', 'json', 'xml', 'log', 'pcap', 'pcapng', 
         'yar', 'yara', 'pdf', 'sqlite', 'db', 'mdb', 'bin'

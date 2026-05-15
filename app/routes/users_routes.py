@@ -1,6 +1,6 @@
 import json
 import logging
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, send_file
 from flask_login import login_required, current_user, login_user, logout_user
 import stripe
 from datetime import datetime, timedelta
@@ -40,8 +40,10 @@ import os
 from werkzeug.utils import secure_filename
 import datetime
 from app.config import Config
-from app.utils.utils import generate_report, OutputHandler
+from app.utils.utils import generate_report, OutputHandler, get_serializer
 from sqlalchemy import inspect, text
+
+from app.subscription_service import COMPLIANCE_TIERS
 
 # Create blueprint for user routes
 users_bp = Blueprint('users', __name__)
@@ -57,44 +59,90 @@ def _utc_now():
 
 
 PLAN_ANALYSIS_LIMITS = {
-    'free': {
+    'starter': {
         'max_file_size_mb': 2,
-        'max_text_chars': 1000,
+        'max_text_chars': 10000,
         'max_items_per_analysis': 5,
         'max_url_length': 300,
+        'description': 'Basic threat detection for individuals',
+    },
+    'compliance_pro': {
+        'max_file_size_mb': 8,
+        'max_text_chars': 50000,
+        'max_items_per_analysis': 30,
+        'max_url_length': 1200,
+        'description': 'GDPR-compliant threat detection with audit trails',
+    },
+    'enterprise_risk': {
+        'max_file_size_mb': 16,
+        'max_text_chars': 150000,
+        'max_items_per_analysis': 150,
+        'max_url_length': 2500,
+        'description': 'NIS2 + ISO27001 critical infrastructure risk management',
+    },
+    'enterprise_elite': {
+        'max_file_size_mb': 500,  # Effectively unlimited
+        'max_text_chars': 5000000,
+        'max_items_per_analysis': 5000,
+        'max_url_length': 8000,
+        'description': 'White-glove SOC2 + EU residency enforcement',
+    },
+    # Legacy tier names for backward compatibility
+    'free': {
+        'max_file_size_mb': 2,
+        'max_text_chars': 10000,
+        'max_items_per_analysis': 5,
+        'max_url_length': 300,
+        'description': 'Starter tier',
     },
     'premium_individual': {
         'max_file_size_mb': 8,
-        'max_text_chars': 10000,
+        'max_text_chars': 50000,
         'max_items_per_analysis': 30,
         'max_url_length': 1200,
+        'description': 'Compliance Pro tier',
     },
     'premium_small_business': {
         'max_file_size_mb': 16,
-        'max_text_chars': 50000,
+        'max_text_chars': 150000,
         'max_items_per_analysis': 150,
         'max_url_length': 2500,
+        'description': 'Enterprise Risk tier',
     },
     'premium_large_business': {
-        'max_file_size_mb': 16,
-        'max_text_chars': 150000,
-        'max_items_per_analysis': 500,
-        'max_url_length': 4000,
+        'max_file_size_mb': 500,
+        'max_text_chars': 5000000,
+        'max_items_per_analysis': 5000,
+        'max_url_length': 8000,
+        'description': 'Enterprise Elite tier',
     },
 }
 
 
 def _normalize_plan_key(plan_like):
-    value = str(plan_like or 'free').strip().lower()
-    if value in {'starter', 'premium'}:
-        return 'premium_individual'
-    if value == 'growth':
-        return 'premium_small_business'
-    if value == 'scale':
-        return 'premium_large_business'
-    if value in PLAN_ANALYSIS_LIMITS:
-        return value
-    return 'free'
+    """Normalize plan names to canonical tier keys, handling legacy names."""
+    value = str(plan_like or 'starter').strip().lower()
+    
+    # Map legacy names to new compliance-focused tiers
+    legacy_mapping = {
+        'free': 'starter',
+        'freemium': 'starter',
+        'premium': 'compliance_pro',
+        'premium_individual': 'compliance_pro',
+        'starter': 'starter',
+        'growth': 'enterprise_risk',
+        'premium_small_business': 'enterprise_risk',
+        'scale': 'enterprise_elite',
+        'premium_large_business': 'enterprise_elite',
+        'compliance_pro': 'compliance_pro',
+        'enterprise_risk': 'enterprise_risk',
+        'enterprise_elite': 'enterprise_elite',
+    }
+    
+    normalized = legacy_mapping.get(value, 'starter')
+    if normalized not in PLAN_ANALYSIS_LIMITS:
+        return 'starter'
+    return normalized
 
 
 def _get_latest_subscription(user_id):
@@ -178,6 +226,51 @@ def _log_user_activity(user_id, event_type, description, entity_type=None, entit
     return activity
 
 
+@users_bp.route('/checkout/create-session', methods=['POST'])
+@login_required
+def create_checkout_session():
+    """Create a Stripe Checkout session for the selected compliance tier."""
+    payload = request.get_json(silent=True) or {}
+    tier_id = payload.get('tier_id')
+    if not tier_id:
+        return jsonify({'error': 'tier_id is required'}), 400
+
+    # Normalize and validate
+    tier_key = _normalize_plan_key(tier_id)
+    tier_config = COMPLIANCE_TIERS.get(tier_key)
+    if not tier_config or tier_config.get('price_monthly_eur', 0) == 0:
+        return jsonify({'error': 'Invalid or free tier selected'}), 400
+
+    # Initialize Stripe
+    stripe.api_key = current_app.config.get('STRIPE_API_KEY')
+    if not stripe.api_key:
+        return jsonify({'error': 'Stripe API key not configured'}), 500
+
+    # Build checkout session with inline price data
+    try:
+        base_url = request.host_url.rstrip('/')
+        session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            mode='payment',
+            line_items=[{
+                'price_data': {
+                    'currency': 'eur',
+                    'product_data': {'name': f"gueInsight - {tier_config.get('name')}"},
+                    'unit_amount': int(tier_config.get('price_monthly_eur', 0)),
+                },
+                'quantity': 1,
+            }],
+            success_url=f"{base_url}/admin?checkout=success",
+            cancel_url=f"{base_url}/admin?checkout=cancel",
+            metadata={'user_id': current_user.id, 'tier': tier_key},
+        )
+    except Exception as e:
+        current_app.logger.exception('Stripe checkout session creation failed')
+        return jsonify({'error': 'Failed to create checkout session'}), 500
+
+    return jsonify({'checkout_url': session.url})
+
+
 def _log_security_event(event_type, severity='info', user_id=None, details=None):
     event = SecurityEvent(
         user_id=user_id,
@@ -235,6 +328,47 @@ def _sync_user_profile_columns():
             connection.execute(text(f'ALTER TABLE "user" ADD COLUMN {column_name} {column_ddl}'))
 
     _USER_SCHEMA_SYNCED = True
+
+
+def _privacy_export_serializer():
+    return get_serializer(current_app.config['SECRET_KEY'], current_app.config['SECURITY_PASSWORD_SALT'])
+
+
+def _privacy_export_dir():
+    export_dir = os.path.join(current_app.instance_path, 'privacy_exports')
+    os.makedirs(export_dir, exist_ok=True)
+    return export_dir
+
+
+def _build_privacy_export_payload(user):
+    return {
+        'exported_at': _utc_now().isoformat(),
+        'user': _serialize_auth_user(user),
+        'preferences': user.preference.to_dict() if user.preference else None,
+        'subscriptions': [
+            {
+                'id': sub.id,
+                'plan': sub.plan,
+                'start_date': sub.start_date.isoformat() if sub.start_date else None,
+                'end_date': sub.end_date.isoformat() if sub.end_date else None,
+            }
+            for sub in user.subscriptions
+        ],
+        'billing_transactions': [tx.to_dict() for tx in user.billing_transactions],
+        'analysis_transactions': [tx.to_dict() for tx in user.analysis_transactions],
+        'support_tickets': [ticket.to_dict() for ticket in user.support_tickets],
+        'activity_events': [event.to_dict() for event in user.activity_events],
+        'security_events': [event.to_dict() for event in getattr(user, 'security_events', [])],
+        'data_export_requests': [request_item.to_dict() for request_item in user.data_export_requests],
+        'data_deletion_requests': [request_item.to_dict() for request_item in user.data_deletion_requests],
+    }
+
+
+def _write_privacy_export(user_id, request_id, payload):
+    export_path = os.path.join(_privacy_export_dir(), f'user_{user_id}_export_{request_id}.json')
+    with open(export_path, 'w', encoding='utf-8') as export_file:
+        json.dump(payload, export_file, indent=2, ensure_ascii=False)
+    return export_path
 
 
 
@@ -1076,46 +1210,89 @@ def auth_privacy_consent():
 @users_bp.route('/auth/privacy/export', methods=['POST'])
 @login_required
 def auth_privacy_export():
-    export_request = DataExportRequest(user_id=current_user.id, status='completed', requested_at=_utc_now())
+    export_request = DataExportRequest(user_id=current_user.id, status='processing', requested_at=_utc_now())
     db.session.add(export_request)
+    db.session.flush()
 
-    export_payload = {
-        'exported_at': _utc_now().isoformat(),
-        'user': _serialize_auth_user(current_user),
-        'preferences': current_user.preference.to_dict() if current_user.preference else None,
-        'subscriptions': [
-            {
-                'id': sub.id,
-                'plan': sub.plan,
-                'start_date': sub.start_date.isoformat() if sub.start_date else None,
-                'end_date': sub.end_date.isoformat() if sub.end_date else None,
-            }
-            for sub in current_user.subscriptions
-        ],
-        'billing_transactions': [tx.to_dict() for tx in current_user.billing_transactions],
-        'analysis_transactions': [tx.to_dict() for tx in current_user.analysis_transactions],
-        'support_tickets': [ticket.to_dict() for ticket in current_user.support_tickets],
-        'activity_events': [event.to_dict() for event in current_user.activity_events],
-    }
+    export_payload = _build_privacy_export_payload(current_user)
+    export_path = _write_privacy_export(current_user.id, export_request.id, export_payload)
+    download_token = _privacy_export_serializer().dumps({
+        'request_id': export_request.id,
+        'user_id': current_user.id,
+    })
+
+    export_request.status = 'completed'
+    export_request.completed_at = _utc_now()
+    export_request.download_token = download_token
 
     _log_user_activity(
         current_user.id,
         event_type='privacy.data_exported',
         description='Exported personal account data.',
         entity_type='privacy',
+        metadata={'export_request_id': export_request.id, 'export_path': export_path},
     )
     _log_security_event(
         event_type='privacy.data_exported',
         severity='info',
         user_id=current_user.id,
+        details={'export_request_id': export_request.id},
     )
     db.session.commit()
 
     return {
         'message': 'Data export generated.',
+        'download_url': url_for('users.auth_privacy_export_download', token=download_token, _external=False),
         'export': export_payload,
         'request': export_request.to_dict(),
     }, 200
+
+
+@users_bp.route('/auth/privacy/export/download/<token>', methods=['GET'])
+@login_required
+def auth_privacy_export_download(token):
+    try:
+        token_payload = _privacy_export_serializer().loads(token, max_age=86400)
+    except Exception:
+        return {'error': 'Invalid or expired export token.'}, 400
+
+    if int(token_payload.get('user_id') or 0) != current_user.id:
+        return {'error': 'Forbidden.'}, 403
+
+    export_request = DataExportRequest.query.filter_by(
+        id=token_payload.get('request_id'),
+        user_id=current_user.id,
+        download_token=token,
+        status='completed',
+    ).first()
+    if not export_request:
+        return {'error': 'Export request not found.'}, 404
+
+    export_path = os.path.join(_privacy_export_dir(), f'user_{current_user.id}_export_{export_request.id}.json')
+    if not os.path.exists(export_path):
+        return {'error': 'Export file not found.'}, 404
+
+    _log_user_activity(
+        current_user.id,
+        event_type='privacy.data_export_downloaded',
+        description='Downloaded exported personal account data.',
+        entity_type='privacy',
+        metadata={'export_request_id': export_request.id},
+    )
+    _log_security_event(
+        event_type='privacy.data_export_downloaded',
+        severity='info',
+        user_id=current_user.id,
+        details={'export_request_id': export_request.id},
+    )
+    db.session.commit()
+
+    return send_file(
+        export_path,
+        mimetype='application/json',
+        as_attachment=True,
+        download_name=f'gueinsight-data-export-{current_user.id}-{export_request.id}.json',
+    )
 
 
 @users_bp.route('/auth/privacy/delete-request', methods=['POST'])
@@ -1131,7 +1308,10 @@ def auth_privacy_delete_request():
         .first()
     )
     if existing_pending:
-        return {'error': 'A deletion request is already pending for this account.'}, 409
+        return {
+            'error': 'A deletion request is already pending for this account.',
+            'request': existing_pending.to_dict(),
+        }, 409
 
     deletion_request = DataDeletionRequest(
         user_id=current_user.id,
@@ -1152,6 +1332,7 @@ def auth_privacy_delete_request():
         event_type='privacy.deletion_requested',
         severity='warning',
         user_id=current_user.id,
+        details={'reason': reason},
     )
     db.session.commit()
 

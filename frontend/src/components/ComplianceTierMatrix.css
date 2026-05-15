@@ -1,0 +1,331 @@
+/* Compliance Tier Matrix Styles */
+
+.compliance-tier-matrix {
+  padding: 2rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.tier-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.tier-header h2 {
+  font-size: 2.5rem;
+  color: #1a1a1a;
+  margin: 0 0 0.5rem;
+  font-weight: 700;
+}
+
+.tier-subtitle {
+  font-size: 1.1rem;
+  color: #666;
+  margin: 0;
+}
+
+.tier-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+  margin-bottom: 3rem;
+}
+
+.tier-card {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  border: 2px solid #e0e0e0;
+  transition: all 0.3s ease;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.tier-card:hover {
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  border-color: #0066cc;
+}
+
+.tier-card.highlighted {
+  border-color: #0066cc;
+  box-shadow: 0 4px 16px rgba(0, 102, 204, 0.2);
+  transform: scale(1.02);
+}
+
+.tier-card.active {
+  border-color: #28a745;
+  background: #f0f8f4;
+}
+
+.recommended-badge {
+  position: absolute;
+  top: -12px;
+  left: 20px;
+  background: linear-gradient(135deg, #0066cc, #0052a3);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 102, 204, 0.3);
+}
+
+.tier-info h3 {
+  font-size: 1.5rem;
+  color: #1a1a1a;
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+}
+
+.tier-description {
+  font-size: 0.95rem;
+  color: #666;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.tier-price {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.price-amount {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #0066cc;
+}
+
+.price-period {
+  font-size: 0.95rem;
+  color: #666;
+}
+
+.compliance-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.35rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.badge.gdpr-badge {
+  background: #e3f2fd;
+  color: #1565c0;
+  border: 1px solid #1565c0;
+}
+
+.badge.nis2-badge {
+  background: #fce4ec;
+  color: #c2185b;
+  border: 1px solid #c2185b;
+}
+
+.badge.m365-badge {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #2e7d32;
+}
+
+.badge.gws-badge {
+  background: #fff3e0;
+  color: #e65100;
+  border: 1px solid #e65100;
+}
+
+.badge.eu-badge {
+  background: #f3e5f5;
+  color: #6a1b9a;
+  border: 1px solid #6a1b9a;
+}
+
+.tier-features {
+  flex: 1;
+  border-top: 1px solid #e0e0e0;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 1rem 0;
+}
+
+.tier-features ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tier-features li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.95rem;
+  color: #333;
+}
+
+.tier-features li.included {
+  color: #1a1a1a;
+}
+
+.tier-features li.excluded {
+  color: #999;
+  text-decoration: line-through;
+}
+
+.tier-features .check {
+  color: #28a745;
+  font-weight: 600;
+  min-width: 20px;
+}
+
+.tier-features li.excluded .check {
+  color: #999;
+}
+
+.feature-name {
+  flex: 1;
+}
+
+.feature-value {
+  background: #f0f0f0;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  color: #0066cc;
+  font-weight: 600;
+}
+
+.tier-cta {
+  background: #0066cc;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tier-cta:hover:not(:disabled) {
+  background: #0052a3;
+  box-shadow: 0 2px 8px rgba(0, 102, 204, 0.3);
+}
+
+.tier-cta:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.tier-cta:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* Comparison Table */
+
+.tier-comparison-table {
+  margin-top: 3rem;
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  overflow-x: auto;
+}
+
+.tier-comparison-table h3 {
+  margin: 0 0 1.5rem;
+  font-size: 1.5rem;
+  color: #1a1a1a;
+}
+
+.tier-comparison-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.tier-comparison-table thead {
+  background: #f8f9fa;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.tier-comparison-table th {
+  text-align: left;
+  padding: 1rem;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.tier-comparison-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #e0e0e0;
+  color: #333;
+}
+
+.tier-comparison-table tbody tr:hover {
+  background: #f9f9f9;
+}
+
+.tier-comparison-table tbody tr:nth-child(even) {
+  background: #fafafa;
+}
+
+.tier-comparison-table tbody tr:nth-child(even):hover {
+  background: #f2f2f2;
+}
+
+/* Responsive */
+
+@media (max-width: 768px) {
+  .compliance-tier-matrix {
+    padding: 1rem;
+  }
+
+  .tier-header h2 {
+    font-size: 1.8rem;
+  }
+
+  .tier-container {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .tier-card.highlighted {
+    transform: scale(1);
+  }
+
+  .tier-comparison-table {
+    padding: 1rem;
+    overflow-x: auto;
+  }
+
+  .tier-comparison-table table {
+    min-width: 500px;
+  }
+}
+
+@media (max-width: 480px) {
+  .tier-header h2 {
+    font-size: 1.5rem;
+  }
+
+  .price-amount {
+    font-size: 1.5rem;
+  }
+
+  .tier-cta {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.95rem;
+  }
+}

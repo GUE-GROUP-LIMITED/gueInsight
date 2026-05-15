@@ -17,12 +17,14 @@ from app.config import Config
 
 
 #from flask_wtf.csrf import CSRFProtect
+from flask_cors import CORS
 
 
 # Initialize the database instance
 db = SQLAlchemy()
 mail = Mail()  # Initialize Mail here without passing an app
 migrate = Migrate()
+from .routes.stripe_webhooks import stripe_bp
 login_manager = LoginManager()
 
 def create_app():
@@ -94,5 +96,9 @@ def create_app():
 
 
     return app
+
+
+    # register stripe webhook blueprint
+    app.register_blueprint(stripe_bp)
 
 

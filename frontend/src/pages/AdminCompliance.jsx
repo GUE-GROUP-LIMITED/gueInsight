@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
+import ComplianceTierMatrix from '../components/ComplianceTierMatrix';
+import NIS2IncidentReport from '../components/NIS2IncidentReport';
 import './AdminCompliance.css';
 
 const severityOrder = { critical: 3, warning: 2, info: 1 };
@@ -11,6 +13,8 @@ const AdminCompliance = () => {
   const [securityEvents, setSecurityEvents] = useState([]);
   const [deletionRequests, setDeletionRequests] = useState([]);
   const [updatingId, setUpdatingId] = useState(null);
+  const [incidentSubmitting, setIncidentSubmitting] = useState(false);
+  const [incidentMessage, setIncidentMessage] = useState('');
 
   const loadComplianceData = async () => {
     setLoading(true);
@@ -27,6 +31,57 @@ const AdminCompliance = () => {
       setError(requestError?.response?.data?.error || 'Unable to load compliance data right now.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUpgrade = async (tierId) => {
+    setError('');
+    try {
+      const res = await api.post('/checkout/create-session', { tier_id: tierId });
+      const checkoutUrl = res?.data?.checkout_url;
+      if (checkoutUrl) {
+        window.location.href = checkoutUrl;
+      } else {
+        setError('Unable to create Stripe checkout session.');
+      }
+    } catch (err) {
+      setError(err?.response?.data?.error || 'Stripe checkout failed.');
+    }
+  };
+
+  const handleIncidentSubmit = async (incidentData) => {
+    setIncidentSubmitting(true);
+    setIncidentMessage('');
+    setError('');
+    try {
+      const res = await api.post('/api/incidents/report-nis2', incidentData);
+      const incidentId = res?.data?.incident_id || res?.data?.id;
+      setIncidentMessage('Incident submitted. ID: ' + (incidentId || 'N/A'));
+      if (incidentId) await handlePDFDownload(incidentId);
+      await loadComplianceData();
+    } catch (err) {
+      setError(err?.response?.data?.error || 'Unable to submit incident.');
+    } finally {
+      setIncidentSubmitting(false);
+    }
+  };
+
+  const handlePDFDownload = async (incidentId) => {
+    setError('');
+    try {
+      const res = await api.get(`/api/incidents/nis2/${incidentId}/pdf`, { responseType: 'blob' });
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `NIS2_Incident_${incidentId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+    } catch (err) {
+      setError(err?.response?.data?.error || 'Unable to download PDF.');
     }
   };
 
@@ -96,6 +151,23 @@ const AdminCompliance = () => {
         <article>
           <span>Pending deletion requests</span>
           <strong>{pendingRequests}</strong>
+        </article>
+      </section>
+
+      <section className="admin-compliance-page__feature-area">
+        <article className="admin-compliance-card admin-compliance-card--tiers">
+          <h2>Pricing & Compliance Tiers</h2>
+          <ComplianceTierMatrix currentTier="compliance_pro" onUpgrade={handleUpgrade} />
+        </article>
+
+        <article className="admin-compliance-card admin-compliance-card--incident">
+          <h2>Report NIS2 Incident</h2>
+          <NIS2IncidentReport
+            onSubmit={handleIncidentSubmit}
+            onDownloadPDF={handlePDFDownload}
+          />
+          {incidentSubmitting ? <p>Submitting incident...</p> : null}
+          {incidentMessage ? <p className="admin-compliance-success">{incidentMessage}</p> : null}
         </article>
       </section>
 
