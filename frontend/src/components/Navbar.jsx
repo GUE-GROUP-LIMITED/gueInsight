@@ -30,8 +30,9 @@ const Navbar = () => {
     }
 
     return [
-      { to: '/', label: 'Home' },
-      { to: '/subscription', label: 'Plans' },
+      { to: '/subscription', label: 'Pricing' },
+      { to: '/docs', label: 'Documentation' },
+      { to: 'https://www.guecyber.com', label: 'Company', external: true },
     ];
   }, [homePath, user]);
 
@@ -95,14 +96,26 @@ const Navbar = () => {
           <div className="app-navbar__links">
             {navLinks.map((link, index) => (
               <React.Fragment key={link.to}>
-                <NavLink
-                  to={link.to}
-                  end={link.to === '/'}
-                  className={({ isActive }) => `app-navbar__link ${isActive ? 'is-active' : ''}`}
-                  onClick={closeMenu}
-                >
-                  {link.label}
-                </NavLink>
+                {link.external ? (
+                  <a
+                    href={link.to}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`app-navbar__link`}
+                    onClick={closeMenu}
+                  >
+                    {link.label}
+                  </a>
+                ) : (
+                  <NavLink
+                    to={link.to}
+                    end={link.to === '/'}
+                    className={({ isActive }) => `app-navbar__link ${isActive ? 'is-active' : ''}`}
+                    onClick={closeMenu}
+                  >
+                    {link.label}
+                  </NavLink>
+                )}
                 {index < navLinks.length - 1 ? <span className="app-navbar__separator" aria-hidden="true"> </span> : null}
               </React.Fragment>
             ))}
@@ -113,9 +126,6 @@ const Navbar = () => {
               <>
                 <NavLink to="/login" className={({ isActive }) => `app-navbar__link app-navbar__link--ghost ${isActive ? 'is-active' : ''}`} onClick={closeMenu}>
                   Login
-                </NavLink>
-                <NavLink to="/signup" className={({ isActive }) => `app-navbar__link app-navbar__link--primary ${isActive ? 'is-active' : ''}`} onClick={closeMenu}>
-                  Sign Up
                 </NavLink>
               </>
             ) : (
