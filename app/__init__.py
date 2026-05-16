@@ -73,6 +73,10 @@ def create_app():
     login_manager.init_app(app)
     login_manager.login_view = 'users.user_login'
 
+    @app.route('/')
+    def index():
+        return {'status': 'ok', 'service': 'gueInsight backend'}, 200
+
     @app.route('/healthz')
     def healthz():
         return {'status': 'ok'}, 200
