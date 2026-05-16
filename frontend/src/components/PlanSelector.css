@@ -1,0 +1,12 @@
+.plan-selector__backdrop{position:fixed;inset:0;background:rgba(3,8,18,0.6);display:flex;align-items:center;justify-content:center;z-index:2200}
+.plan-selector{width:min(980px,calc(100% - 40px));background:#fff;border-radius:12px;padding:20px;box-shadow:0 20px 60px rgba(3,12,34,0.45)}
+.plan-selector__grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
+.plan-card{background:#f7f9fc;border:1px solid #e6eef8;padding:12px;border-radius:10px;text-align:left;cursor:pointer}
+.plan-card.is-selected{border-color:#0b66c3;box-shadow:0 8px 20px rgba(11,102,195,0.12)}
+.plan-card__name{font-weight:700}
+.plan-card__price{margin-top:8px;font-size:1.05rem;color:#0b66c3;font-weight:800}
+.plan-card__desc{margin-top:6px;color:#4c5f78;font-size:0.93rem}
+.plan-selector__actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+.plan-selector__confirm{background:#0b66c3;color:#fff;padding:8px 14px;border-radius:8px;border:none}
+.plan-selector__cancel{background:transparent;border:1px solid #d0d7e6;padding:8px 12px;border-radius:8px}
+.plan-selector__error{color:#b81f2e;margin-top:10px}

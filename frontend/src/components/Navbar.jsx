@@ -69,7 +69,13 @@ const Navbar = () => {
       <div className="app-navbar__container">
         <div className="app-navbar__brand-group">
           <Link to={homePath} className="app-navbar__brand" onClick={closeMenu}>
-            GueInsight
+            <img
+              src="/img/logo.png"
+              alt="Gue Cyber"
+              className="app-navbar__logo"
+              onError={(e) => { e.currentTarget.src = '/img/guecyber-logo.svg'; }}
+            />
+            <span className="app-navbar__brand-text">GueInsight</span>
           </Link>
           <span className="app-navbar__subtitle">Cyber threat intelligence</span>
         </div>

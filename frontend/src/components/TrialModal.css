@@ -1,0 +1,22 @@
+.trial-modal__backdrop{
+  position:fixed;
+  inset:0;
+  background:rgba(4,8,16,0.6);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:2000;
+}
+.trial-modal{
+  width:min(720px, calc(100% - 48px));
+  background:#fff;
+  border-radius:12px;
+  padding:22px;
+  box-shadow:0 20px 60px rgba(3,12,34,0.4);
+}
+.trial-modal h2{margin:0 0 8px;font-size:1.2rem}
+.trial-modal p{color:#334;line-height:1.5}
+.trial-modal ul{margin:12px 0 18px;padding-left:20px;color:#334}
+.trial-modal__actions{display:flex;gap:10px;justify-content:flex-end}
+.trial-modal__confirm{background:#0b66c3;color:#fff;padding:8px 12px;border-radius:8px;border:none}
+.trial-modal__cancel{background:transparent;color:#334;padding:8px 12px;border-radius:8px;border:1px solid #ccc}

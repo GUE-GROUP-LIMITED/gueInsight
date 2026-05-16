@@ -229,9 +229,10 @@ def _log_user_activity(user_id, event_type, description, entity_type=None, entit
 @users_bp.route('/checkout/create-session', methods=['POST'])
 @login_required
 def create_checkout_session():
-    """Create a Stripe Checkout session for the selected compliance tier."""
+    """Create a Stripe Checkout session for the selected compliance tier trial."""
     payload = request.get_json(silent=True) or {}
     tier_id = payload.get('tier_id')
+    trial_days = int(payload.get('trial_days') or 14)
     if not tier_id:
         return jsonify({'error': 'tier_id is required'}), 400
 
@@ -241,6 +242,17 @@ def create_checkout_session():
     if not tier_config or tier_config.get('price_monthly_eur', 0) == 0:
         return jsonify({'error': 'Invalid or free tier selected'}), 400
 
+    # Prevent duplicate active subscriptions/trials
+    now = datetime.utcnow()
+    existing = (
+        Subscription.query
+        .filter_by(user_id=current_user.id)
+        .order_by(Subscription.end_date.desc())
+        .first()
+    )
+    if existing and existing.end_date and existing.end_date >= now:
+        return jsonify({'error': 'You already have an active subscription or trial.'}), 400
+
     # Initialize Stripe
     stripe.api_key = current_app.config.get('STRIPE_API_KEY')
     if not stripe.api_key:
@@ -249,20 +261,35 @@ def create_checkout_session():
     # Build checkout session with inline price data
     try:
         base_url = request.host_url.rstrip('/')
-        session = stripe.checkout.Session.create(
-            payment_method_types=['card'],
-            mode='payment',
-            line_items=[{
+        # Use an existing Stripe Price ID if configured; otherwise fall back to inline price_data
+        price_id = tier_config.get('stripe_price_id')
+        if price_id:
+            line_items = [{'price': price_id, 'quantity': 1}]
+        else:
+            line_items = [{
                 'price_data': {
                     'currency': 'eur',
                     'product_data': {'name': f"gueInsight - {tier_config.get('name')}"},
                     'unit_amount': int(tier_config.get('price_monthly_eur', 0)),
+                    'recurring': {'interval': 'month'},
                 },
                 'quantity': 1,
-            }],
-            success_url=f"{base_url}/admin?checkout=success",
-            cancel_url=f"{base_url}/admin?checkout=cancel",
-            metadata={'user_id': current_user.id, 'tier': tier_key},
+            }]
+
+        # Build subscription_data: include trial_period_days only when > 0
+        subscription_data = {'metadata': {'user_id': str(current_user.id), 'tier': tier_key, 'trial_days': str(trial_days)}}
+        if trial_days and int(trial_days) > 0:
+            subscription_data['trial_period_days'] = int(trial_days)
+
+        session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            payment_method_collection='always',
+            mode='subscription',
+            line_items=line_items,
+            subscription_data=subscription_data,
+            success_url=f"{base_url}/dashboard?checkout=success",
+            cancel_url=f"{base_url}/subscription?checkout=cancel",
+            metadata={'user_id': str(current_user.id), 'tier': tier_key, 'trial_days': str(trial_days)},
         )
     except Exception as e:
         current_app.logger.exception('Stripe checkout session creation failed')

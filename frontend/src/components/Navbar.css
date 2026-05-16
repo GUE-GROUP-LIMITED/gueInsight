@@ -23,6 +23,14 @@
   gap: 2px;
 }
 
+.app-navbar__logo{
+  height:28px;
+  width:auto;
+  margin-right:8px;
+}
+.app-navbar__brand-text{
+  font-weight:700;
+}
 .app-navbar__brand {
   color: #7dd3fc;
   text-decoration: none;
