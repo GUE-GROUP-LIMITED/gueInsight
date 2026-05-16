@@ -96,6 +96,7 @@ class Subscription(db.Model):
     plan = Column(String(50), nullable=False)
     start_date = Column(DateTime, nullable=False)
     end_date = Column(DateTime, nullable=False)
+    is_trial = Column(Boolean, nullable=False, default=False)
 
     # Relationship with User
     user = db.relationship("User", backref="subscriptions")

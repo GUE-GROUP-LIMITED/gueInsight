@@ -31,6 +31,12 @@ const Payment = () => {
 		return normalizePlan(params.get('plan'));
 	}, [search]);
 
+	const trialDays = useMemo(() => {
+		const params = new URLSearchParams(search);
+		const parsed = Number.parseInt(params.get('trial') || '14', 10);
+		return Number.isFinite(parsed) && parsed > 0 ? parsed : 14;
+	}, [search]);
+
 	const selectedPlanDetails = PLAN_DETAILS[selectedPlan] || null;
 
 	const handleUpgrade = async () => {
@@ -40,22 +46,26 @@ const Payment = () => {
 		setSuccessMessage('');
 
 		try {
-			const response = await api.post('/auth/subscription/upgrade', { plan: selectedPlan }, { validateStatus: () => true });
+			const response = await api.post(
+				'/checkout/create-session',
+				{ tier_id: selectedPlan, trial_days: trialDays },
+				{ validateStatus: () => true }
+			);
 
 			if (response.status >= 200 && response.status < 300) {
-				if (response.data?.user) {
-					setUser(response.data.user);
+				const checkoutUrl = response.data?.checkout_url;
+				if (checkoutUrl) {
+					setSuccessMessage(`Redirecting to secure checkout for a ${trialDays}-day free trial...`);
+					window.location.assign(checkoutUrl);
+					return;
 				}
-				setSuccessMessage('Your plan has been upgraded successfully. Redirecting to dashboard...');
-				window.setTimeout(() => {
-					navigate('/dashboard', { replace: true });
-				}, 1200);
+				setSuccessMessage('Checkout session created, but no redirect URL was returned.');
 				return;
 			}
 
-			setErrorMessage(response.data?.error || 'Unable to complete this upgrade right now.');
+			setErrorMessage(response.data?.error || 'Unable to start the trial checkout right now.');
 		} catch {
-			setErrorMessage('Unable to complete this upgrade right now.');
+			setErrorMessage('Unable to start the trial checkout right now.');
 		} finally {
 			setSubmitting(false);
 		}
@@ -80,8 +90,8 @@ const Payment = () => {
 				<p className="auth-pricing-card__eyebrow">Payment</p>
 				<h1>Confirm your {selectedPlanDetails.name} plan</h1>
 				<p>
-					You are upgrading to <strong>{selectedPlanDetails.name}</strong> at {selectedPlanDetails.price}
-					{selectedPlanDetails.cycle}.
+					Start a <strong>{trialDays}-day free trial</strong> on <strong>{selectedPlanDetails.name}</strong> at {selectedPlanDetails.price}
+					{selectedPlanDetails.cycle}. Stripe will validate your payment method before the trial begins.
 				</p>
 			</section>
 
@@ -93,11 +103,11 @@ const Payment = () => {
 						{selectedPlanDetails.price}<span>{selectedPlanDetails.cycle}</span>
 					</p>
 					<p className="pricing-card__description">
-						Billing starts immediately and your account access updates right away.
+						Billing begins after the trial ends. Your payment method is validated now so the plan can auto-renew.
 					</p>
 					<ul>
-						<li>30-day billing period</li>
-						<li>Plan access is applied instantly</li>
+						<li>{trialDays}-day free trial</li>
+						<li>Payment method validated before trial starts</li>
 						<li>Manage or change plan anytime</li>
 					</ul>
 
@@ -111,7 +121,7 @@ const Payment = () => {
 						disabled={submitting}
 						aria-busy={submitting}
 					>
-						{submitting ? 'Processing...' : `Confirm ${selectedPlanDetails.name} upgrade`}
+						{submitting ? 'Processing...' : `Start ${trialDays}-day free trial`}
 					</button>
 					<Link to="/subscription" className="pricing-card__cta pricing-card__cta--ghost">Back to plans</Link>
 				</article>

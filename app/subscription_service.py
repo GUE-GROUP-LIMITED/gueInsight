@@ -42,6 +42,7 @@ COMPLIANCE_TIERS = {
         "gdpr_ready": True,
         "nis2_ready": False,
         "storage_gb": 10,
+        "stripe_price_id": None,  # Set to your Stripe Price ID in production, e.g. 'price_1N...'
     },
     "enterprise_risk": {
         "name": "Enterprise Risk",
@@ -65,6 +66,7 @@ COMPLIANCE_TIERS = {
         "gdpr_ready": True,
         "nis2_ready": True,
         "storage_gb": 100,
+        "stripe_price_id": None,
     },
     "enterprise_elite": {
         "name": "Enterprise Elite",
@@ -86,6 +88,7 @@ COMPLIANCE_TIERS = {
         "gdpr_ready": True,
         "nis2_ready": True,
         "storage_gb": 1000,
+        "stripe_price_id": None,
     },
 }
 
