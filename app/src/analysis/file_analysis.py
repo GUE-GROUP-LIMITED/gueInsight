@@ -12,7 +12,6 @@ from sklearn.feature_extraction.text import CountVectorizer
 
 from app.models import Alert, AlertRule, Event, db
 from app.notifications.alerts import send_slack_alert, send_teams_alert
-from transformers import pipeline
 
 
 def _utc_now():
@@ -166,9 +165,11 @@ class Analyzer:
 
 # Lazy-load transformer models only when needed
 def get_ner_pipeline():
+    from transformers import pipeline
     return pipeline("ner", model="dbmdz/bert-large-cased-finetuned-conll03-english")
 
 def get_classifier_pipeline():
+    from transformers import pipeline
     return pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
 
 # Define IoC extraction methods

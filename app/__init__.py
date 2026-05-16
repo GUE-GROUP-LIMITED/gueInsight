@@ -73,6 +73,10 @@ def create_app():
     login_manager.init_app(app)
     login_manager.login_view = 'users.user_login'
 
+    @app.route('/healthz')
+    def healthz():
+        return {'status': 'ok'}, 200
+
     @login_manager.user_loader
     def load_user(user_id):
         from app.models import User
@@ -92,13 +96,12 @@ def create_app():
     with app.app_context():
         from app.models import User, Subscription  # Import your models
         db.create_all()  # Create tables
+
+    # Register webhook routes before returning the app so Render serves them.
+    app.register_blueprint(stripe_bp)
     
 
 
     return app
-
-
-    # register stripe webhook blueprint
-    app.register_blueprint(stripe_bp)
 
 
