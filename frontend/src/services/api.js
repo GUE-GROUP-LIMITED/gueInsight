@@ -7,7 +7,7 @@ const getDefaultApiBase = () => {
   }
 
   if (import.meta.env.PROD) {
-    return 'https://kuber.insights.guecyber.com';
+    return 'https://kuber.guecyber.com';
   }
 
   return 'http://localhost:5000';
