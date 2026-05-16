@@ -35,7 +35,7 @@ def create_app():
     # Allow browser calls from the local Vite frontend while keeping cookies enabled.
     configured_origins = os.getenv(
         'FRONTEND_ORIGINS',
-        'http://localhost:5173,http://127.0.0.1:5173,https://insights.guecyber.com'
+        'http://localhost:5173,http://127.0.0.1:5173,https://insights.guecyber.com,https://gue-insight-git-main-gabalohos-projects.vercel.app,https://gue-insight-jekcd18ru-gabalohos-projects.vercel.app'
     )
     allowed_origins = [origin.strip() for origin in configured_origins.split(',') if origin.strip()]
     CORS(
