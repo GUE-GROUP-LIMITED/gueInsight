@@ -27,8 +27,16 @@ from app.models import (
 )
 from app.forms import LoginForm, ResetPasswordForm, SignupForm, SubmitCloudLinkForm, SubmitTextForm, UploadFileForm, LogoutForm, ProfileForm, AlertRuleForm
 from app.subscription_service import SubscriptionService
-from app.src.analysis.file_analysis import analyze_text_for_security, analyze_cloud_link
-from app.src.preprocessing.preprocess import preprocess_text
+try:
+    from app.src.analysis.file_analysis import analyze_text_for_security, analyze_cloud_link
+except Exception:
+    analyze_text_for_security = None
+    analyze_cloud_link = None
+
+try:
+    from app.src.preprocessing.preprocess import preprocess_text
+except Exception:
+    preprocess_text = None
 from werkzeug.exceptions import RequestEntityTooLarge
 from werkzeug.security import generate_password_hash
 from itsdangerous import URLSafeTimedSerializer

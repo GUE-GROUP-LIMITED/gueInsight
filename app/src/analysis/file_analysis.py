@@ -5,10 +5,22 @@ import os
 import re
 from datetime import datetime, timezone
 
-import docx
-from pypdf import PdfReader
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.feature_extraction.text import CountVectorizer
+try:
+    import docx
+except Exception:
+    docx = None
+
+try:
+    from pypdf import PdfReader
+except Exception:
+    PdfReader = None
+
+try:
+    from sklearn.ensemble import RandomForestClassifier
+    from sklearn.feature_extraction.text import CountVectorizer
+except Exception:
+    RandomForestClassifier = None
+    CountVectorizer = None
 
 from app.models import Alert, AlertRule, Event, db
 from app.notifications.alerts import send_slack_alert, send_teams_alert
@@ -209,15 +221,21 @@ def process_text_or_hash(input_data):
 
 # Feature extraction
 def extract_features_from_entity(entities):
+    if CountVectorizer is None:
+        return []
     vectorizer = CountVectorizer()
     return vectorizer.fit_transform(entities)
 
 # ML classification methods
 def classify_text(text, candidate_labels):
     classifier = get_classifier_pipeline()
+    if classifier is None:
+        return {'labels': [], 'scores': []}
     return classifier(text, candidate_labels)
 
 def train_classifier(data, labels):
+    if CountVectorizer is None or RandomForestClassifier is None:
+        raise RuntimeError('scikit-learn is not installed in this environment')
     vectorizer = CountVectorizer()
     X = vectorizer.fit_transform(data)
     classifier = RandomForestClassifier()

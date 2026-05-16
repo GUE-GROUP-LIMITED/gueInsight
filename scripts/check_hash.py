@@ -1,0 +1,3 @@
+from werkzeug.security import check_password_hash
+h = 'scrypt:32768:8:1$u0ZVdqM4XMy80vVC$28f8aed588a4d7d18d50d55fe3b451a62f1dd9b774941fa28542f798d8ee48287f30f5d2d7f651802f25279a24524c50a8cfb2966140c74aaf713f1a80eb9fcd'
+print(check_password_hash(h, 'Password123!'))
