@@ -3,15 +3,16 @@ import { Link } from 'react-router-dom';
 import AdminTopbarControls from '../components/AdminTopbarControls';
 import { AuthContext } from '../context/AuthContext';
 import { api } from '../services/api';
+import { useTranslation } from '../i18n/index';
 import './AdminSupport.css';
 
 const statusOptions = [
-  { value: 'all', label: 'All tickets' },
-  { value: 'open', label: 'Open' },
-  { value: 'in_progress', label: 'In progress' },
-  { value: 'waiting_on_user', label: 'Waiting on user' },
-  { value: 'resolved', label: 'Resolved' },
-  { value: 'closed', label: 'Closed' },
+  { value: 'all', key: 'all_tickets' },
+  { value: 'open', key: 'open' },
+  { value: 'in_progress', key: 'in_progress' },
+  { value: 'waiting_on_user', key: 'waiting_on_user' },
+  { value: 'resolved', key: 'resolved' },
+  { value: 'closed', key: 'closed' },
 ];
 
 const priorityLabels = {
@@ -37,6 +38,7 @@ const formatDateTime = (isoDate) => {
 };
 
 const AdminSupport = () => {
+  const { t } = useTranslation();
   const { user } = useContext(AuthContext);
   const [tickets, setTickets] = useState([]);
   const [selectedTicketId, setSelectedTicketId] = useState(null);
@@ -62,7 +64,7 @@ const AdminSupport = () => {
       setTickets(loadedTickets);
       setSelectedTicketId((current) => current || loadedTickets[0]?.id || null);
     } catch (requestError) {
-      setError(requestError?.response?.data?.error || 'Unable to load support tickets.');
+      setError(requestError?.response?.data?.error || t('admin_support.load_failed'));
     } finally {
       setLoading(false);
     }
@@ -81,7 +83,7 @@ const AdminSupport = () => {
         assigned_admin_id: ticket?.assigned_admin_id ? String(ticket.assigned_admin_id) : '',
       });
     } catch (requestError) {
-      setError(requestError?.response?.data?.error || 'Unable to load the selected ticket.');
+      setError(requestError?.response?.data?.error || t('admin_support.ticket_detail_failed'));
     } finally {
       setDetailLoading(false);
     }
@@ -104,10 +106,10 @@ const AdminSupport = () => {
   const selectedTicketSummary = useMemo(() => {
     if (!selectedTicket) return null;
     return [
-      { label: 'Requester', value: selectedTicket.user_name || selectedTicket.user_email || 'Unknown user' },
-      { label: 'Assigned staff', value: selectedTicket.assigned_admin_email || 'Unassigned' },
-      { label: 'Attended by', value: selectedTicket.attended_by_email || 'Not attended yet' },
-      { label: 'Created', value: formatDateTime(selectedTicket.created_at) },
+      { label: t('admin_support.requester'), value: selectedTicket.user_name || selectedTicket.user_email || t('admin_support.unknown_user') },
+      { label: t('admin_support.assigned_staff'), value: selectedTicket.assigned_admin_email || t('admin_support.unassigned') },
+      { label: t('admin_support.attended_by'), value: selectedTicket.attended_by_email || t('admin_support.not_attended') },
+      { label: t('admin_support.created'), value: formatDateTime(selectedTicket.created_at) },
     ];
   }, [selectedTicket]);
 
@@ -115,9 +117,9 @@ const AdminSupport = () => {
     const openCount = tickets.filter((ticket) => ['open', 'in_progress', 'waiting_on_user'].includes(ticket.status)).length;
     const resolvedCount = tickets.filter((ticket) => ['resolved', 'closed'].includes(ticket.status)).length;
     return [
-      { label: 'Open queue', value: String(openCount), detail: 'Tickets needing attention' },
-      { label: 'Completed', value: String(resolvedCount), detail: 'Resolved or closed cases' },
-      { label: 'Total tickets', value: String(tickets.length), detail: 'Subscriber support requests' },
+      { label: t('admin_support.open_queue'), value: String(openCount), detail: t('admin_support.tickets_needing_attention') },
+      { label: t('admin_support.completed'), value: String(resolvedCount), detail: t('admin_support.resolved_cases') },
+      { label: t('admin_support.total_tickets'), value: String(tickets.length), detail: t('admin_support.subscriber_requests') },
     ];
   }, [tickets]);
 
@@ -144,10 +146,10 @@ const AdminSupport = () => {
         resolution_summary: response.data?.ticket?.resolution_summary || '',
         assigned_admin_id: response.data?.ticket?.assigned_admin_id ? String(response.data.ticket.assigned_admin_id) : String(user.id),
       });
-      setMessage('Ticket assigned to you and marked in progress.');
+      setMessage(t('admin_support.ticket_taken'));
       await loadTickets();
     } catch (requestError) {
-      setError(requestError?.response?.data?.error || 'Unable to take ownership of the ticket.');
+      setError(requestError?.response?.data?.error || t('admin_support.take_failed'));
     } finally {
       setSaving(false);
     }
@@ -168,10 +170,10 @@ const AdminSupport = () => {
         assigned_admin_id: ticketForm.assigned_admin_id ? Number(ticketForm.assigned_admin_id) : null,
       });
       setSelectedTicket(response.data?.ticket || selectedTicket);
-      setMessage('Ticket updated successfully.');
+      setMessage(t('admin_support.ticket_updated'));
       await loadTickets();
     } catch (requestError) {
-      setError(requestError?.response?.data?.error || 'Unable to update the ticket.');
+      setError(requestError?.response?.data?.error || t('admin_support.update_failed'));
     } finally {
       setSaving(false);
     }
@@ -184,37 +186,37 @@ const AdminSupport = () => {
           <div className="admin-support-shell__brand-mark">GI</div>
           <div className="admin-support-shell__brand-copy">
             <strong>GueInsight</strong>
-            <span>Admin Panel</span>
+            <span>{t('admin_support.admin_panel')}</span>
           </div>
         </div>
 
         <nav className="admin-support-shell__nav" aria-label="Admin support navigation">
-          <Link to="/admin" className="admin-support-shell__nav-link">Dashboard</Link>
-          <Link to="/admin/support" className="admin-support-shell__nav-link is-active">Support queue</Link>
-          <Link to="/admin/users" className="admin-support-shell__nav-link">Subscribers</Link>
-          <Link to="/admin/profile" className="admin-support-shell__nav-link">Profile</Link>
+          <Link to="/admin" className="admin-support-shell__nav-link">{t('nav.dashboard')}</Link>
+          <Link to="/admin/support" className="admin-support-shell__nav-link is-active">{t('admin_support.support_queue')}</Link>
+          <Link to="/admin/users" className="admin-support-shell__nav-link">{t('nav.subscribers')}</Link>
+          <Link to="/admin/profile" className="admin-support-shell__nav-link">{t('nav.profile')}</Link>
         </nav>
 
         <div className="admin-support-shell__sidebar-card">
-          <p className="admin-support-shell__sidebar-label">Support policy</p>
-          <h3>Track every handoff</h3>
-          <p>Assigned staff, first attendance, and resolution timestamps are recorded on each ticket.</p>
-          <Link to="/admin" className="admin-support-shell__sidebar-action">Back to dashboard</Link>
+          <p className="admin-support-shell__sidebar-label">{t('admin_support.support_policy')}</p>
+          <h3>{t('admin_support.track_every_handoff')}</h3>
+          <p>{t('admin_support.sidebar_copy')}</p>
+          <Link to="/admin" className="admin-support-shell__sidebar-action">{t('admin_support.back_to_dashboard')}</Link>
         </div>
       </aside>
 
       <main className="admin-support-shell__content">
         <header className="admin-support-shell__topbar">
           <div>
-            <p className="admin-support-shell__eyebrow">Service Desk</p>
-            <h1>Support queue</h1>
+            <p className="admin-support-shell__eyebrow">{t('admin_support.service_desk')}</p>
+            <h1>{t('admin_support.support_queue')}</h1>
           </div>
 
           <AdminTopbarControls
-            searchPlaceholder="Search support"
-            searchAriaLabel="Search support tickets"
+            searchPlaceholder={t('admin_support.search_support')}
+            searchAriaLabel={t('admin_support.search_support_aria')}
             primaryActionHref="/admin/users"
-            primaryActionLabel="Manage users"
+            primaryActionLabel={t('admin_support.manage_users')}
             onToggleSidebar={undefined}
           />
         </header>
@@ -242,7 +244,7 @@ const AdminSupport = () => {
                 <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
                   {statusOptions.map((option) => (
                     <option key={option.value} value={option.value}>
-                      {option.label}
+                      {option.value === 'all' ? t('admin_support.all_tickets') : t(`support.${option.key}`)}
                     </option>
                   ))}
                 </select>

@@ -3,14 +3,15 @@ import PropTypes from 'prop-types';
 import { Link } from 'react-router-dom';
 import AdminTopbarControls from '../components/AdminTopbarControls';
 import { api } from '../services/api';
+import { useTranslation } from '../i18n/index';
 import './UserManagement.css';
 
 const sidebarItems = [
-  { label: 'Home', href: '/admin', icon: 'home' },
-  { label: 'Users', href: '/admin/users', active: true, icon: 'users' },
-  { label: 'Roles', href: '#roles', icon: 'roles' },
-  { label: 'Tables', href: '#accounts', icon: 'table' },
-  { label: 'Logs', href: '#logs', icon: 'logs' },
+  { label: 'nav.home', href: '/admin', icon: 'home' },
+  { label: 'nav.subscribers', href: '/admin/users', active: true, icon: 'users' },
+  { label: 'admin_users.roles', href: '#roles', icon: 'roles' },
+  { label: 'admin_users.tables', href: '#accounts', icon: 'table' },
+  { label: 'admin_users.logs', href: '#logs', icon: 'logs' },
 ];
 
 const SidebarIcon = ({ type }) => {
@@ -77,11 +78,11 @@ const toTitle = (value) => {
   return value.charAt(0).toUpperCase() + value.slice(1);
 };
 
-const nameFromUser = (user) => {
+const nameFromUser = (user, fallbackUnknown = 'Unknown user') => {
   const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ').trim();
   if (fullName) return fullName;
   if (user.email) return user.email.split('@')[0];
-  return 'Unknown user';
+  return fallbackUnknown;
 };
 
 const initialsFromName = (name) => {
@@ -99,10 +100,10 @@ const percent = (count, total) => {
   return Math.round((count / total) * 100);
 };
 
-const formatDateTime = (isoDate) => {
-  if (!isoDate) return 'N/A';
+const formatDateTime = (isoDate, unavailable = 'N/A') => {
+  if (!isoDate) return unavailable;
   const parsedDate = new Date(isoDate);
-  if (Number.isNaN(parsedDate.getTime())) return 'N/A';
+  if (Number.isNaN(parsedDate.getTime())) return unavailable;
   return parsedDate.toLocaleString();
 };
 
@@ -151,6 +152,109 @@ const listUserToDetailShape = (listUser) => {
 };
 
 const UserManagement = () => {
+  const { t } = useTranslation();
+  const ui = {
+    na: t('admin_users.na'),
+    unknownUser: t('admin_users.unknown_user'),
+    loadingUsers: t('admin_users.loading_users'),
+    loadingUser: t('admin_users.loading_user'),
+    loadingUserDetails: t('admin_users.loading_user_details'),
+    noUsersMatch: t('admin_users.no_users_match'),
+    userControls: t('admin_users.user_controls'),
+    accountAdministration: t('admin_users.account_administration'),
+    sidebarDescription: t('admin_users.sidebar_description'),
+    backToDashboard: t('admin_users.back_to_dashboard'),
+    dashboard: t('admin_users.dashboard'),
+    userManagement: t('admin_users.user_management'),
+    searchUsers: t('admin_users.search_users'),
+    adminDashboard: t('admin_users.admin_dashboard'),
+    totalUsers: t('admin_users.total_users'),
+    allAccounts: t('admin_users.all_accounts'),
+    activeAccounts: t('admin_users.active_accounts'),
+    activeStanding: t('admin_users.active_standing'),
+    inactiveAccounts: t('admin_users.inactive_accounts'),
+    needFollowUp: t('admin_users.need_follow_up'),
+    admins: t('admin_users.admins'),
+    staffAccessOnly: t('admin_users.staff_access_only'),
+    activeAccountsTitle: t('admin_users.active_accounts_title'),
+    adminAccountsTitle: t('admin_users.admin_accounts_title'),
+    paidPlansTitle: t('admin_users.paid_plans_title'),
+    filteredViewTitle: t('admin_users.filtered_view_title'),
+    directorySynced: t('admin_users.directory_synced'),
+    now: t('admin_users.now'),
+    totalAccountSuffix: t('admin_users.total_account_suffix'),
+    activeAccountSuffix: t('admin_users.active_account_suffix'),
+    inactiveAccountSuffix: t('admin_users.inactive_account_suffix'),
+    matchFilters: t('admin_users.match_filters'),
+    accounts: t('admin_users.accounts'),
+    subscriberList: t('admin_users.subscriber_list'),
+    preview: t('admin_users.preview'),
+    user: t('admin_users.user'),
+    email: t('admin_users.email'),
+    plan: t('admin_users.plan'),
+    role: t('admin_users.role'),
+    status: t('admin_users.status'),
+    actions: t('admin_users.actions'),
+    open: t('admin_users.open'),
+    loading: t('admin_users.loading'),
+    activity: t('admin_users.activity'),
+    accountTimeline: t('admin_users.account_timeline'),
+    filters: t('admin_users.filters'),
+    findAccount: t('admin_users.find_account'),
+    search: t('admin_users.search'),
+    searchByNameOrEmail: t('admin_users.search_by_name_or_email'),
+    allRoles: t('admin_users.all_roles'),
+    users: t('admin_users.users'),
+    staffAdmins: t('admin_users.staff_admins'),
+    anyStatus: t('admin_users.any_status'),
+    active: t('admin_users.active'),
+    inactive: t('admin_users.inactive'),
+    distributionMix: t('admin_users.distribution_mix'),
+    userProfile: t('admin_users.user_profile'),
+    close: t('admin_users.close'),
+    loadingUserDetailsText: t('admin_users.loading_user_details'),
+    statusActive: t('admin_users.status_active'),
+    statusInactive: t('admin_users.status_inactive'),
+    firstName: t('admin_users.first_name'),
+    lastName: t('admin_users.last_name'),
+    phone: t('admin_users.phone'),
+    company: t('admin_users.company'),
+    jobTitle: t('admin_users.job_title'),
+    teamSize: t('admin_users.team_size'),
+    primaryUseCase: t('admin_users.primary_use_case'),
+    newsletter: t('admin_users.newsletter'),
+    optedIn: t('admin_users.opted_in'),
+    notSubscribed: t('admin_users.not_subscribed'),
+    created: t('admin_users.created'),
+    fileUploads: t('admin_users.file_uploads'),
+    editProfile: t('admin_users.edit_profile'),
+    saveProfile: t('admin_users.save_profile'),
+    cancelEdit: t('admin_users.cancel_edit'),
+    deactivateAccount: t('admin_users.deactivate_account'),
+    activateAccount: t('admin_users.activate_account'),
+    setStandardUser: t('admin_users.set_standard_user'),
+    promoteToAdmin: t('admin_users.promote_to_admin'),
+    deleteAccount: t('admin_users.delete_account'),
+    confirmDelete: t('admin_users.confirm_delete'),
+    profileUpdated: t('admin_users.profile_updated'),
+    userDeleted: t('admin_users.user_deleted'),
+    userActivated: t('admin_users.user_activated'),
+    userDeactivated: t('admin_users.user_deactivated'),
+    userPromoted: t('admin_users.user_promoted'),
+    userStandard: t('admin_users.user_standard'),
+    actionFailed: t('admin_users.action_failed'),
+    subscription: t('admin_users.subscription'),
+    subscriptionDetails: t('admin_users.subscription_details'),
+    started: t('admin_users.started'),
+    expires: t('admin_users.expires'),
+    totalPlans: t('admin_users.total_plans'),
+    freePlan: t('admin_users.free_plan'),
+    noSubscriptionHistory: t('admin_users.no_subscription_history'),
+    recentActivity: t('admin_users.recent_activity'),
+    latestAdminActions: t('admin_users.latest_admin_actions'),
+    noActivityLogs: t('admin_users.no_activity_logs'),
+  };
+  const displayPlan = (plan) => (!plan || plan === 'Free' ? ui.freePlan : plan);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -185,26 +289,26 @@ const UserManagement = () => {
       const normalizedUsers = rawUsers.map((user) => {
         const role = normalizeRole(user.role);
         const status = user.is_active ? 'active' : 'inactive';
-        const name = nameFromUser(user);
+        const name = nameFromUser(user, ui.unknownUser);
         return {
           id: user.id,
           name,
-          email: user.email || 'N/A',
-          plan: user.current_plan || 'Free',
+          email: user.email || ui.na,
+          plan: displayPlan(user.current_plan),
           role,
-          roleLabel: toTitle(role),
+          roleLabel: role === 'admin' ? t('admin_users.role_admin') : t('admin_users.role_user'),
           status,
-          statusLabel: toTitle(status),
+          statusLabel: status === 'active' ? ui.active : ui.inactive,
           badge: initialsFromName(name),
         };
       });
       setUsers(normalizedUsers);
     } catch (requestError) {
-      setError(requestError?.response?.data?.error || 'Unable to load users right now.');
+      setError(requestError?.response?.data?.error || t('admin_users.load_failed'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t, ui]);
 
   useEffect(() => {
     let active = true;
@@ -240,7 +344,7 @@ const UserManagement = () => {
     } catch (requestError) {
       const status = requestError?.response?.status;
       if (status === 403) {
-        setDetailError(requestError?.response?.data?.error || 'You do not have permission to view this account.');
+        setDetailError(requestError?.response?.data?.error || t('admin_users.forbidden'));
         return;
       }
       const fallbackUser = listUserToDetailShape(users.find((user) => user.id === userId));
@@ -256,14 +360,14 @@ const UserManagement = () => {
           can_toggle_active: false,
           can_change_role: false,
         });
-        setDetailError('Detailed endpoint is unavailable on the active backend process. Restart Flask to enable full user actions.');
+        setDetailError(t('admin_users.detail_unavailable'));
       } else {
-        setDetailError(requestError?.response?.data?.error || 'Unable to open this user profile.');
+        setDetailError(requestError?.response?.data?.error || t('admin_users.detail_failed'));
       }
     } finally {
       setDetailLoading(false);
     }
-  }, [users]);
+  }, [t, ui, users]);
 
   const closeUserDetail = () => {
     setSelectedUserId(null);
@@ -292,14 +396,14 @@ const UserManagement = () => {
           is_active: !selectedUser.is_active,
         });
         setSelectedUser(response.data?.user || selectedUser);
-        setActionMessage(selectedUser.is_active ? 'User deactivated.' : 'User activated.');
+        setActionMessage(selectedUser.is_active ? ui.userDeactivated : ui.userActivated);
       }
 
       if (actionType === 'toggle_role') {
         const nextRole = selectedUser.role === 'admin' ? 'user' : 'admin';
         const response = await api.patch(`/admin_users/${selectedUser.id}`, { role: nextRole });
         setSelectedUser(response.data?.user || selectedUser);
-        setActionMessage(nextRole === 'admin' ? 'User promoted to admin.' : 'User set to standard user.');
+        setActionMessage(nextRole === 'admin' ? ui.userPromoted : ui.userStandard);
       }
 
       if (actionType === 'save_profile') {
@@ -308,17 +412,17 @@ const UserManagement = () => {
         setSelectedUser(updatedUser);
         setProfileDraft(buildEditableProfile(updatedUser));
         setEditMode(false);
-        setActionMessage('Profile details updated.');
+        setActionMessage(ui.profileUpdated);
       }
 
       if (actionType === 'delete') {
-        const confirmed = window.confirm('Delete this user account? This cannot be undone.');
+        const confirmed = window.confirm(ui.confirmDelete);
         if (!confirmed) {
           setActionLoading(false);
           return;
         }
         await api.delete(`/admin_users/${selectedUser.id}`);
-        setActionMessage('User deleted.');
+        setActionMessage(ui.userDeleted);
         await loadUsers();
         closeUserDetail();
         return;
@@ -327,7 +431,7 @@ const UserManagement = () => {
       await loadUsers();
       await loadUserDetail(selectedUser.id);
     } catch (requestError) {
-      setDetailError(requestError?.response?.data?.error || 'Action failed. Please try again.');
+      setDetailError(requestError?.response?.data?.error || ui.actionFailed);
     } finally {
       setActionLoading(false);
     }
@@ -372,30 +476,30 @@ const UserManagement = () => {
 
   const statCards = useMemo(() => {
     return [
-      { label: 'Total users', value: totalUsers.toString(), detail: 'All accounts in system', tone: 'blue' },
-      { label: 'Active accounts', value: activeUsers.toString(), detail: 'Currently in good standing', tone: 'green' },
-      { label: 'Inactive accounts', value: inactiveUsers.toString(), detail: 'Need follow-up', tone: 'orange' },
-      { label: 'Admins', value: adminUsers.toString(), detail: 'Staff access only', tone: 'red' },
+      { label: ui.totalUsers, value: totalUsers.toString(), detail: ui.allAccounts, tone: 'blue' },
+      { label: ui.activeAccounts, value: activeUsers.toString(), detail: ui.activeStanding, tone: 'green' },
+      { label: ui.inactiveAccounts, value: inactiveUsers.toString(), detail: ui.needFollowUp, tone: 'orange' },
+      { label: ui.admins, value: adminUsers.toString(), detail: ui.staffAccessOnly, tone: 'red' },
     ];
-  }, [activeUsers, adminUsers, inactiveUsers, totalUsers]);
+  }, [activeUsers, adminUsers, inactiveUsers, totalUsers, ui]);
 
   const activityItems = useMemo(() => {
     return [
-      { title: 'Active accounts', value: percent(activeUsers, totalUsers), color: 'blue' },
-      { title: 'Admin accounts', value: percent(adminUsers, totalUsers), color: 'green' },
-      { title: 'Paid plans', value: percent(paidUsers, totalUsers), color: 'orange' },
-      { title: 'Filtered view', value: percent(filteredUsers.length, Math.max(totalUsers, 1)), color: 'red' },
+      { title: ui.activeAccountsTitle, value: percent(activeUsers, totalUsers), color: 'blue' },
+      { title: ui.adminAccountsTitle, value: percent(adminUsers, totalUsers), color: 'green' },
+      { title: ui.paidPlansTitle, value: percent(paidUsers, totalUsers), color: 'orange' },
+      { title: ui.filteredViewTitle, value: percent(filteredUsers.length, Math.max(totalUsers, 1)), color: 'red' },
     ];
-  }, [activeUsers, adminUsers, filteredUsers.length, paidUsers, totalUsers]);
+  }, [activeUsers, adminUsers, filteredUsers.length, paidUsers, totalUsers, ui]);
 
   const timelineItems = useMemo(() => {
     return [
-      { title: 'Directory synced', time: 'Now', detail: `${totalUsers} total account${totalUsers === 1 ? '' : 's'} loaded` },
-      { title: 'Active users', time: 'Now', detail: `${activeUsers} active account${activeUsers === 1 ? '' : 's'}` },
-      { title: 'Inactive users', time: 'Now', detail: `${inactiveUsers} inactive account${inactiveUsers === 1 ? '' : 's'}` },
-      { title: 'Current view', time: 'Now', detail: `${filteredUsers.length} account${filteredUsers.length === 1 ? '' : 's'} match filters` },
+      { title: ui.directorySynced, time: ui.now, detail: t('admin_users.total_accounts_loaded', { count: totalUsers }) },
+      { title: ui.activeAccountsTitle, time: ui.now, detail: t('admin_users.active_accounts_loaded', { count: activeUsers }) },
+      { title: ui.inactiveAccounts, time: ui.now, detail: t('admin_users.inactive_accounts_loaded', { count: inactiveUsers }) },
+      { title: ui.filteredViewTitle, time: ui.now, detail: t('admin_users.filtered_accounts', { count: filteredUsers.length }) },
     ];
-  }, [activeUsers, filteredUsers.length, inactiveUsers, totalUsers]);
+  }, [activeUsers, filteredUsers.length, inactiveUsers, totalUsers, t, ui]);
 
   return (
     <div className={`user-shell ${sidebarCollapsed ? 'user-shell--collapsed' : ''}`} id="roles">
@@ -404,56 +508,56 @@ const UserManagement = () => {
           <div className="user-shell__brand-mark">GI</div>
           <div className="user-shell__brand-copy">
             <strong>GueInsight</strong>
-            <span>Admin Panel</span>
+            <span>{ui.adminDashboard}</span>
           </div>
         </div>
 
-        <nav className="user-shell__nav" aria-label="User management sidebar">
+        <nav className="user-shell__nav" aria-label={ui.userManagement}>
           {sidebarItems.map((item) => (
             item.href.startsWith('/') ? (
               <Link
                 key={item.label}
                 to={item.href}
-                aria-label={item.label}
+                aria-label={t(item.label)}
                 className={`user-shell__nav-link ${item.active ? 'is-active' : ''}`}
               >
                 <span className="user-shell__nav-icon" aria-hidden="true"><SidebarIcon type={item.icon} /></span>
-                <span className="user-shell__nav-label">{item.label}</span>
+                <span className="user-shell__nav-label">{t(item.label)}</span>
               </Link>
             ) : (
               <a
                 key={item.label}
                 href={item.href}
-                aria-label={item.label}
+                aria-label={t(item.label)}
                 className={`user-shell__nav-link ${item.active ? 'is-active' : ''}`}
               >
                 <span className="user-shell__nav-icon" aria-hidden="true"><SidebarIcon type={item.icon} /></span>
-                <span className="user-shell__nav-label">{item.label}</span>
+                <span className="user-shell__nav-label">{t(item.label)}</span>
               </a>
             )
           ))}
         </nav>
 
         <div className="user-shell__sidebar-card">
-          <p className="user-shell__sidebar-label">User Controls</p>
-          <h3>Account administration</h3>
-          <p>Review plan status, role assignment, and user lifecycle events from the table below.</p>
-          <Link to="/admin" className="user-shell__sidebar-action">Back to dashboard</Link>
+          <p className="user-shell__sidebar-label">{ui.userControls}</p>
+          <h3>{ui.accountAdministration}</h3>
+          <p>{ui.sidebarDescription}</p>
+          <Link to="/admin" className="user-shell__sidebar-action">{ui.backToDashboard}</Link>
         </div>
       </aside>
 
       <main className="user-shell__content">
         <header className="user-shell__topbar">
           <div>
-            <p className="user-shell__eyebrow">Dashboard</p>
-            <h1>User management</h1>
+            <p className="user-shell__eyebrow">{ui.dashboard}</p>
+            <h1>{ui.userManagement}</h1>
           </div>
 
           <AdminTopbarControls
-            searchPlaceholder="Search users"
-            searchAriaLabel="Search users"
+            searchPlaceholder={ui.searchUsers}
+            searchAriaLabel={ui.searchUsers}
             primaryActionHref="/admin"
-            primaryActionLabel="Admin dashboard"
+            primaryActionLabel={ui.adminDashboard}
             sidebarCollapsed={sidebarCollapsed}
             onToggleSidebar={() => setSidebarCollapsed((current) => !current)}
           />
@@ -473,22 +577,22 @@ const UserManagement = () => {
           <article className="user-shell__panel user-shell__panel--chart" id="accounts">
             <div className="user-shell__panel-header">
               <div>
-                <p className="user-shell__section-label">Accounts</p>
-                <h2>Subscriber list</h2>
+                <p className="user-shell__section-label">{ui.accounts}</p>
+                <h2>{ui.subscriberList}</h2>
               </div>
-              <span className="user-shell__chip">Preview</span>
+              <span className="user-shell__chip">{ui.preview}</span>
             </div>
 
             <div className="user-shell__table-wrap">
               <table className="user-shell__table">
                 <thead>
                   <tr>
-                    <th>User</th>
-                    <th>Email</th>
-                    <th>Plan</th>
-                    <th>Role</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                    <th>{ui.user}</th>
+                    <th>{ui.email}</th>
+                    <th>{ui.plan}</th>
+                    <th>{ui.role}</th>
+                    <th>{ui.status}</th>
+                    <th>{ui.actions}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -525,19 +629,19 @@ const UserManagement = () => {
                             loadUserDetail(user.id);
                           }}
                         >
-                          Open
+                          {ui.open}
                         </button>
                       </td>
                     </tr>
                   ))}
                   {!loading && !error && filteredUsers.length === 0 ? (
                     <tr>
-                      <td colSpan={6}>No users match the current filters.</td>
+                      <td colSpan={6}>{ui.noUsersMatch}</td>
                     </tr>
                   ) : null}
                 </tbody>
               </table>
-              {loading ? <p className="user-shell__feedback">Loading users...</p> : null}
+              {loading ? <p className="user-shell__feedback">{ui.loadingUsers}</p> : null}
               {error ? <p className="user-shell__feedback user-shell__feedback--error">{error}</p> : null}
             </div>
           </article>
@@ -545,8 +649,8 @@ const UserManagement = () => {
           <article className="user-shell__panel user-shell__panel--activity" id="logs">
             <div className="user-shell__panel-header">
               <div>
-                <p className="user-shell__section-label">Activity</p>
-                <h2>Account timeline</h2>
+                <p className="user-shell__section-label">{ui.activity}</p>
+                <h2>{ui.accountTimeline}</h2>
               </div>
             </div>
 
@@ -569,37 +673,37 @@ const UserManagement = () => {
           <article className="user-shell__panel">
             <div className="user-shell__panel-header">
               <div>
-                <p className="user-shell__section-label">Filters</p>
-                <h2>Find an account</h2>
+                <p className="user-shell__section-label">{ui.filters}</p>
+                <h2>{ui.findAccount}</h2>
               </div>
             </div>
 
             <div className="user-shell__filters">
               <label className="user-shell__field">
-                <span>Search</span>
+                <span>{ui.search}</span>
                 <input
                   type="text"
-                  placeholder="Search by name or email"
+                  placeholder={ui.searchByNameOrEmail}
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
                 />
               </label>
 
               <label className="user-shell__field">
-                <span>Role</span>
+                <span>{ui.role}</span>
                 <select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}>
-                  <option value="all">All roles</option>
-                  <option value="user">Users</option>
-                  <option value="admin">Staff admins</option>
+                  <option value="all">{ui.allRoles}</option>
+                  <option value="user">{ui.users}</option>
+                  <option value="admin">{ui.staffAdmins}</option>
                 </select>
               </label>
 
               <label className="user-shell__field">
-                <span>Status</span>
+                <span>{ui.status}</span>
                 <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-                  <option value="all">Any status</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
+                  <option value="all">{ui.anyStatus}</option>
+                  <option value="active">{ui.active}</option>
+                  <option value="inactive">{ui.inactive}</option>
                 </select>
               </label>
             </div>
@@ -608,8 +712,8 @@ const UserManagement = () => {
           <article className="user-shell__panel user-shell__panel--activity">
             <div className="user-shell__panel-header">
               <div>
-                <p className="user-shell__section-label">Status</p>
-                <h2>Distribution mix</h2>
+                <p className="user-shell__section-label">{ui.status}</p>
+                <h2>{ui.distributionMix}</h2>
               </div>
             </div>
 
@@ -631,42 +735,42 @@ const UserManagement = () => {
       </main>
 
       {selectedUserId ? (
-        <section className="user-shell__detail-overlay" role="dialog" aria-modal="true" aria-label="User detail">
+        <section className="user-shell__detail-overlay" role="dialog" aria-modal="true" aria-label={ui.userProfile}>
           <article className="user-shell__detail-card">
             <header className="user-shell__detail-header">
               <div>
-                <p className="user-shell__section-label">User Profile</p>
-                <h2>{selectedUser ? nameFromUser(selectedUser) : 'Loading user'}</h2>
+                <p className="user-shell__section-label">{ui.userProfile}</p>
+                <h2>{selectedUser ? nameFromUser(selectedUser, ui.unknownUser) : ui.loadingUser}</h2>
               </div>
-              <button type="button" className="user-shell__detail-close" onClick={closeUserDetail} aria-label="Close">
-                Close
+              <button type="button" className="user-shell__detail-close" onClick={closeUserDetail} aria-label={ui.close}>
+                {ui.close}
               </button>
             </header>
 
-            {detailLoading ? <p className="user-shell__feedback">Loading user details...</p> : null}
+            {detailLoading ? <p className="user-shell__feedback">{ui.loadingUserDetailsText}</p> : null}
             {detailError ? <p className="user-shell__feedback user-shell__feedback--error">{detailError}</p> : null}
 
             {selectedUser && !detailLoading ? (
               <>
                 <dl className="user-shell__detail-grid">
                   <div>
-                    <dt>Email</dt>
-                    <dd>{selectedUser.email || 'N/A'}</dd>
+                    <dt>{ui.email}</dt>
+                    <dd>{selectedUser.email || ui.na}</dd>
                   </div>
                   <div>
-                    <dt>Status</dt>
-                    <dd>{selectedUser.is_active ? 'Active' : 'Inactive'}</dd>
+                    <dt>{ui.status}</dt>
+                    <dd>{selectedUser.is_active ? ui.active : ui.inactive}</dd>
                   </div>
                   <div>
-                    <dt>Role</dt>
-                    <dd>{toTitle(normalizeRole(selectedUser.role))}</dd>
+                    <dt>{ui.role}</dt>
+                    <dd>{normalizeRole(selectedUser.role) === 'admin' ? t('admin_users.role_admin') : t('admin_users.role_user')}</dd>
                   </div>
                   <div>
-                    <dt>Plan</dt>
-                    <dd>{selectedUser.current_plan || 'Free'}</dd>
+                    <dt>{ui.plan}</dt>
+                    <dd>{displayPlan(selectedUser.current_plan)}</dd>
                   </div>
                   <div>
-                    <dt>First name</dt>
+                    <dt>{ui.firstName}</dt>
                     <dd>
                       {editMode ? (
                         <input
@@ -676,12 +780,12 @@ const UserManagement = () => {
                           onChange={(event) => handleDraftChange('first_name', event.target.value)}
                         />
                       ) : (
-                        selectedUser.first_name || 'N/A'
+                        selectedUser.first_name || ui.na
                       )}
                     </dd>
                   </div>
                   <div>
-                    <dt>Last name</dt>
+                    <dt>{ui.lastName}</dt>
                     <dd>
                       {editMode ? (
                         <input
@@ -691,12 +795,12 @@ const UserManagement = () => {
                           onChange={(event) => handleDraftChange('last_name', event.target.value)}
                         />
                       ) : (
-                        selectedUser.last_name || 'N/A'
+                        selectedUser.last_name || ui.na
                       )}
                     </dd>
                   </div>
                   <div>
-                    <dt>Phone</dt>
+                    <dt>{ui.phone}</dt>
                     <dd>
                       {editMode ? (
                         <input
@@ -706,12 +810,12 @@ const UserManagement = () => {
                           onChange={(event) => handleDraftChange('phone_number', event.target.value)}
                         />
                       ) : (
-                        selectedUser.phone_number || 'N/A'
+                        selectedUser.phone_number || ui.na
                       )}
                     </dd>
                   </div>
                   <div>
-                    <dt>Company</dt>
+                    <dt>{ui.company}</dt>
                     <dd>
                       {editMode ? (
                         <input
@@ -721,12 +825,12 @@ const UserManagement = () => {
                           onChange={(event) => handleDraftChange('company', event.target.value)}
                         />
                       ) : (
-                        selectedUser.company || 'N/A'
+                        selectedUser.company || ui.na
                       )}
                     </dd>
                   </div>
                   <div>
-                    <dt>Job title</dt>
+                    <dt>{ui.jobTitle}</dt>
                     <dd>
                       {editMode ? (
                         <input
@@ -736,12 +840,12 @@ const UserManagement = () => {
                           onChange={(event) => handleDraftChange('job_title', event.target.value)}
                         />
                       ) : (
-                        selectedUser.job_title || 'N/A'
+                        selectedUser.job_title || ui.na
                       )}
                     </dd>
                   </div>
                   <div>
-                    <dt>Team size</dt>
+                    <dt>{ui.teamSize}</dt>
                     <dd>
                       {editMode ? (
                         <input
@@ -751,12 +855,12 @@ const UserManagement = () => {
                           onChange={(event) => handleDraftChange('team_size', event.target.value)}
                         />
                       ) : (
-                        selectedUser.team_size || 'N/A'
+                        selectedUser.team_size || ui.na
                       )}
                     </dd>
                   </div>
                   <div>
-                    <dt>Primary use case</dt>
+                    <dt>{ui.primaryUseCase}</dt>
                     <dd>
                       {editMode ? (
                         <input
@@ -766,12 +870,12 @@ const UserManagement = () => {
                           onChange={(event) => handleDraftChange('primary_use_case', event.target.value)}
                         />
                       ) : (
-                        selectedUser.primary_use_case || 'N/A'
+                        selectedUser.primary_use_case || ui.na
                       )}
                     </dd>
                   </div>
                   <div>
-                    <dt>Newsletter</dt>
+                    <dt>{ui.newsletter}</dt>
                     <dd>
                       {editMode ? (
                         <label className="user-shell__detail-checkbox">
@@ -780,19 +884,19 @@ const UserManagement = () => {
                             checked={profileDraft.newsletter_opt_in}
                             onChange={(event) => handleDraftChange('newsletter_opt_in', event.target.checked)}
                           />
-                          <span>Opted in</span>
+                          <span>{ui.optedIn}</span>
                         </label>
                       ) : (
-                        selectedUser.newsletter_opt_in ? 'Opted in' : 'Not subscribed'
+                        selectedUser.newsletter_opt_in ? ui.optedIn : ui.notSubscribed
                       )}
                     </dd>
                   </div>
                   <div>
-                    <dt>Created</dt>
-                    <dd>{formatDateTime(selectedUser.created_at)}</dd>
+                    <dt>{ui.created}</dt>
+                    <dd>{formatDateTime(selectedUser.created_at, ui.na)}</dd>
                   </div>
                   <div>
-                    <dt>File uploads</dt>
+                    <dt>{ui.fileUploads}</dt>
                     <dd>{uploadsCount}</dd>
                   </div>
                 </dl>
@@ -805,7 +909,7 @@ const UserManagement = () => {
                       disabled={actionLoading}
                       onClick={startEditProfile}
                     >
-                      Edit profile
+                      {ui.editProfile}
                     </button>
                   ) : null}
 
@@ -816,7 +920,7 @@ const UserManagement = () => {
                       disabled={actionLoading}
                       onClick={() => runUserAction('save_profile')}
                     >
-                      Save profile
+                      {ui.saveProfile}
                     </button>
                   ) : null}
 
@@ -827,7 +931,7 @@ const UserManagement = () => {
                       disabled={actionLoading}
                       onClick={cancelEditProfile}
                     >
-                      Cancel edit
+                      {ui.cancelEdit}
                     </button>
                   ) : null}
 
@@ -837,7 +941,7 @@ const UserManagement = () => {
                     disabled={!availableActions.can_toggle_active || actionLoading || editMode}
                     onClick={() => runUserAction('toggle_active')}
                   >
-                    {selectedUser.is_active ? 'Deactivate account' : 'Activate account'}
+                    {selectedUser.is_active ? ui.deactivateAccount : ui.activateAccount}
                   </button>
                   <button
                     type="button"
@@ -845,7 +949,7 @@ const UserManagement = () => {
                     disabled={!availableActions.can_change_role || actionLoading || editMode}
                     onClick={() => runUserAction('toggle_role')}
                   >
-                    {normalizeRole(selectedUser.role) === 'admin' ? 'Set as standard user' : 'Promote to admin'}
+                    {normalizeRole(selectedUser.role) === 'admin' ? ui.setStandardUser : ui.promoteToAdmin}
                   </button>
                   <button
                     type="button"
@@ -853,7 +957,7 @@ const UserManagement = () => {
                     disabled={!availableActions.can_delete || actionLoading || editMode}
                     onClick={() => runUserAction('delete')}
                   >
-                    Delete account
+                    {ui.deleteAccount}
                   </button>
                 </div>
 
@@ -862,30 +966,30 @@ const UserManagement = () => {
                 <section className="user-shell__detail-logs">
                   <div className="user-shell__panel-header">
                     <div>
-                      <p className="user-shell__section-label">Subscription</p>
-                      <h3>Subscription details</h3>
+                      <p className="user-shell__section-label">{ui.subscription}</p>
+                      <h3>{ui.subscriptionDetails}</h3>
                     </div>
                   </div>
 
                   <dl className="user-shell__subscription-grid">
                     <div>
-                      <dt>Status</dt>
+                      <dt>{ui.status}</dt>
                       <dd>{toTitle(subscriptionSummary.status || 'none')}</dd>
                     </div>
                     <div>
-                      <dt>Current plan</dt>
-                      <dd>{subscriptionSummary.current_plan || 'Free'}</dd>
+                      <dt>{ui.plan}</dt>
+                      <dd>{displayPlan(subscriptionSummary.current_plan)}</dd>
                     </div>
                     <div>
-                      <dt>Started</dt>
-                      <dd>{formatDateTime(subscriptionSummary.current_start_date)}</dd>
+                      <dt>{ui.started}</dt>
+                      <dd>{formatDateTime(subscriptionSummary.current_start_date, ui.na)}</dd>
                     </div>
                     <div>
-                      <dt>Expires</dt>
-                      <dd>{formatDateTime(subscriptionSummary.current_end_date)}</dd>
+                      <dt>{ui.expires}</dt>
+                      <dd>{formatDateTime(subscriptionSummary.current_end_date, ui.na)}</dd>
                     </div>
                     <div>
-                      <dt>Total plans</dt>
+                      <dt>{ui.totalPlans}</dt>
                       <dd>{subscriptionSummary.total_subscriptions || 0}</dd>
                     </div>
                   </dl>
@@ -894,23 +998,25 @@ const UserManagement = () => {
                     <ul className="user-shell__detail-log-list">
                       {subscriptionHistory.map((subscription) => (
                         <li key={subscription.id}>
-                          <strong>{subscription.plan || 'Free'}</strong>
+                          <strong>{displayPlan(subscription.plan)}</strong>
                           <span>
-                            {formatDateTime(subscription.start_date)} - {formatDateTime(subscription.end_date)}
+                            {displayPlan(subscription.plan)}
+                            {' '}
+                            {formatDateTime(subscription.start_date, ui.na)} - {formatDateTime(subscription.end_date, ui.na)}
                           </span>
                         </li>
                       ))}
                     </ul>
                   ) : (
-                    <p className="user-shell__feedback">No subscription history recorded for this user yet.</p>
+                    <p className="user-shell__feedback">{ui.noSubscriptionHistory}</p>
                   )}
                 </section>
 
                 <section className="user-shell__detail-logs">
                   <div className="user-shell__panel-header">
                     <div>
-                      <p className="user-shell__section-label">Recent activity</p>
-                      <h3>Latest admin-visible actions</h3>
+                      <p className="user-shell__section-label">{ui.recentActivity}</p>
+                      <h3>{ui.latestAdminActions}</h3>
                     </div>
                   </div>
                   {recentLogs.length ? (
@@ -923,7 +1029,7 @@ const UserManagement = () => {
                       ))}
                     </ul>
                   ) : (
-                    <p className="user-shell__feedback">No activity logs recorded for this user yet.</p>
+                    <p className="user-shell__feedback">{ui.noActivityLogs}</p>
                   )}
                 </section>
               </>

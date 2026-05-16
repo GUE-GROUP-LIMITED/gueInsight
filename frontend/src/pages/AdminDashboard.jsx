@@ -3,16 +3,17 @@ import PropTypes from 'prop-types';
 import { Link } from 'react-router-dom';
 import AdminTopbarControls from '../components/AdminTopbarControls';
 import { api } from '../services/api';
+import { useTranslation } from '../i18n/index';
 import './AdminDashboard.css';
 
 const sidebarItems = [
-  { label: 'Home', href: '#dashboard', active: true, icon: 'home' },
-  { label: 'Compliance', href: '/admin/compliance', icon: 'shield' },
-  { label: 'Widgets', href: '#widgets', icon: 'widgets' },
-  { label: 'Tables', href: '#tables', icon: 'table' },
-  { label: 'Charts', href: '#charts', icon: 'chart' },
-  { label: 'Support', href: '/admin/support', icon: 'logs' },
-  { label: 'Users', href: '/admin/users', icon: 'users' },
+  { label: 'nav.home', href: '#dashboard', active: true, icon: 'home' },
+  { label: 'admin_dashboard.compliance', href: '/admin/compliance', icon: 'shield' },
+  { label: 'admin_dashboard.widgets', href: '#widgets', icon: 'widgets' },
+  { label: 'admin_dashboard.tables', href: '#tables', icon: 'table' },
+  { label: 'admin_dashboard.charts', href: '#charts', icon: 'chart' },
+  { label: 'nav.support', href: '/admin/support', icon: 'logs' },
+  { label: 'nav.subscribers', href: '/admin/users', icon: 'users' },
 ];
 
 const SidebarIcon = ({ type }) => {
@@ -110,6 +111,7 @@ const percent = (count, total) => {
 };
 
 const AdminDashboard = () => {
+  const { t } = useTranslation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -144,7 +146,7 @@ const AdminDashboard = () => {
         });
       } catch (requestError) {
         if (!active) return;
-        setError(requestError?.response?.data?.error || 'Unable to load admin data right now.');
+        setError(requestError?.response?.data?.error || t('admin_dashboard.load_failed'));
       } finally {
         if (active) {
           setLoading(false);
@@ -175,7 +177,7 @@ const AdminDashboard = () => {
         plan: user.current_plan || 'Free',
       };
     });
-  }, [dashboardData.users]);
+  }, [dashboardData.users, t]);
 
   const totalUsers = users.length;
   const activeUsers = users.filter((user) => user.status === 'Active').length;
@@ -185,35 +187,35 @@ const AdminDashboard = () => {
 
   const statCards = useMemo(() => {
     return [
-      { label: 'Registered accounts', value: totalUsers.toString(), detail: 'From the user table', tone: 'blue' },
-      { label: 'Active users', value: activeUsers.toString(), detail: 'Can access platform', tone: 'green' },
+      { label: t('admin_dashboard.registered_accounts'), value: totalUsers.toString(), detail: t('admin_dashboard.from_user_table'), tone: 'blue' },
+      { label: t('admin_dashboard.active_users'), value: activeUsers.toString(), detail: t('admin_dashboard.can_access_platform'), tone: 'green' },
       {
-        label: 'Critical alerts',
+        label: t('admin_dashboard.critical_alerts'),
         value: dashboardData.critical_alert ? '1' : '0',
-        detail: dashboardData.critical_alert ? 'Action required' : 'No critical alert',
+        detail: dashboardData.critical_alert ? t('admin_dashboard.action_required') : t('admin_dashboard.no_critical_alert'),
         tone: 'orange',
       },
-      { label: 'File uploads', value: uploadsCount.toString(), detail: 'Analyzed submissions', tone: 'red' },
+      { label: t('admin_dashboard.file_uploads'), value: uploadsCount.toString(), detail: t('admin_dashboard.analyzed_submissions'), tone: 'red' },
     ];
-  }, [activeUsers, dashboardData.critical_alert, totalUsers, uploadsCount]);
+  }, [activeUsers, dashboardData.critical_alert, t, totalUsers, uploadsCount]);
 
   const activityItems = useMemo(() => {
     return [
-      { title: 'Active accounts', value: percent(activeUsers, totalUsers), color: 'blue' },
-      { title: 'Admin coverage', value: percent(adminUsers, totalUsers), color: 'green' },
-      { title: 'Paid plans', value: percent(paidUsers, totalUsers), color: 'orange' },
-      { title: 'Upload density', value: percent(uploadsCount, Math.max(totalUsers, 1)), color: 'red' },
+      { title: t('admin_dashboard.active_accounts'), value: percent(activeUsers, totalUsers), color: 'blue' },
+      { title: t('admin_dashboard.admin_coverage'), value: percent(adminUsers, totalUsers), color: 'green' },
+      { title: t('admin_dashboard.paid_plans'), value: percent(paidUsers, totalUsers), color: 'orange' },
+      { title: t('admin_dashboard.upload_density'), value: percent(uploadsCount, Math.max(totalUsers, 1)), color: 'red' },
     ];
-  }, [activeUsers, adminUsers, paidUsers, totalUsers, uploadsCount]);
+  }, [activeUsers, adminUsers, paidUsers, t, totalUsers, uploadsCount]);
 
   const timelineItems = useMemo(() => {
     return [
-      { title: 'Users loaded', time: 'Now', detail: `${totalUsers} account${totalUsers === 1 ? '' : 's'} in directory` },
-      { title: 'Current sign-ins', time: 'Now', detail: `${activeUsers} active account${activeUsers === 1 ? '' : 's'}` },
-      { title: 'Staff admins', time: 'Now', detail: `${adminUsers} admin account${adminUsers === 1 ? '' : 's'} configured` },
-      { title: 'File ingestion', time: 'Now', detail: `${uploadsCount} upload event${uploadsCount === 1 ? '' : 's'} recorded` },
+      { title: t('admin_dashboard.users_loaded'), time: 'Now', detail: `${totalUsers} account${totalUsers === 1 ? '' : 's'} in directory` },
+      { title: t('admin_dashboard.current_sign_ins'), time: 'Now', detail: `${activeUsers} active account${activeUsers === 1 ? '' : 's'}` },
+      { title: t('admin_dashboard.staff_admins'), time: 'Now', detail: `${adminUsers} admin account${adminUsers === 1 ? '' : 's'} configured` },
+      { title: t('admin_dashboard.file_ingestion'), time: 'Now', detail: `${uploadsCount} upload event${uploadsCount === 1 ? '' : 's'} recorded` },
     ];
-  }, [activeUsers, adminUsers, totalUsers, uploadsCount]);
+  }, [activeUsers, adminUsers, t, totalUsers, uploadsCount]);
 
   return (
     <div className={`admin-shell ${sidebarCollapsed ? 'admin-shell--collapsed' : ''}`} id="dashboard">
@@ -236,7 +238,7 @@ const AdminDashboard = () => {
                 className={`admin-shell__nav-link ${item.active ? 'is-active' : ''}`}
               >
                 <span className="admin-shell__nav-icon" aria-hidden="true"><SidebarIcon type={item.icon} /></span>
-                <span className="admin-shell__nav-label">{item.label}</span>
+                <span className="admin-shell__nav-label">{t(item.label)}</span>
               </Link>
             ) : (
               <a
@@ -246,32 +248,32 @@ const AdminDashboard = () => {
                 className={`admin-shell__nav-link ${item.active ? 'is-active' : ''}`}
               >
                 <span className="admin-shell__nav-icon" aria-hidden="true"><SidebarIcon type={item.icon} /></span>
-                <span className="admin-shell__nav-label">{item.label}</span>
+                <span className="admin-shell__nav-label">{t(item.label)}</span>
               </a>
             )
           ))}
         </nav>
 
         <div className="admin-shell__sidebar-card">
-          <p className="admin-shell__sidebar-label">Support</p>
-          <h3>Need help?</h3>
-          <p>Review dashboard logs, user sessions, and system activity from the admin console.</p>
-          <a href="#tables" className="admin-shell__sidebar-action">Open tables</a>
+          <p className="admin-shell__sidebar-label">{t('nav.support')}</p>
+          <h3>{t('admin_dashboard.need_help')}</h3>
+          <p>{t('admin_dashboard.sidebar_copy')}</p>
+          <a href="#tables" className="admin-shell__sidebar-action">{t('admin_dashboard.open_tables')}</a>
         </div>
       </aside>
 
       <main className="admin-shell__content">
         <header className="admin-shell__topbar">
           <div>
-            <p className="admin-shell__eyebrow">Dashboard</p>
-            <h1>Admin dashboard</h1>
+            <p className="admin-shell__eyebrow">{t('nav.dashboard')}</p>
+            <h1>{t('admin_dashboard.heading')}</h1>
           </div>
 
           <AdminTopbarControls
-            searchPlaceholder="Search"
-            searchAriaLabel="Search admin dashboard"
+            searchPlaceholder={t('admin_dashboard.search')}
+            searchAriaLabel={t('admin_dashboard.search_aria')}
             primaryActionHref="/admin/users"
-            primaryActionLabel="Manage users"
+            primaryActionLabel={t('admin_dashboard.manage_users')}
             sidebarCollapsed={sidebarCollapsed}
             onToggleSidebar={() => setSidebarCollapsed((current) => !current)}
           />
@@ -291,10 +293,10 @@ const AdminDashboard = () => {
           <article className="admin-shell__panel admin-shell__panel--chart">
             <div className="admin-shell__panel-header">
               <div>
-                <p className="admin-shell__section-label">Performance</p>
-                <h2>Traffic overview</h2>
+                <p className="admin-shell__section-label">{t('admin_dashboard.performance')}</p>
+                <h2>{t('admin_dashboard.traffic_overview')}</h2>
               </div>
-              <span className="admin-shell__chip">Live</span>
+              <span className="admin-shell__chip">{t('admin_dashboard.live')}</span>
             </div>
 
             <div className="admin-shell__chart">
@@ -309,9 +311,9 @@ const AdminDashboard = () => {
                 <span style={{ height: '73%' }} />
               </div>
               <div className="admin-shell__chart-legend">
-                <span><i className="is-blue" /> Total visits</span>
-                <span><i className="is-green" /> Signups</span>
-                <span><i className="is-orange" /> Alerts</span>
+                <span><i className="is-blue" /> {t('admin_dashboard.total_visits')}</span>
+                <span><i className="is-green" /> {t('admin_dashboard.signups')}</span>
+                <span><i className="is-orange" /> {t('admin_dashboard.alerts')}</span>
               </div>
             </div>
           </article>
@@ -319,8 +321,8 @@ const AdminDashboard = () => {
           <article className="admin-shell__panel admin-shell__panel--activity">
             <div className="admin-shell__panel-header">
               <div>
-                <p className="admin-shell__section-label">System status</p>
-                <h2>Activity mix</h2>
+                <p className="admin-shell__section-label">{t('admin_dashboard.system_status')}</p>
+                <h2>{t('admin_dashboard.activity_mix')}</h2>
               </div>
             </div>
 

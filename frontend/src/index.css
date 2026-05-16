@@ -151,6 +151,13 @@ footer {
   font-size: 14px;
 }
 
+/* When viewing documentation, make footer flow with page to avoid overlap */
+body.page-docs footer,
+body.page-docs .app-footer {
+  position: static !important;
+  width: 100%;
+}
+
 footer ul {
   list-style: none;
   padding: 0;

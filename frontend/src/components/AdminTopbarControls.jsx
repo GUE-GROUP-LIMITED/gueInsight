@@ -59,9 +59,9 @@ const AdminTopbarControls = ({
   }, [displayName, user]);
 
   const roleLabel = useMemo(() => {
+    if (!user) return null;
     if (user?.role === 'admin') return 'Staff admin';
-    if (user) return 'Signed in';
-    return 'Guest';
+    return 'Signed in';
   }, [user]);
 
   const closeMenus = () => {

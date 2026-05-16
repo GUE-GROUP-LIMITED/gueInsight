@@ -3,10 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { AuthContext, normalizeRole } from '../context/AuthContext';
 import './AuthPricing.css';
+import { useTranslation } from '../i18n/index';
 
 const Login = () => {
 	const navigate = useNavigate();
 	const { setUser } = useContext(AuthContext);
+	const { t } = useTranslation();
 	const [email, setEmail] = useState('');
 	const [password, setPassword] = useState('');
 	const [error, setError] = useState('');
@@ -37,41 +39,41 @@ const Login = () => {
 		<main className="auth-pricing-page auth-pricing-page--auth">
 			<section className="auth-pricing-card">
 				<div className="auth-pricing-card__head">
-					<p className="auth-pricing-card__eyebrow">Welcome back</p>
-					<h1>Sign in to GueInsight</h1>
-					<p>Access your threat analysis dashboard and continue your investigations.</p>
+					<p className="auth-pricing-card__eyebrow">{t('login.eyebrow')}</p>
+					<h1>{t('login.heading')}</h1>
+					<p>{t('login.lead')}</p>
 				</div>
 
 				<form className="auth-pricing-form" onSubmit={handleSubmit}>
-					<label htmlFor="login-email">Email</label>
+					<label htmlFor="login-email">{t('login.email')}</label>
 					<input
 						id="login-email"
 						type="email"
-						placeholder="you@company.com"
+						placeholder={t('login.placeholder_email')}
 						value={email}
 						onChange={(e) => setEmail(e.target.value)}
 						required
 					/>
 
-					<label htmlFor="login-password">Password</label>
+					<label htmlFor="login-password">{t('login.password')}</label>
 					<input
 						id="login-password"
 						type="password"
-						placeholder="Enter your password"
+						placeholder={t('login.placeholder_password')}
 						value={password}
 						onChange={(e) => setPassword(e.target.value)}
 						required
 					/>
 
 					<button type="submit" disabled={loading}>
-						{loading ? 'Signing you in...' : 'Log in'}
+						{loading ? t('login.signing') : t('login.log_in')}
 					</button>
 
 					{error && <p className="auth-pricing-message auth-pricing-message--error">{error}</p>}
 
 					<div className="auth-pricing-links auth-pricing-links--login">
-						<Link to="/signup">Sign up</Link>
-						{showResetPassword ? <Link to="/reset-password">Reset password</Link> : null}
+						<Link to="/signup">{t('login.sign_up')}</Link>
+						{showResetPassword ? <Link to="/reset-password">{t('login.reset_password')}</Link> : null}
 					</div>
 				</form>
 

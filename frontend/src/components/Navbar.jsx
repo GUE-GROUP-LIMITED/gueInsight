@@ -2,6 +2,10 @@ import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import './Navbar.css';
+import SITE_CONFIG from '../config';
+import { getNavLinks } from '../utils/navLinks';
+import { useTranslation } from '../i18n/index';
+import LanguageSelector from './LanguageSelector';
 
 const Navbar = () => {
   const { user, logout } = useContext(AuthContext);
@@ -10,31 +14,8 @@ const Navbar = () => {
   const accountMenuRef = useRef(null);
   const homePath = user?.role === 'admin' ? '/admin' : user ? '/dashboard' : '/';
 
-  const navLinks = useMemo(() => {
-    if (user) {
-      if (user.role === 'admin') {
-        return [
-          { to: '/admin', label: 'Admin Dashboard' },
-          { to: '/admin/users', label: 'Subscribers' },
-          { to: '/profile', label: 'Profile' },
-        ];
-      }
-
-      return [
-        { to: homePath, label: 'Home' },
-        { to: '/dashboard', label: 'Dashboard' },
-        { to: '/support', label: 'Support' },
-        { to: '/profile', label: 'Profile' },
-        { to: '/subscription', label: 'Plans' },
-      ];
-    }
-
-    return [
-      { to: '/subscription', label: 'Pricing' },
-      { to: '/docs', label: 'Documentation' },
-      { to: 'https://www.guecyber.com', label: 'Company', external: true },
-    ];
-  }, [homePath, user]);
+  const { t } = useTranslation();
+  const navLinks = useMemo(() => getNavLinks(user, homePath, t), [user, homePath, t]);
 
   const handleLogout = async () => {
     await logout();
@@ -58,7 +39,8 @@ const Navbar = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const roleLabel = user?.role === 'admin' ? 'Staff' : user ? 'Subscriber' : 'Guest';
+  // Only show a role label when a user is signed in and the flag is enabled
+  const roleLabel = (SITE_CONFIG.showRoleBadges && user) ? (user.role === 'admin' ? t('role.staff') : t('role.subscriber')) : null;
   const firstName = user?.first_name || user?.user_metadata?.first_name || '';
   const lastName = user?.last_name || user?.user_metadata?.last_name || '';
   const fullName = `${firstName} ${lastName}`.trim();
@@ -77,7 +59,7 @@ const Navbar = () => {
             />
             <span className="app-navbar__brand-text">GueInsight</span>
           </Link>
-          <span className="app-navbar__subtitle">Cyber threat intelligence</span>
+          <span className="app-navbar__subtitle">{t('landing.utility')}</span>
         </div>
 
         <button
@@ -95,8 +77,8 @@ const Navbar = () => {
 
         <div id="app-navbar-menu" className={`app-navbar__menu ${menuOpen ? 'is-open' : ''}`}>
           <div className="app-navbar__meta">
-            <span className="app-navbar__role-badge">{roleLabel}</span>
-            {displayName ? <span className="app-navbar__email">Welcome, {displayName}</span> : null}
+            {roleLabel ? <span className="app-navbar__role-badge">{roleLabel}</span> : null}
+            {displayName ? <span className="app-navbar__email">{displayName}</span> : null}
           </div>
 
           <div className="app-navbar__links">
@@ -106,11 +88,16 @@ const Navbar = () => {
                   <a
                     href={link.to}
                     target="_blank"
-                    rel="noreferrer"
+                    rel="noopener noreferrer nofollow"
                     className={`app-navbar__link`}
                     onClick={closeMenu}
+                    aria-label={`${link.label} (opens in new tab)`}
                   >
                     {link.label}
+                    <svg className="external-link-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path fill="currentColor" d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42 9.3-9.29H14V3z"></path>
+                      <path fill="currentColor" d="M5 5h5V3H3v7h2V5z"></path>
+                    </svg>
                   </a>
                 ) : (
                   <NavLink
@@ -128,11 +115,17 @@ const Navbar = () => {
           </div>
 
           <div className="app-navbar__actions">
+            <LanguageSelector />
             {!user ? (
               <>
                 <NavLink to="/login" className={({ isActive }) => `app-navbar__link app-navbar__link--ghost ${isActive ? 'is-active' : ''}`} onClick={closeMenu}>
-                  Login
+                  {t('nav.login')}
                 </NavLink>
+                {SITE_CONFIG.showVisitorCTA ? (
+                  <NavLink to="/signup" className={({ isActive }) => `app-navbar__link app-navbar__link--primary ${isActive ? 'is-active' : ''}`} onClick={closeMenu}>
+                    {t('nav.signup')}
+                  </NavLink>
+                ) : null}
               </>
             ) : (
               <div className="app-navbar__account" ref={accountMenuRef}>
@@ -143,7 +136,7 @@ const Navbar = () => {
                   aria-expanded={accountMenuOpen}
                   aria-haspopup="menu"
                 >
-                  {displayName || 'Account'}
+                  {displayName || t('nav.account')}
                 </button>
                 {accountMenuOpen ? (
                   <div className="app-navbar__account-menu" role="menu">
@@ -153,7 +146,7 @@ const Navbar = () => {
                       role="menuitem"
                       onClick={closeMenu}
                     >
-                      Open support
+                      {t('topbar.open_support')}
                     </NavLink>
                     <NavLink
                       to="/subscription"
@@ -161,7 +154,7 @@ const Navbar = () => {
                       role="menuitem"
                       onClick={closeMenu}
                     >
-                      Manage plan
+                      {t('topbar.manage_plan')}
                     </NavLink>
                     <NavLink
                       to="/profile"
@@ -169,7 +162,7 @@ const Navbar = () => {
                       role="menuitem"
                       onClick={closeMenu}
                     >
-                      Account settings
+                      {t('topbar.account_settings')}
                     </NavLink>
                     <button
                       type="button"
@@ -177,7 +170,7 @@ const Navbar = () => {
                       onClick={handleLogout}
                       role="menuitem"
                     >
-                      Logout
+                      {t('topbar.logout')}
                     </button>
                   </div>
                 ) : null}

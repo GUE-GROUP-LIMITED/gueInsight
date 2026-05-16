@@ -2,6 +2,7 @@ import { useContext, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { api } from '../services/api';
+import { useTranslation } from '../i18n/index';
 import './AuthPricing.css';
 
 const PLAN_DETAILS = {
@@ -22,6 +23,7 @@ const Payment = () => {
 	const { search } = useLocation();
 	const navigate = useNavigate();
 	const { setUser } = useContext(AuthContext);
+	const { t } = useTranslation();
 	const [submitting, setSubmitting] = useState(false);
 	const [errorMessage, setErrorMessage] = useState('');
 	const [successMessage, setSuccessMessage] = useState('');
@@ -75,10 +77,10 @@ const Payment = () => {
 		return (
 			<main className="auth-pricing-page auth-pricing-page--pricing">
 				<section className="pricing-hero">
-					<p className="auth-pricing-card__eyebrow">Payment</p>
-					<h1>Choose a valid plan to continue</h1>
-					<p>The selected plan is missing or invalid. Return to pricing and choose a paid plan.</p>
-					<Link to="/subscription" className="pricing-card__cta">Back to plans</Link>
+					<p className="auth-pricing-card__eyebrow">{t('payment.title')}</p>
+					<h1>{t('payment.missing_plan')}</h1>
+					<p>{t('payment.missing_plan')}</p>
+					<Link to="/subscription" className="pricing-card__cta">{t('payment.back_to_plans')}</Link>
 				</section>
 			</main>
 		);
@@ -87,28 +89,30 @@ const Payment = () => {
 	return (
 		<main className="auth-pricing-page auth-pricing-page--pricing">
 			<section className="pricing-hero">
-				<p className="auth-pricing-card__eyebrow">Payment</p>
-				<h1>Confirm your {selectedPlanDetails.name} plan</h1>
+				<p className="auth-pricing-card__eyebrow">{t('payment.title')}</p>
+				<h1>{t('payment.confirm_plan', { plan: selectedPlanDetails.name })}</h1>
 				<p>
-					Start a <strong>{trialDays}-day free trial</strong> on <strong>{selectedPlanDetails.name}</strong> at {selectedPlanDetails.price}
-					{selectedPlanDetails.cycle}. Stripe will validate your payment method before the trial begins.
+					{t('payment.trial_summary', {
+						days: trialDays,
+						plan: selectedPlanDetails.name,
+						price: selectedPlanDetails.price,
+						cycle: selectedPlanDetails.cycle,
+					})}
 				</p>
 			</section>
 
-			<section className="pricing-grid" aria-label="Payment confirmation">
+			<section className="pricing-grid" aria-label={t('payment.payment_confirmation')}>
 				<article className="pricing-card pricing-card--recommended">
-					<p className="pricing-card__badge">Secure checkout</p>
+					<p className="pricing-card__badge">{t('payment.secure_checkout')}</p>
 					<h2>{selectedPlanDetails.name}</h2>
 					<p className="pricing-card__price">
 						{selectedPlanDetails.price}<span>{selectedPlanDetails.cycle}</span>
 					</p>
-					<p className="pricing-card__description">
-						Billing begins after the trial ends. Your payment method is validated now so the plan can auto-renew.
-					</p>
+					<p className="pricing-card__description">{t('payment.billing_begins')}</p>
 					<ul>
-						<li>{trialDays}-day free trial</li>
-						<li>Payment method validated before trial starts</li>
-						<li>Manage or change plan anytime</li>
+						<li>{t('payment.trial_day', { days: trialDays })}</li>
+						<li>{t('payment.validate_before')}</li>
+						<li>{t('payment.manage_anytime')}</li>
 					</ul>
 
 					{errorMessage ? <p className="auth-pricing-card__error">{errorMessage}</p> : null}
@@ -121,9 +125,9 @@ const Payment = () => {
 						disabled={submitting}
 						aria-busy={submitting}
 					>
-						{submitting ? 'Processing...' : `Start ${trialDays}-day free trial`}
+						{submitting ? t('payment.processing') : t('payment.start_trial', { days: trialDays })}
 					</button>
-					<Link to="/subscription" className="pricing-card__cta pricing-card__cta--ghost">Back to plans</Link>
+					<Link to="/subscription" className="pricing-card__cta pricing-card__cta--ghost">{t('payment.back_to_plans')}</Link>
 				</article>
 			</section>
 		</main>

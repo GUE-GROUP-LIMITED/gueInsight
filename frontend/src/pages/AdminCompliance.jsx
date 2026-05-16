@@ -3,11 +3,13 @@ import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 import ComplianceTierMatrix from '../components/ComplianceTierMatrix';
 import NIS2IncidentReport from '../components/NIS2IncidentReport';
+import { useTranslation } from '../i18n/index';
 import './AdminCompliance.css';
 
 const severityOrder = { critical: 3, warning: 2, info: 1 };
 
 const AdminCompliance = () => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [securityEvents, setSecurityEvents] = useState([]);
@@ -28,7 +30,7 @@ const AdminCompliance = () => {
       setSecurityEvents(Array.isArray(eventsResponse.data?.security_events) ? eventsResponse.data.security_events : []);
       setDeletionRequests(Array.isArray(requestsResponse.data?.deletion_requests) ? requestsResponse.data.deletion_requests : []);
     } catch (requestError) {
-      setError(requestError?.response?.data?.error || 'Unable to load compliance data right now.');
+      setError(requestError?.response?.data?.error || t('admin_compliance.load_failed'));
     } finally {
       setLoading(false);
     }
@@ -42,10 +44,10 @@ const AdminCompliance = () => {
       if (checkoutUrl) {
         window.location.href = checkoutUrl;
       } else {
-        setError('Unable to create Stripe checkout session.');
+        setError(t('admin_compliance.checkout_session_failed'));
       }
     } catch (err) {
-      setError(err?.response?.data?.error || 'Stripe checkout failed.');
+      setError(err?.response?.data?.error || t('admin_compliance.checkout_failed'));
     }
   };
 
@@ -56,11 +58,11 @@ const AdminCompliance = () => {
     try {
       const res = await api.post('/api/incidents/report-nis2', incidentData);
       const incidentId = res?.data?.incident_id || res?.data?.id;
-      setIncidentMessage('Incident submitted. ID: ' + (incidentId || 'N/A'));
+      setIncidentMessage(t('admin_compliance.incident_submitted', { id: incidentId || 'N/A' }));
       if (incidentId) await handlePDFDownload(incidentId);
       await loadComplianceData();
     } catch (err) {
-      setError(err?.response?.data?.error || 'Unable to submit incident.');
+      setError(err?.response?.data?.error || t('admin_compliance.submit_failed'));
     } finally {
       setIncidentSubmitting(false);
     }
@@ -81,7 +83,7 @@ const AdminCompliance = () => {
       window.URL.revokeObjectURL(url);
       a.remove();
     } catch (err) {
-      setError(err?.response?.data?.error || 'Unable to download PDF.');
+      setError(err?.response?.data?.error || t('admin_compliance.download_failed'));
     }
   };
 
@@ -118,7 +120,7 @@ const AdminCompliance = () => {
       await api.patch(`/admin/deletion_requests/${requestId}`, { status });
       await loadComplianceData();
     } catch (requestError) {
-      setError(requestError?.response?.data?.error || 'Unable to update request status right now.');
+      setError(requestError?.response?.data?.error || t('admin_compliance.update_failed'));
     } finally {
       setUpdatingId(null);
     }
@@ -128,64 +130,64 @@ const AdminCompliance = () => {
     <main className="admin-compliance-page">
       <header className="admin-compliance-page__header">
         <div>
-          <p className="admin-compliance-page__eyebrow">Governance</p>
-          <h1>Compliance operations center</h1>
-          <p>Review security events and process GDPR deletion requests from one admin workspace.</p>
+          <p className="admin-compliance-page__eyebrow">{t('admin_compliance.eyebrow')}</p>
+          <h1>{t('admin_compliance.heading')}</h1>
+          <p>{t('admin_compliance.lead')}</p>
         </div>
-        <Link to="/admin" className="admin-compliance-page__link">Back to dashboard</Link>
+        <Link to="/admin" className="admin-compliance-page__link">{t('admin_compliance.back_to_dashboard')}</Link>
       </header>
 
       <section className="admin-compliance-page__stats">
         <article>
-          <span>Security events</span>
+          <span>{t('admin_compliance.security_events')}</span>
           <strong>{securityEvents.length}</strong>
         </article>
         <article>
-          <span>Critical</span>
+          <span>{t('admin_compliance.critical')}</span>
           <strong>{severityBreakdown.critical}</strong>
         </article>
         <article>
-          <span>Warnings</span>
+          <span>{t('admin_compliance.warnings')}</span>
           <strong>{severityBreakdown.warning}</strong>
         </article>
         <article>
-          <span>Pending deletion requests</span>
+          <span>{t('admin_compliance.pending_deletions')}</span>
           <strong>{pendingRequests}</strong>
         </article>
       </section>
 
       <section className="admin-compliance-page__feature-area">
         <article className="admin-compliance-card admin-compliance-card--tiers">
-          <h2>Pricing & Compliance Tiers</h2>
+          <h2>{t('admin_compliance.tiers')}</h2>
           <ComplianceTierMatrix currentTier="compliance_pro" onUpgrade={handleUpgrade} />
         </article>
 
         <article className="admin-compliance-card admin-compliance-card--incident">
-          <h2>Report NIS2 Incident</h2>
+          <h2>{t('admin_compliance.report_incident')}</h2>
           <NIS2IncidentReport
             onSubmit={handleIncidentSubmit}
             onDownloadPDF={handlePDFDownload}
           />
-          {incidentSubmitting ? <p>Submitting incident...</p> : null}
+          {incidentSubmitting ? <p>{t('admin_compliance.submitting_incident')}</p> : null}
           {incidentMessage ? <p className="admin-compliance-success">{incidentMessage}</p> : null}
         </article>
       </section>
 
-      {loading ? <p className="admin-compliance-page__feedback">Loading compliance data...</p> : null}
+      {loading ? <p className="admin-compliance-page__feedback">{t('admin_compliance.loading')}</p> : null}
       {error ? <p className="admin-compliance-page__feedback admin-compliance-page__feedback--error">{error}</p> : null}
 
       <section className="admin-compliance-page__grid">
         <article className="admin-compliance-card">
-          <h2>Recent security events</h2>
+          <h2>{t('admin_compliance.recent_events')}</h2>
           <div className="admin-compliance-table-wrap">
             <table className="admin-compliance-table">
               <thead>
                 <tr>
-                  <th>Time</th>
-                  <th>Type</th>
-                  <th>Severity</th>
-                  <th>User</th>
-                  <th>IP</th>
+                  <th>{t('admin_compliance.time')}</th>
+                  <th>{t('admin_compliance.type')}</th>
+                  <th>{t('admin_compliance.severity')}</th>
+                  <th>{t('admin_compliance.user')}</th>
+                  <th>{t('admin_compliance.ip')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -204,7 +206,7 @@ const AdminCompliance = () => {
                 ))}
                 {!loading && sortedSecurityEvents.length === 0 ? (
                   <tr>
-                    <td colSpan={5}>No security events found.</td>
+                    <td colSpan={5}>{t('admin_compliance.no_events')}</td>
                   </tr>
                 ) : null}
               </tbody>
@@ -213,7 +215,7 @@ const AdminCompliance = () => {
         </article>
 
         <article className="admin-compliance-card">
-          <h2>Deletion requests</h2>
+          <h2>{t('admin_compliance.deletion_requests')}</h2>
           <div className="admin-compliance-table-wrap">
             <table className="admin-compliance-table">
               <thead>
