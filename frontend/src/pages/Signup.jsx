@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { AuthContext } from '../context/AuthContext';
 import './AuthPricing.css';
+import { useTranslation } from '../i18n/index';
 
 const teamSizeOptions = [
 	'1-5',
@@ -13,16 +14,17 @@ const teamSizeOptions = [
 ];
 
 const useCaseOptions = [
-	'Threat monitoring',
-	'Incident response',
-	'Client security operations',
-	'Compliance reporting',
-	'General security analytics',
+	{ value: 'Threat monitoring', key: 'use_case_threat' },
+	{ value: 'Incident response', key: 'use_case_incident' },
+	{ value: 'Client security operations', key: 'use_case_client' },
+	{ value: 'Compliance reporting', key: 'use_case_compliance' },
+	{ value: 'General security analytics', key: 'use_case_general' },
 ];
 
 const Signup = () => {
 	const navigate = useNavigate();
 	const { setUser } = useContext(AuthContext);
+	const { t } = useTranslation();
 	const [firstName, setFirstName] = useState('');
 	const [lastName, setLastName] = useState('');
 	const [email, setEmail] = useState('');
@@ -46,7 +48,7 @@ const Signup = () => {
 		setSuccess('');
 
 		if (!agreedToTerms || !gdprConsent) {
-			setError('Please accept legal terms and GDPR consent to continue.');
+				setError(t('signup.accept_terms_error'));
 			setLoading(false);
 			return;
 		}
@@ -67,7 +69,7 @@ const Signup = () => {
 				gdpr_consent: gdprConsent,
 			});
 			setUser(response.data?.user || null);
-			setSuccess('Account created successfully.');
+			setSuccess(t('signup.create_account'));
 			navigate('/dashboard');
 		} catch (err) {
 			setError(err?.response?.data?.error || 'Signup failed.');
@@ -79,22 +81,22 @@ const Signup = () => {
 		<main className="auth-pricing-page auth-pricing-page--auth">
 			<section className="auth-pricing-card auth-pricing-card--signup">
 				<div className="auth-pricing-card__head">
-					<p className="auth-pricing-card__eyebrow">Get started</p>
-					<h1>Create your GueInsight account</h1>
-					<p>Tell us about your team so we can tailor your onboarding and recommended setup.</p>
+					<p className="auth-pricing-card__eyebrow">{t('signup.eyebrow')}</p>
+					<h1>{t('signup.heading')}</h1>
+					<p>{t('signup.intro')}</p>
 					<p className="auth-pricing-card__note">
-						Already have an account? <Link to="/login">Log in instead</Link>.
+						{t('signup.note')} <Link to="/login">{t('login.log_in')}</Link>.
 					</p>
 				</div>
 
 				<form className="auth-pricing-form" onSubmit={handleSubmit}>
 					<div className="auth-pricing-grid">
 						<div>
-							<label htmlFor="signup-first-name">First name</label>
+							<label htmlFor="signup-first-name">{t('signup.first_name')}</label>
 							<input
 								id="signup-first-name"
 								type="text"
-								placeholder="Jane"
+								placeholder={t('signup.placeholder_first')}
 								value={firstName}
 								onChange={(e) => setFirstName(e.target.value)}
 								required
@@ -102,11 +104,11 @@ const Signup = () => {
 						</div>
 
 						<div>
-							<label htmlFor="signup-last-name">Last name</label>
+							<label htmlFor="signup-last-name">{t('signup.last_name')}</label>
 							<input
 								id="signup-last-name"
 								type="text"
-								placeholder="Doe"
+								placeholder={t('signup.placeholder_last')}
 								value={lastName}
 								onChange={(e) => setLastName(e.target.value)}
 								required
@@ -114,7 +116,7 @@ const Signup = () => {
 						</div>
 					</div>
 
-					<label htmlFor="signup-email">Work email</label>
+					<label htmlFor="signup-email">{t('signup.work_email')}</label>
 					<input
 						id="signup-email"
 						type="email"
@@ -126,11 +128,11 @@ const Signup = () => {
 
 					<div className="auth-pricing-grid">
 						<div>
-							<label htmlFor="signup-company">Company</label>
+							<label htmlFor="signup-company">{t('signup.company')}</label>
 							<input
 								id="signup-company"
 								type="text"
-								placeholder="Acme Security"
+								placeholder={t('signup.placeholder_company')}
 								value={company}
 								onChange={(e) => setCompany(e.target.value)}
 								required
@@ -138,11 +140,11 @@ const Signup = () => {
 						</div>
 
 						<div>
-							<label htmlFor="signup-job-title">Job title</label>
+							<label htmlFor="signup-job-title">{t('signup.job_title')}</label>
 							<input
 								id="signup-job-title"
 								type="text"
-								placeholder="Security Analyst"
+								placeholder={t('signup.placeholder_job')}
 								value={jobTitle}
 								onChange={(e) => setJobTitle(e.target.value)}
 								required
@@ -152,11 +154,11 @@ const Signup = () => {
 
 					<div className="auth-pricing-grid">
 						<div>
-							<label htmlFor="signup-phone">Phone number</label>
+							<label htmlFor="signup-phone">{t('signup.phone_number')}</label>
 							<input
 								id="signup-phone"
 								type="tel"
-								placeholder="+1 555 010 9999"
+								placeholder={t('signup.placeholder_phone')}
 								value={phoneNumber}
 								onChange={(e) => setPhoneNumber(e.target.value)}
 								required
@@ -164,7 +166,7 @@ const Signup = () => {
 						</div>
 
 						<div>
-							<label htmlFor="signup-team-size">Team size</label>
+							<label htmlFor="signup-team-size">{t('signup.team_size')}</label>
 							<select
 								id="signup-team-size"
 								value={teamSize}
@@ -177,22 +179,22 @@ const Signup = () => {
 						</div>
 					</div>
 
-					<label htmlFor="signup-primary-use-case">Primary use case</label>
+					<label htmlFor="signup-primary-use-case">{t('signup.primary_use_case')}</label>
 					<select
 						id="signup-primary-use-case"
 						value={primaryUseCase}
 						onChange={(e) => setPrimaryUseCase(e.target.value)}
 					>
 						{useCaseOptions.map((useCase) => (
-							<option key={useCase} value={useCase}>{useCase}</option>
+							<option key={useCase.value} value={useCase.value}>{t(`signup.${useCase.key}`)}</option>
 						))}
 					</select>
 
-					<label htmlFor="signup-password">Password</label>
+					<label htmlFor="signup-password">{t('signup.password')}</label>
 					<input
 						id="signup-password"
 						type="password"
-						placeholder="Create a strong password"
+						placeholder={t('signup.placeholder_password')}
 						value={password}
 						onChange={(e) => setPassword(e.target.value)}
 						required
@@ -204,7 +206,7 @@ const Signup = () => {
 							checked={newsletter}
 							onChange={(e) => setNewsletter(e.target.checked)}
 						/>
-						<span>Send me product updates and security insights.</span>
+						<span>{t('signup.newsletter')}</span>
 					</label>
 
 					<label className="auth-pricing-checkbox auth-pricing-checkbox--required">
@@ -214,7 +216,7 @@ const Signup = () => {
 							onChange={(e) => setAgreedToTerms(e.target.checked)}
 							required
 						/>
-						<span>I agree to the Terms of Service and Privacy Policy.</span>
+						<span>{t('signup.terms')}</span>
 					</label>
 
 					<label className="auth-pricing-checkbox auth-pricing-checkbox--required">
@@ -224,11 +226,11 @@ const Signup = () => {
 							onChange={(e) => setGdprConsent(e.target.checked)}
 							required
 						/>
-						<span>I consent to personal data processing for account and security operations.</span>
+						<span>{t('signup.consent')}</span>
 					</label>
 
 					<button type="submit" disabled={loading}>
-						{loading ? 'Creating account...' : 'Create account'}
+						{loading ? t('signup.creating') : t('signup.create_account')}
 					</button>
 
 					{error && <p className="auth-pricing-message auth-pricing-message--error">{error}</p>}

@@ -1,9 +1,17 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useContext, useMemo } from 'react';
+import { useTranslation } from '../i18n/index';
 import './Footer.css';
+import { AuthContext } from '../context/AuthContext';
+import { getNavLinks } from '../utils/navLinks';
 
 const Footer = () => {
   const logoSrc = '/img/guecyber-logo.png';
+  const { user } = useContext(AuthContext);
+  const homePath = user?.role === 'admin' ? '/admin' : user ? '/dashboard' : '/';
+  const { t } = useTranslation();
+  const navLinks = useMemo(() => getNavLinks(user, homePath, t), [user, homePath, t]);
   return (
     <footer className="app-footer" role="contentinfo">
       <div className="app-footer__inner">
@@ -19,14 +27,28 @@ const Footer = () => {
 
         <div className="app-footer__meta">
           <nav className="app-footer__nav" aria-label="Footer navigation">
-            <Link to="/">Platform</Link>
-            <Link to="/login">Login</Link>
-            <Link to="/subscription">Solutions</Link>
-            <Link to="/support">Resources</Link>
+            {navLinks.map((link) => (
+              link.external ? (
+                <a key={link.label}
+                   href={link.to}
+                   target="_blank"
+                   rel="noopener noreferrer nofollow"
+                   aria-label={`${link.label} (opens in new tab)`}
+                >
+                  {link.label}
+                  <svg className="external-link-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path fill="currentColor" d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42 9.3-9.29H14V3z"></path>
+                    <path fill="currentColor" d="M5 5h5V3H3v7h2V5z"></path>
+                  </svg>
+                </a>
+              ) : (
+                <Link key={link.to} to={link.to}>{link.label}</Link>
+              )
+            ))}
           </nav>
-          <div><strong>GueInsight</strong> — a product of <a href="https://www.guecyber.com" target="_blank" rel="noreferrer">Gue Cyber</a></div>
-          <div>For services, assessments, or consultancy, visit <a href="https://www.guecyber.com" target="_blank" rel="noreferrer">guecyber.com</a> or contact <a href="mailto:info@guecyber.com">info@guecyber.com</a>.</div>
-          <div className="app-footer__legal">Enterprise number: 1037.163.392 · Doorniksesteenweg 3B bus 101, 8580 Avelgem, Belgium</div>
+          <div><strong>GueInsight</strong> — {t('footer.product_of')} <a href="https://www.guecyber.com" target="_blank" rel="noopener noreferrer">Gue Cyber</a></div>
+          <div>{t('footer.services_text')} <a href="https://www.guecyber.com" target="_blank" rel="noopener noreferrer">guecyber.com</a> {t('footer.or_contact')} <a href="mailto:info@guecyber.com">info@guecyber.com</a>.</div>
+          <div className="app-footer__legal">{t('footer.enterprise_number')}: 1037.163.392 · Doorniksesteenweg 3B bus 101, 8580 Avelgem, Belgium</div>
         </div>
       </div>
     </footer>

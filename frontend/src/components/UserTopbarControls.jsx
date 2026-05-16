@@ -3,9 +3,11 @@ import { Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { api } from '../services/api';
 import './UserTopbarControls.css';
+import { useTranslation } from '../i18n/index';
 
 const UserTopbarControls = () => {
   const { user, setUser, logout } = useContext(AuthContext);
+  const { t } = useTranslation();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -78,7 +80,7 @@ const UserTopbarControls = () => {
   return (
     <div className="user-topbar-controls" ref={controlsRef}>
       <div className="user-topbar-controls__left">
-        <Link to="/support" className="user-topbar-controls__pill">Open support</Link>
+        <Link to="/support" className="user-topbar-controls__pill">{t('topbar.open_support')}</Link>
       </div>
 
       <div className="user-topbar-controls__right">
@@ -87,7 +89,7 @@ const UserTopbarControls = () => {
             type="button"
             className="user-topbar-controls__icon-button"
             onClick={handleToggleNotifications}
-            aria-label="View notifications"
+            aria-label={t('topbar.view_notifications')}
             aria-expanded={notificationsOpen}
             aria-haspopup="menu"
           >
@@ -100,11 +102,11 @@ const UserTopbarControls = () => {
           {notificationsOpen ? (
             <div className="user-topbar-controls__dropdown" role="menu">
               <div className="user-topbar-controls__dropdown-head">
-                <strong>Notifications</strong>
-                <span>{unreadCount} unread</span>
+                <strong>{t('topbar.notifications')}</strong>
+                <span>{unreadCount} {t('topbar.unread')}</span>
               </div>
-              {loadingNotifications ? <p className="user-topbar-controls__empty">Loading...</p> : null}
-              {!loadingNotifications && notifications.length === 0 ? <p className="user-topbar-controls__empty">No notifications.</p> : null}
+              {loadingNotifications ? <p className="user-topbar-controls__empty">{t('topbar.loading')}</p> : null}
+              {!loadingNotifications && notifications.length === 0 ? <p className="user-topbar-controls__empty">{t('topbar.no_notifications')}</p> : null}
               <div className="user-topbar-controls__notification-list">
                 {notifications.map((notification) => (
                   <article key={notification.id} className="user-topbar-controls__notification-item">
@@ -115,7 +117,7 @@ const UserTopbarControls = () => {
               </div>
               {notifications.length ? (
                 <button type="button" className="user-topbar-controls__mark-read" onClick={handleMarkAllRead}>
-                  Mark all as read
+                  {t('topbar.mark_all_read')}
                 </button>
               ) : null}
             </div>
@@ -130,7 +132,7 @@ const UserTopbarControls = () => {
               setMenuOpen((current) => !current);
               setNotificationsOpen(false);
             }}
-            aria-label="Open profile menu"
+            aria-label={t('topbar.profile_menu')}
             aria-expanded={menuOpen}
             aria-haspopup="menu"
           >
@@ -147,19 +149,19 @@ const UserTopbarControls = () => {
             <div className="user-topbar-controls__dropdown user-topbar-controls__dropdown--menu" role="menu">
               <div className="user-topbar-controls__dropdown-head">
                 <strong>{displayName}</strong>
-                <span>Profile menu</span>
+                <span>{t('topbar.profile_menu')}</span>
               </div>
               <Link to="/profile" className="user-topbar-controls__menu-item" role="menuitem" onClick={() => setMenuOpen(false)}>
-                Account settings
+                {t('topbar.account_settings')}
               </Link>
               <Link to="/subscription" className="user-topbar-controls__menu-item" role="menuitem" onClick={() => setMenuOpen(false)}>
-                Manage plan
+                {t('topbar.manage_plan')}
               </Link>
               <Link to="/support" className="user-topbar-controls__menu-item" role="menuitem" onClick={() => setMenuOpen(false)}>
-                Open support
+                {t('topbar.open_support')}
               </Link>
               <button type="button" className="user-topbar-controls__menu-item user-topbar-controls__menu-item--danger" onClick={handleLogout} role="menuitem">
-                Logout
+                {t('topbar.logout')}
               </button>
             </div>
           ) : null}

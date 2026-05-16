@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { api } from '../services/api';
 import './Profile.css';
+import { useTranslation } from '../i18n/index';
 
 const useCaseOptions = [
 	'Threat monitoring',
@@ -14,6 +15,7 @@ const useCaseOptions = [
 
 const Profile = () => {
 	const { user, setUser, loading } = useContext(AuthContext);
+	const { t } = useTranslation();
 	const location = useLocation();
 	const [submitting, setSubmitting] = useState(false);
 	const [savingPreferences, setSavingPreferences] = useState(false);
@@ -106,12 +108,12 @@ const Profile = () => {
 	const readOnlyMeta = useMemo(() => {
 		if (!user) return [];
 		return [
-			{ label: 'Email', value: user.email || 'N/A' },
-			{ label: 'Role', value: user.role || 'user' },
-			{ label: 'Team size', value: user.team_size || 'N/A' },
-			{ label: 'User ID', value: user.id || 'N/A' },
+			{ label: t('profile.email'), value: user.email || 'N/A' },
+			{ label: t('profile.role'), value: user.role || 'user' },
+			{ label: t('profile.team_size'), value: user.team_size || 'N/A' },
+			{ label: t('profile.user_id'), value: user.id || 'N/A' },
 		];
-	}, [user]);
+	}, [t, user]);
 
 	const updateField = (field) => (event) => {
 		const value = field === 'newsletter_opt_in' ? event.target.checked : event.target.value;
@@ -132,9 +134,9 @@ const Profile = () => {
 		try {
 			const response = await api.patch('/auth/profile', form);
 			setUser(response.data?.user || user);
-			setMessage('Profile updated successfully.');
+			setMessage(t('profile.profile_updated'));
 		} catch (requestError) {
-			setError(requestError?.response?.data?.error || 'Unable to update profile right now.');
+			setError(requestError?.response?.data?.error || t('profile.update_failed'));
 		} finally {
 			setSubmitting(false);
 		}
@@ -149,9 +151,9 @@ const Profile = () => {
 		try {
 			const response = await api.patch('/auth/preferences', preferences);
 			setUser(response.data?.user || user);
-			setPreferenceMessage('Preferences saved successfully.');
+			setPreferenceMessage(t('profile.preferences_saved'));
 		} catch (requestError) {
-			setError(requestError?.response?.data?.error || 'Unable to save preferences right now.');
+			setError(requestError?.response?.data?.error || t('profile.save_preferences_failed'));
 		} finally {
 			setSavingPreferences(false);
 		}
@@ -164,9 +166,9 @@ const Profile = () => {
 		try {
 			const response = await api.patch('/auth/privacy/consent', { refresh_legal_consent: true });
 			setUser(response.data?.user || user);
-			setPrivacyMessage('Legal consent refreshed successfully.');
+			setPrivacyMessage(t('profile.consent_refreshed'));
 		} catch (requestError) {
-			setPrivacyError(requestError?.response?.data?.error || 'Unable to refresh consent right now.');
+			setPrivacyError(requestError?.response?.data?.error || t('profile.refresh_consent_failed'));
 		} finally {
 			setPrivacyBusy(false);
 		}
@@ -189,16 +191,16 @@ const Profile = () => {
 			anchor.click();
 			anchor.remove();
 			URL.revokeObjectURL(url);
-			setPrivacyMessage('Data export generated and downloaded.');
+			setPrivacyMessage(t('profile.data_exported'));
 		} catch (requestError) {
-			setPrivacyError(requestError?.response?.data?.error || 'Unable to export data right now.');
+			setPrivacyError(requestError?.response?.data?.error || t('profile.export_failed'));
 		} finally {
 			setPrivacyBusy(false);
 		}
 	};
 
 	const requestAccountDeletion = async () => {
-		const confirmed = window.confirm('Submit account deletion request and deactivate this account now?');
+		const confirmed = window.confirm(t('profile.delete_confirm'));
 		if (!confirmed) return;
 
 		setPrivacyBusy(true);
@@ -207,9 +209,9 @@ const Profile = () => {
 		try {
 			await api.post('/auth/privacy/delete-request', { reason: 'Requested via profile privacy controls.' });
 			setUser(null);
-			setPrivacyMessage('Deletion request submitted. Your account has been deactivated.');
+			setPrivacyMessage(t('profile.deletion_submitted'));
 		} catch (requestError) {
-			setPrivacyError(requestError?.response?.data?.error || 'Unable to submit deletion request right now.');
+			setPrivacyError(requestError?.response?.data?.error || t('profile.delete_failed'));
 		} finally {
 			setPrivacyBusy(false);
 		}
@@ -218,7 +220,7 @@ const Profile = () => {
 	const currentPlanLabel = String(user?.current_plan || 'free').replaceAll('_', ' ');
 
 	if (loading) {
-		return <main className="profile-page"><p>Loading your profile...</p></main>;
+		return <main className="profile-page"><p>{t('profile.loading')}</p></main>;
 	}
 
 	return (
@@ -226,13 +228,13 @@ const Profile = () => {
 			<section className="profile-page__header">
 				<div className="profile-page__header-row">
 					<div>
-						<p className="profile-page__eyebrow">Operator Identity</p>
-						<h1>Profile control panel</h1>
-						<p>Review immutable account attributes and manage team-editable profile fields.</p>
+						<p className="profile-page__eyebrow">{t('profile.eyebrow')}</p>
+						<h1>{t('profile.title')}</h1>
+						<p>{t('profile.lead')}</p>
 					</div>
 					{user ? (
 						<Link to={backLinkHref} className="profile-page__back-link">
-							Back to dashboard
+							{t('profile.back_to_dashboard')}
 						</Link>
 					) : null}
 				</div>
@@ -240,7 +242,7 @@ const Profile = () => {
 
 			<section className="profile-page__layout">
 				<article className="profile-page__card">
-					<h2>Read-only account info</h2>
+					<h2>{t('profile.read_only')}</h2>
 					<div className="profile-page__meta-grid">
 						{readOnlyMeta.map((item) => (
 							<div className="profile-page__meta-item" key={item.label}>
@@ -252,53 +254,53 @@ const Profile = () => {
 
 					<div className="profile-page__meta-grid" style={{ marginTop: '12px' }}>
 						<div className="profile-page__meta-item">
-							<span>Current plan</span>
+							<span>{t('profile.current_plan')}</span>
 							<strong>{currentPlanLabel}</strong>
 						</div>
 						<div className="profile-page__meta-item">
-							<span>Plan expires</span>
+							<span>{t('profile.plan_expires')}</span>
 							<strong>{user?.plan_expires_at ? new Date(user.plan_expires_at).toLocaleString() : 'N/A'}</strong>
 						</div>
 					</div>
 
 					<div className="profile-page__grid" style={{ marginTop: '12px' }}>
-						<Link to="/subscription" className="profile-page__back-link">Manage plan</Link>
-						<Link to="/support" className="profile-page__back-link">Open support</Link>
+						<Link to="/subscription" className="profile-page__back-link">{t('profile.manage_plan')}</Link>
+						<Link to="/support" className="profile-page__back-link">{t('profile.open_support')}</Link>
 					</div>
 				</article>
 
 				<article className="profile-page__card">
-					<h2>Editable details</h2>
+					<h2>{t('profile.editable_details')}</h2>
 					<form className="profile-page__form" onSubmit={handleSubmit}>
 						<div className="profile-page__grid">
 							<label>
-								<span>First name</span>
+								<span>{t('profile.first_name')}</span>
 								<input type="text" value={form.first_name} onChange={updateField('first_name')} required />
 							</label>
 							<label>
-								<span>Last name</span>
+								<span>{t('profile.last_name')}</span>
 								<input type="text" value={form.last_name} onChange={updateField('last_name')} required />
 							</label>
 						</div>
 
 						<div className="profile-page__grid">
 							<label>
-								<span>Phone number</span>
+								<span>{t('profile.phone_number')}</span>
 								<input type="tel" value={form.phone_number} onChange={updateField('phone_number')} required />
 							</label>
 							<label>
-								<span>Company</span>
+								<span>{t('profile.company')}</span>
 								<input type="text" value={form.company} onChange={updateField('company')} />
 							</label>
 						</div>
 
 						<div className="profile-page__grid">
 							<label>
-								<span>Job title</span>
+								<span>{t('profile.job_title')}</span>
 								<input type="text" value={form.job_title} onChange={updateField('job_title')} />
 							</label>
 							<label>
-								<span>Primary use case</span>
+								<span>{t('profile.primary_use_case')}</span>
 								<select value={form.primary_use_case} onChange={updateField('primary_use_case')}>
 									{useCaseOptions.map((useCase) => (
 										<option key={useCase} value={useCase}>{useCase}</option>
@@ -313,66 +315,66 @@ const Profile = () => {
 								checked={form.newsletter_opt_in}
 								onChange={updateField('newsletter_opt_in')}
 							/>
-							<span>Receive product updates and security insights.</span>
+							<span>{t('profile.newsletter')}</span>
 						</label>
 
 						{error ? <p className="profile-page__message profile-page__message--error">{error}</p> : null}
 						{message ? <p className="profile-page__message profile-page__message--success">{message}</p> : null}
 
 						<button type="submit" disabled={submitting}>
-							{submitting ? 'Saving...' : 'Save profile'}
+							{submitting ? t('profile.saving') : t('profile.save_profile')}
 						</button>
 					</form>
 				</article>
 
 				<article className="profile-page__card">
-					<h2>Preferences</h2>
+								<h2>{t('profile.preferences')}</h2>
 					<form className="profile-page__form" onSubmit={handleSavePreferences}>
 						<div className="profile-page__grid">
 							<label>
-								<span>Avatar URL</span>
-								<input type="url" value={preferences.avatar_url} onChange={updatePreferenceField('avatar_url')} placeholder="https://..." />
+											<span>{t('profile.avatar_url')}</span>
+											<input type="url" value={preferences.avatar_url} onChange={updatePreferenceField('avatar_url')} placeholder="https://..." />
 							</label>
 							<label>
-								<span>Theme</span>
+											<span>{t('profile.theme')}</span>
 								<select value={preferences.theme} onChange={updatePreferenceField('theme')}>
-									<option value="system">System</option>
-									<option value="light">Light</option>
-									<option value="dark">Dark</option>
+												<option value="system">{t('profile.system')}</option>
+												<option value="light">{t('profile.light')}</option>
+												<option value="dark">{t('profile.dark')}</option>
 								</select>
 							</label>
 						</div>
 
 						<div className="profile-page__grid">
 							<label>
-								<span>Timezone</span>
+											<span>{t('profile.timezone')}</span>
 								<input type="text" value={preferences.timezone} onChange={updatePreferenceField('timezone')} />
 							</label>
 							<label>
-								<span>Language</span>
+											<span>{t('profile.language')}</span>
 								<input type="text" value={preferences.language} onChange={updatePreferenceField('language')} />
 							</label>
 						</div>
 
 						<label className="profile-page__checkbox">
 							<input type="checkbox" checked={preferences.notification_inapp_enabled} onChange={updatePreferenceField('notification_inapp_enabled')} />
-							<span>Enable in-app notifications.</span>
+										<span>{t('profile.enable_inapp')}</span>
 						</label>
 
 						<label className="profile-page__checkbox">
 							<input type="checkbox" checked={preferences.notification_email_enabled} onChange={updatePreferenceField('notification_email_enabled')} />
-							<span>Enable email notifications.</span>
+										<span>{t('profile.enable_email')}</span>
 						</label>
 
 						{preferenceMessage ? <p className="profile-page__message profile-page__message--success">{preferenceMessage}</p> : null}
 						<button type="submit" disabled={savingPreferences}>
-							{savingPreferences ? 'Saving...' : 'Save preferences'}
+							{savingPreferences ? t('profile.saving') : t('profile.save_preferences')}
 						</button>
 					</form>
 				</article>
 
 				<article className="profile-page__card">
-					<h2>Billing transactions</h2>
+					<h2>{t('profile.billing_transactions')}</h2>
 					<div className="profile-page__meta-grid">
 						{billingTransactions.length ? billingTransactions.map((tx) => (
 							<div className="profile-page__meta-item" key={tx.id}>
@@ -380,24 +382,24 @@ const Profile = () => {
 								<strong>{tx.amount_minor} {String(tx.currency || '').toUpperCase()}</strong>
 								<p>{tx.created_at ? new Date(tx.created_at).toLocaleString() : 'N/A'}</p>
 							</div>
-						)) : <p>No billing transactions yet.</p>}
+						)) : <p>{t('profile.no_billing_transactions')}</p>}
 					</div>
 				</article>
 
 				<article className="profile-page__card">
-					<h2>Privacy and compliance</h2>
-					<p>Manage GDPR consent records and submit data subject requests.</p>
+					<h2>{t('profile.privacy_and_compliance')}</h2>
+					<p>{t('profile.privacy_subtitle')}</p>
 					<div className="profile-page__grid" style={{ marginTop: '12px' }}>
 						<button type="button" onClick={refreshLegalConsent} disabled={privacyBusy}>
-							Refresh legal consent
+							{t('profile.refresh_legal_consent')}
 						</button>
 						<button type="button" onClick={exportPersonalData} disabled={privacyBusy}>
-							Export my data
+							{t('profile.export_my_data')}
 						</button>
 					</div>
 					<div className="profile-page__grid" style={{ marginTop: '12px' }}>
 						<button type="button" onClick={requestAccountDeletion} disabled={privacyBusy}>
-							Request account deletion
+							{t('profile.request_account_deletion')}
 						</button>
 					</div>
 					{privacyError ? <p className="profile-page__message profile-page__message--error">{privacyError}</p> : null}

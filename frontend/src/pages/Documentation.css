@@ -1,9 +1,37 @@
 /* Documentation Page - Main Layout */
 .documentation-page {
-  padding: 2rem;
+  /* reserve space for sticky navbar and footer so docs behave like a full page */
+  --nav-height: 74px;
+  padding: calc(var(--nav-height) + 16px) 2rem calc(var(--footer-height) + 32px) 2rem;
   max-width: 1200px;
   margin: 0 auto;
   background: #fafafa;
+}
+
+/* Theme variables for documentation (light/dark) */
+:root {
+  --doc-bg: #ffffff;
+  --doc-text: #111111;
+  --doc-muted: #555555;
+  --doc-accent: #002d5c;
+  --doc-link: #004a9f;
+  --footer-height: 220px;
+  --doc-cta-bg: linear-gradient(135deg, #005aa3 0%, #003a7a 100%);
+}
+
+body.theme-dark {
+  --doc-bg: #071022;
+  --doc-text: #e6eef8;
+  --doc-muted: #b8c7d6;
+  --doc-accent: #7fb3ff;
+  --doc-link: #9fd1ff;
+  --doc-cta-bg: linear-gradient(135deg, #0b3b5b 0%, #07283f 100%);
+}
+
+/* Ensure anchor navigation accounts for sticky navbar and footer */
+html {
+  scroll-padding-top: calc(var(--nav-height) + 12px);
+  scroll-padding-bottom: calc(var(--footer-height) + 12px);
 }
 
 .documentation-page__header {
@@ -18,8 +46,25 @@
   color: #1a1a1a;
 }
 
+/* Hero header contrast override to ensure visibility on any global banner */
+.documentation-page__header {
+  background: var(--doc-bg) !important;
+  color: var(--doc-text) !important;
+  padding: 2rem !important;
+  border-radius: 6px !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06) !important;
+}
+
+.documentation-page__header h1 {
+  color: #002d5c !important;
+}
+
+.documentation-page__header h1 {
+  color: var(--doc-accent) !important;
+}
 .documentation-page__header p {
-  font-size: 1.1rem;
+  color: var(--doc-muted) !important;
+}
   color: #666;
   margin: 0;
 }
@@ -31,9 +76,9 @@
   gap: 1rem;
   margin-bottom: 3rem;
   padding: 1.5rem;
-  background: white;
+  background: var(--doc-bg);
   border-radius: 8px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid rgba(0,0,0,0.06);
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
@@ -41,7 +86,7 @@
   display: inline-block;
   padding: 0.75rem 1.25rem;
   background: #f0f0f0;
-  color: #0066cc;
+  color: var(--doc-link);
   text-decoration: none;
   border-radius: 6px;
   font-weight: 500;
@@ -56,16 +101,21 @@
 /* Content Sections */
 .documentation-page__content {
   max-width: 900px;
-  background: white;
+  background: var(--doc-bg);
   padding: 2rem;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  position: relative;
+  z-index: 1; /* keep below the sticky navbar (z-index:40) */
+  margin-bottom: calc(var(--footer-height) + 32px);
 }
 
 .doc-section {
   margin-bottom: 3rem;
   padding-bottom: 2rem;
   border-bottom: 1px solid #e0e0e0;
+  scroll-margin-top: calc(var(--nav-height) + 12px);
+  scroll-margin-bottom: calc(var(--footer-height) + 12px);
 }
 
 .doc-section:last-child {
@@ -74,7 +124,7 @@
 
 .doc-section h2 {
   font-size: 1.8rem;
-  color: #0066cc;
+  color: var(--doc-accent);
   margin: 0 0 1.5rem;
   display: flex;
   align-items: center;
@@ -93,14 +143,14 @@
 
 .doc-subsection p {
   line-height: 1.6;
-  color: #555;
+  color: var(--doc-muted);
   margin: 0.5rem 0;
 }
 
 .doc-subsection ol,
 .doc-subsection ul {
   line-height: 1.8;
-  color: #555;
+  color: var(--doc-muted);
   padding-left: 2rem;
   margin: 1rem 0;
 }
@@ -330,6 +380,7 @@
 @media (max-width: 768px) {
   .documentation-page {
     padding: 1rem;
+    --footer-height: 180px;
   }
 
   .documentation-page__header h1 {
@@ -372,4 +423,104 @@
   .btn {
     width: 100%;
   }
+}
+
+/* High-contrast overrides to ensure readability across site themes */
+.documentation-page__content,
+.documentation-page__content * {
+  color: #111 !important;
+}
+
+.documentation-page__content a,
+.documentation-page__content a:visited {
+  color: #004a9f !important;
+  text-decoration: underline;
+}
+
+.documentation-page__nav .nav-link {
+  background: #ffffff !important;
+  color: #003a7a !important;
+  border: 1px solid #e6e6e6 !important;
+}
+
+.doc-section h2 {
+  color: #002d5c !important;
+}
+
+.doc-subsection h3 {
+  color: #0b2238 !important;
+}
+
+.faq-item summary {
+  color: #0b2238 !important;
+  background: #ffffff !important;
+}
+
+.faq-item > p, .faq-item > ul {
+  color: #111 !important;
+}
+
+/* Ensure tables remain legible */
+.limits-table td, .features-table td, .limits-table th, .features-table th {
+  color: #111 !important;
+}
+
+/* Improve contrast for CTA */
+.doc-cta {
+  background: linear-gradient(135deg, #005aa3 0%, #003a7a 100%) !important;
+}
+
+/* Prevent overly transparent backgrounds from hiding text */
+.documentation-page__content {
+  background: #ffffff !important;
+  opacity: 1 !important;
+}
+
+/* Override accidental pricing/card styles that may leak into docs */
+.documentation-page__content .auth-pricing-card,
+.documentation-page__content .pricing-hero,
+.documentation-page__content .pricing-card {
+  background: #ffffff !important;
+  color: #111 !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06) !important;
+  border: 1px solid #e6e6e6 !important;
+  backdrop-filter: none !important;
+}
+
+.documentation-page__content .auth-pricing-card__head h1,
+.documentation-page__content .pricing-hero h1,
+.documentation-page__content .pricing-card h1 {
+  color: #002d5c !important;
+}
+
+.documentation-page__content .auth-pricing-card p,
+.documentation-page__content .pricing-hero p,
+.documentation-page__content .pricing-card p {
+  color: #334155 !important;
+}
+
+/* Force doc subsections to use transparent/white backgrounds so text remains readable */
+.documentation-page__content .doc-subsection,
+.documentation-page__content .doc-subsection * {
+  background: transparent !important;
+  color: #111 !important;
+}
+
+/* Make entire doc sections readable unless they're the CTA */
+.documentation-page__content .doc-section:not(.doc-cta),
+.documentation-page__content .doc-section:not(.doc-cta) * {
+  background: transparent !important;
+  color: #111 !important;
+}
+
+/* Ensure anchor navigation accounts for sticky navbar */
+html {
+  scroll-padding-top: calc(var(--nav-height) + 12px);
+}
+
+.doc-section {
+  margin-bottom: 3rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid #e0e0e0;
+  scroll-margin-top: calc(var(--nav-height) + 12px);
 }

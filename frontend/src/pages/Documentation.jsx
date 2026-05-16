@@ -1,233 +1,263 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import './Documentation.css';
+import { useTranslation } from '../i18n/index';
 
 const Documentation = () => {
   const [expandedSection, setExpandedSection] = useState('getting-started');
+  const [darkMode, setDarkMode] = useState(false);
+  const { t } = useTranslation();
 
   const toggleSection = (section) => {
     setExpandedSection(expandedSection === section ? null : section);
+  };
+
+  useEffect(() => {
+    const existing = localStorage.getItem('docs-dark-mode') === '1';
+    setDarkMode(existing);
+    if (existing) document.body.classList.add('theme-dark');
+    else document.body.classList.remove('theme-dark');
+    // Mark this page so we can override the fixed footer (prevent overlap)
+    document.body.classList.add('page-docs');
+    return () => { document.body.classList.remove('page-docs'); };
+  }, []);
+
+  const toggleDarkMode = () => {
+    const next = !darkMode;
+    setDarkMode(next);
+    localStorage.setItem('docs-dark-mode', next ? '1' : '0');
+    if (next) document.body.classList.add('theme-dark');
+    else document.body.classList.remove('theme-dark');
   };
 
   return (
     <main className="documentation-page">
       {/* Header */}
       <header className="documentation-page__header">
-        <h1>GueInsight Documentation</h1>
-        <p>Complete guides for threat detection, compliance analysis, and data governance.</p>
+        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+          <div>
+            <h1>{t('docs.title')}</h1>
+            <p>{t('docs.subtitle')}</p>
+          </div>
+          <div>
+            <button onClick={toggleDarkMode} className="btn" style={{marginLeft: '1rem'}}>
+              {darkMode ? t('docs.light_mode') : t('docs.dark_mode')}
+            </button>
+          </div>
+        </div>
       </header>
 
       {/* Quick Navigation */}
       <nav className="documentation-page__nav">
-        <a href="#getting-started" className="nav-link">Getting Started</a>
-        <a href="#file-analysis" className="nav-link">File Analysis</a>
-        <a href="#cloud-integrations" className="nav-link">Cloud Integrations</a>
-        <a href="#compliance" className="nav-link">Compliance</a>
-        <a href="#features" className="nav-link">Features & Limits</a>
-        <a href="#faq" className="nav-link">FAQ</a>
+        <a href="#getting-started" className="nav-link">{t('docs.nav_getting_started')}</a>
+        <a href="#file-analysis" className="nav-link">{t('docs.nav_file_analysis')}</a>
+        <a href="#cloud-integrations" className="nav-link">{t('docs.nav_cloud_integrations')}</a>
+        <a href="#compliance" className="nav-link">{t('docs.nav_compliance')}</a>
+        <a href="#features" className="nav-link">{t('docs.nav_features')}</a>
+        <a href="#faq" className="nav-link">{t('docs.nav_faq')}</a>
       </nav>
 
       {/* Main Content */}
       <article className="documentation-page__content">
         {/* Section 1: Getting Started */}
         <section id="getting-started" className="doc-section">
-          <h2>🚀 Getting Started</h2>
+          <h2>{t('docs.getting_started_title')}</h2>
           
           <div className="doc-subsection">
-            <h3>Step 1: Create Your Account</h3>
+            <h3>{t('docs.step1_title')}</h3>
             <ol>
-              <li>Go to <Link to="/signup">Sign up</Link></li>
-              <li>Enter your email address and create a secure password</li>
-              <li>Verify your email by clicking the verification link</li>
-              <li>You'll be logged in to the Starter plan (free, no credit card needed)</li>
+              <li>{t('docs.step1_item1')} <Link to="/signup">{t('nav.signup')}</Link></li>
+              <li>{t('docs.step1_item2')}</li>
+              <li>{t('docs.step1_item3')}</li>
+              <li>{t('docs.step1_item4')}</li>
             </ol>
           </div>
 
           <div className="doc-subsection">
-            <h3>Step 2: Choose Your Plan</h3>
-            <p>GueInsight offers four plans tailored to different needs:</p>
+            <h3>{t('docs.step2_title')}</h3>
+            <p>{t('docs.step2_intro')}</p>
             <ul className="plan-list">
-              <li><strong>Starter</strong> — Free forever for basic analysis and learning</li>
-              <li><strong>Compliance Pro</strong> — €29.90/month for GDPR-focused threat detection</li>
-              <li><strong>Enterprise Risk</strong> — €499/month for NIS2 + ISO27001 critical infrastructure</li>
-              <li><strong>Enterprise Elite</strong> — €999/month for white-glove SOC2 + EU data residency</li>
+              <li><strong>{t('landing.starter')}</strong> — {t('docs.starter_desc')}</li>
+              <li><strong>{t('landing.compliance_pro')}</strong> — {t('docs.compliance_pro_desc')}</li>
+              <li><strong>{t('landing.enterprise_risk')}</strong> — {t('docs.enterprise_risk_desc')}</li>
+              <li><strong>{t('docs.enterprise_elite_name')}</strong> — {t('docs.enterprise_elite_desc')}</li>
             </ul>
-            <p>Upgrade anytime from your <Link to="/subscription">Subscription</Link> page. Paid plans include a 14-day free trial with no card charged upfront.</p>
+            <p>{t('docs.step2_outro_prefix')} <Link to="/subscription">{t('docs.subscription_link')}</Link> {t('docs.step2_outro_suffix')}</p>
           </div>
 
           <div className="doc-subsection">
-            <h3>Step 3: Access Your Dashboard</h3>
-            <p>After signing up, you'll land on your personal <Link to="/dashboard">Dashboard</Link>. Here you can:</p>
+            <h3>{t('docs.step3_title')}</h3>
+            <p>{t('docs.step3_intro_prefix')} <Link to="/dashboard">{t('nav.dashboard')}</Link>. {t('docs.step3_intro_suffix')}</p>
             <ul>
-              <li>Upload files for threat analysis</li>
-              <li>Analyze text and URLs in real-time</li>
-              <li>Connect cloud platforms (Microsoft 365, Google Workspace)</li>
-              <li>View compliance reports and audit trails</li>
-              <li>Manage your profile and subscription</li>
+              <li>{t('docs.step3_item1')}</li>
+              <li>{t('docs.step3_item2')}</li>
+              <li>{t('docs.step3_item3')}</li>
+              <li>{t('docs.step3_item4')}</li>
+              <li>{t('docs.step3_item5')}</li>
             </ul>
           </div>
         </section>
 
         {/* Section 2: File Analysis */}
         <section id="file-analysis" className="doc-section">
-          <h2>📁 File & Text Analysis</h2>
+          <h2>{t('docs.file_analysis_title')}</h2>
 
           <div className="doc-subsection">
-            <h3>Uploading Files</h3>
+            <h3>{t('docs.uploading_files_title')}</h3>
             <ol>
-              <li>Go to <Link to="/dashboard">Dashboard</Link> → "Upload File"</li>
-              <li>Select a file to analyze (PDF, PCAP, logs, text, JSON, XML)</li>
-              <li>GueInsight will automatically detect threats, anomalies, and security patterns</li>
-              <li>View results including risk score, detected issues, and remediation guidance</li>
+              <li>{t('docs.uploading_files_item1')} <Link to="/dashboard">{t('nav.dashboard')}</Link> → {t('docs.upload_button')}</li>
+              <li>{t('docs.uploading_files_item2')}</li>
+              <li>{t('docs.uploading_files_item3')}</li>
+              <li>{t('docs.uploading_files_item4')}</li>
             </ol>
-            <p><strong>File Size Limits by Plan:</strong></p>
+            <p><strong>{t('docs.file_size_limits')}</strong></p>
             <ul>
-              <li>Starter: 2 MB</li>
-              <li>Compliance Pro: 8 MB</li>
-              <li>Enterprise Risk: 16 MB</li>
-              <li>Enterprise Elite: 500 MB</li>
+              <li>{t('docs.starter_limit')}</li>
+              <li>{t('docs.compliance_pro_limit')}</li>
+              <li>{t('docs.enterprise_risk_limit')}</li>
+              <li>{t('docs.enterprise_elite_limit')}</li>
             </ul>
           </div>
 
           <div className="doc-subsection">
-            <h3>Analyzing Text</h3>
+            <h3>{t('docs.analyzing_text_title')}</h3>
             <ol>
-              <li>Click "Analyze Text" from the dashboard</li>
-              <li>Paste or type the text content (logs, configuration files, code, emails)</li>
-              <li>Submit for instant analysis</li>
-              <li>GueInsight identifies threats, misconfigurations, and compliance violations</li>
+              <li>{t('docs.analyzing_text_item1')}</li>
+              <li>{t('docs.analyzing_text_item2')}</li>
+              <li>{t('docs.analyzing_text_item3')}</li>
+              <li>{t('docs.analyzing_text_item4')}</li>
             </ol>
           </div>
 
           <div className="doc-subsection">
-            <h3>Analyzing URLs</h3>
+            <h3>{t('docs.analyzing_urls_title')}</h3>
             <ol>
-              <li>Click "Analyze URL" from the dashboard</li>
-              <li>Enter the URL you want to check</li>
-              <li>GueInsight analyzes the page for phishing, malware, and malicious redirects</li>
-              <li>View threat assessment and recommendations</li>
+              <li>{t('docs.analyzing_urls_item1')}</li>
+              <li>{t('docs.analyzing_urls_item2')}</li>
+              <li>{t('docs.analyzing_urls_item3')}</li>
+              <li>{t('docs.analyzing_urls_item4')}</li>
             </ol>
           </div>
 
           <div className="doc-subsection">
-            <h3>Understanding Results</h3>
-            <p><strong>Risk Scores:</strong></p>
+            <h3>{t('docs.understanding_results_title')}</h3>
+            <p><strong>{t('docs.risk_scores')}</strong></p>
             <ul>
-              <li><span className="risk-low">🟢 Low (0-30)</span> — Minimal security concern</li>
-              <li><span className="risk-medium">🟡 Medium (31-60)</span> — Review recommended</li>
-              <li><span className="risk-high">🔴 High (61-90)</span> — Action required</li>
-              <li><span className="risk-critical">🟣 Critical (91-100)</span> — Immediate intervention needed</li>
+              <li><span className="risk-low">{t('docs.risk_low_label')}</span> — {t('docs.risk_low_desc')}</li>
+              <li><span className="risk-medium">{t('docs.risk_medium_label')}</span> — {t('docs.risk_medium_desc')}</li>
+              <li><span className="risk-high">{t('docs.risk_high_label')}</span> — {t('docs.risk_high_desc')}</li>
+              <li><span className="risk-critical">{t('docs.risk_critical_label')}</span> — {t('docs.risk_critical_desc')}</li>
             </ul>
-            <p>Each analysis result includes specific threats detected, affected systems, and step-by-step remediation guidance.</p>
+            <p>{t('docs.results_outro')}</p>
           </div>
         </section>
 
         {/* Section 3: Cloud Integrations */}
         <section id="cloud-integrations" className="doc-section">
-          <h2>☁️ Cloud Platform Integrations</h2>
+          <h2>{t('docs.cloud_title')}</h2>
 
           <div className="doc-subsection">
-            <h3>Microsoft 365 (M365) Integration</h3>
-            <p>Available on Compliance Pro, Enterprise Risk, and Enterprise Elite plans.</p>
+            <h3>{t('docs.m365_title')}</h3>
+            <p>{t('docs.m365_intro')}</p>
             <ol>
-              <li>Go to <Link to="/dashboard">Dashboard</Link> → "Connect Microsoft 365"</li>
-              <li>Sign in with your M365 organization admin account</li>
-              <li>Grant GueInsight permissions to audit your tenant</li>
-              <li>GueInsight will automatically analyze:
+              <li>{t('docs.m365_item1')} <Link to="/dashboard">{t('nav.dashboard')}</Link> → {t('docs.connect_m365')}</li>
+              <li>{t('docs.m365_item2')}</li>
+              <li>{t('docs.m365_item3')}</li>
+              <li>{t('docs.m365_item4')}:
                 <ul>
-                  <li>User access policies and role assignments</li>
-                  <li>Email security and threat protection settings</li>
-                  <li>SharePoint and OneDrive security configurations</li>
-                  <li>Teams and collaboration platform security</li>
-                  <li>Compliance configurations and data protection</li>
+                  <li>{t('docs.m365_sub1')}</li>
+                  <li>{t('docs.m365_sub2')}</li>
+                  <li>{t('docs.m365_sub3')}</li>
+                  <li>{t('docs.m365_sub4')}</li>
+                  <li>{t('docs.m365_sub5')}</li>
                 </ul>
               </li>
-              <li>View detailed audit reports and recommendations</li>
+              <li>{t('docs.m365_item5')}</li>
             </ol>
-            <p><strong>Permissions Granted:</strong> Read-only access to audit logs, security settings, and user configurations. No data modification or deletion.</p>
+            <p><strong>{t('docs.permissions_granted')}</strong> {t('docs.permissions_granted_desc')}</p>
           </div>
 
           <div className="doc-subsection">
-            <h3>Google Workspace Integration</h3>
-            <p>Available on Enterprise Risk and Enterprise Elite plans.</p>
+            <h3>{t('docs.gws_title')}</h3>
+            <p>{t('docs.gws_intro')}</p>
             <ol>
-              <li>Go to <Link to="/dashboard">Dashboard</Link> → "Connect Google Workspace"</li>
-              <li>Authenticate with your Google Workspace admin account</li>
-              <li>Authorize GueInsight to access your workspace</li>
-              <li>GueInsight will analyze:
+              <li>{t('docs.gws_item1')} <Link to="/dashboard">{t('nav.dashboard')}</Link> → {t('docs.connect_gws')}</li>
+              <li>{t('docs.gws_item2')}</li>
+              <li>{t('docs.gws_item3')}</li>
+              <li>{t('docs.gws_item4')}:
                 <ul>
-                  <li>Gmail security and phishing protection</li>
-                  <li>Drive sharing and access controls</li>
-                  <li>Meet/Video security settings</li>
-                  <li>Admin activity logs</li>
-                  <li>User provisioning and directory settings</li>
+                  <li>{t('docs.gws_sub1')}</li>
+                  <li>{t('docs.gws_sub2')}</li>
+                  <li>{t('docs.gws_sub3')}</li>
+                  <li>{t('docs.gws_sub4')}</li>
+                  <li>{t('docs.gws_sub5')}</li>
                 </ul>
               </li>
-              <li>Generate compliance evidence for NIS2, ISO 27001, and GDPR</li>
+              <li>{t('docs.gws_item5')}</li>
             </ol>
           </div>
 
           <div className="doc-subsection">
-            <h3>Managing Connected Accounts</h3>
+            <h3>{t('docs.managing_accounts_title')}</h3>
             <ul>
-              <li>View all connected cloud accounts in <Link to="/profile">Profile</Link> → "Connected Accounts"</li>
-              <li>See last sync date and connection status</li>
-              <li>Revoke access anytime to disconnect a platform</li>
-              <li>Update audit frequency (hourly, daily, weekly)</li>
+              <li>{t('docs.managing_accounts_item1')} <Link to="/profile">{t('nav.profile')}</Link> → {t('docs.connected_accounts')}</li>
+              <li>{t('docs.managing_accounts_item2')}</li>
+              <li>{t('docs.managing_accounts_item3')}</li>
+              <li>{t('docs.managing_accounts_item4')}</li>
             </ul>
           </div>
         </section>
 
         {/* Section 4: Compliance & Data Governance */}
         <section id="compliance" className="doc-section">
-          <h2>⚖️ Compliance & Data Governance</h2>
+          <h2>{t('docs.compliance_title')}</h2>
 
           <div className="doc-subsection">
-            <h3>GDPR Compliance</h3>
-            <p>GueInsight is GDPR-ready and helps your organization meet requirements:</p>
+            <h3>{t('docs.gdpr_title')}</h3>
+            <p>{t('docs.gdpr_intro')}</p>
             <ul>
-              <li><strong>Data Processing:</strong> All EU data is processed on EU-only infrastructure (Enterprise Elite)</li>
-              <li><strong>Data Subject Rights:</strong> Export or delete your personal data anytime from <Link to="/profile">Profile</Link> → "Data Management"</li>
-              <li><strong>Audit Trails:</strong> Complete audit logs of all analyses and access for compliance proof</li>
-              <li><strong>Privacy Controls:</strong> Fine-grained consent management and data classification</li>
-              <li><strong>Compliance Reports:</strong> Auto-generated GDPR compliance evidence for your records</li>
+              <li><strong>{t('docs.data_processing')}</strong> {t('docs.data_processing_desc')}</li>
+              <li><strong>{t('docs.data_subject_rights')}</strong> {t('docs.data_subject_rights_desc')} <Link to="/profile">{t('nav.profile')}</Link> → {t('docs.data_management')}</li>
+              <li><strong>{t('docs.audit_trails')}</strong> {t('docs.audit_trails_desc')}</li>
+              <li><strong>{t('docs.privacy_controls')}</strong> {t('docs.privacy_controls_desc')}</li>
+              <li><strong>{t('docs.compliance_reports')}</strong> {t('docs.compliance_reports_desc')}</li>
             </ul>
-            <p>Use the "GDPR Export" feature to download compliance evidence in minutes for regulatory audits.</p>
+            <p>{t('docs.gdpr_export_note')}</p>
           </div>
 
           <div className="doc-subsection">
-            <h3>NIS2 & Critical Infrastructure</h3>
-            <p>Enterprise Risk and Elite plans include NIS2 (Network and Information Systems 2) compliance:</p>
+            <h3>{t('docs.nis2_title')}</h3>
+            <p>{t('docs.nis2_intro')}</p>
             <ul>
-              <li>Risk assessment aligned with NIS2 requirements</li>
-              <li>ISO 27001 security controls mapping</li>
-              <li>Incident response and breach notification workflows</li>
-              <li>Automated vulnerability tracking</li>
-              <li>Compliance certification reports</li>
+              <li>{t('docs.nis2_item1')}</li>
+              <li>{t('docs.nis2_item2')}</li>
+              <li>{t('docs.nis2_item3')}</li>
+              <li>{t('docs.nis2_item4')}</li>
+              <li>{t('docs.nis2_item5')}</li>
             </ul>
           </div>
 
           <div className="doc-subsection">
-            <h3>Generating Compliance Reports</h3>
+            <h3>{t('docs.generating_reports_title')}</h3>
             <ol>
-              <li>Go to <Link to="/dashboard">Dashboard</Link> → "Reports"</li>
-              <li>Select report type: GDPR, NIS2, ISO 27001, SOC 2, or Custom</li>
-              <li>Choose date range and systems to include</li>
-              <li>GueInsight generates a professional PDF report with:
+              <li>{t('docs.generating_reports_item1')} <Link to="/dashboard">{t('nav.dashboard')}</Link> → {t('docs.reports')}</li>
+              <li>{t('docs.generating_reports_item2')}</li>
+              <li>{t('docs.generating_reports_item3')}</li>
+              <li>{t('docs.generating_reports_item4')}:
                 <ul>
-                  <li>Executive summary</li>
-                  <li>Risk assessment and scores</li>
-                  <li>Remediation roadmap</li>
-                  <li>Audit trail evidence</li>
-                  <li>Signed attestation for your records</li>
+                  <li>{t('docs.report_sub1')}</li>
+                  <li>{t('docs.report_sub2')}</li>
+                  <li>{t('docs.report_sub3')}</li>
+                  <li>{t('docs.report_sub4')}</li>
+                  <li>{t('docs.report_sub5')}</li>
                 </ul>
               </li>
-              <li>Download or email the report to stakeholders</li>
+              <li>{t('docs.generating_reports_item5')}</li>
             </ol>
           </div>
 
           <div className="doc-subsection">
-            <h3>Data Export & Deletion (Right to Be Forgotten)</h3>
+            <h3>{t('docs.data_export_title')}</h3>
             <p>GueInsight supports your GDPR obligations:</p>
             <ul>
               <li><strong>Export Your Data:</strong> Go to <Link to="/profile">Profile</Link> → "Data Management" → "Request Export"</li>

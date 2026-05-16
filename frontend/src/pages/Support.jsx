@@ -2,29 +2,30 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 import './Support.css';
+import { useTranslation } from '../i18n/index';
 
 const categories = [
-  'Account access',
-  'Billing',
-  'Subscription',
-  'Analysis issue',
-  'Security incident',
-  'General question',
+  { value: 'Account access', key: 'account_access' },
+  { value: 'Billing', key: 'billing' },
+  { value: 'Subscription', key: 'subscription' },
+  { value: 'Analysis issue', key: 'analysis_issue' },
+  { value: 'Security incident', key: 'security_incident' },
+  { value: 'General question', key: 'general_question' },
 ];
 
 const priorities = [
-  { value: 'low', label: 'Low' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'high', label: 'High' },
-  { value: 'urgent', label: 'Urgent' },
+  { value: 'low', key: 'low' },
+  { value: 'medium', key: 'medium' },
+  { value: 'high', key: 'high' },
+  { value: 'urgent', key: 'urgent' },
 ];
 
-const statusLabels = {
-  open: 'Open',
-  in_progress: 'In progress',
-  waiting_on_user: 'Waiting on you',
-  resolved: 'Resolved',
-  closed: 'Closed',
+const statusKeys = {
+  open: 'open',
+  in_progress: 'in_progress',
+  waiting_on_user: 'waiting_on_user',
+  resolved: 'resolved',
+  closed: 'closed',
 };
 
 const formatDateTime = (isoDate) => {
@@ -35,6 +36,7 @@ const formatDateTime = (isoDate) => {
 };
 
 const Support = () => {
+  const { t } = useTranslation();
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -42,7 +44,7 @@ const Support = () => {
   const [message, setMessage] = useState('');
   const [subject, setSubject] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState(categories[0]);
+  const [category, setCategory] = useState(categories[0].value);
   const [priority, setPriority] = useState('medium');
 
   const loadTickets = async () => {
@@ -52,7 +54,7 @@ const Support = () => {
       const response = await api.get('/support_tickets');
       setTickets(Array.isArray(response.data?.tickets) ? response.data.tickets : []);
     } catch (requestError) {
-      setError(requestError?.response?.data?.error || 'Unable to load your tickets right now.');
+      setError(requestError?.response?.data?.error || t('support.load_failed'));
     } finally {
       setLoading(false);
     }
@@ -66,11 +68,11 @@ const Support = () => {
     const openCount = tickets.filter((ticket) => ['open', 'in_progress', 'waiting_on_user'].includes(ticket.status)).length;
     const resolvedCount = tickets.filter((ticket) => ['resolved', 'closed'].includes(ticket.status)).length;
     return [
-      { label: 'Open tickets', value: String(openCount), detail: 'Requests awaiting staff attention' },
-      { label: 'Resolved tickets', value: String(resolvedCount), detail: 'Completed support cases' },
-      { label: 'My queue', value: String(tickets.length), detail: 'All support requests you opened' },
+      { label: t('support.open_tickets'), value: String(openCount), detail: t('support.open_tickets_detail') },
+      { label: t('support.resolved_tickets'), value: String(resolvedCount), detail: t('support.resolved_tickets_detail') },
+      { label: t('support.my_queue'), value: String(tickets.length), detail: t('support.my_queue_detail') },
     ];
-  }, [tickets]);
+  }, [tickets, t]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -87,12 +89,12 @@ const Support = () => {
       });
       setSubject('');
       setDescription('');
-      setCategory(categories[0]);
+      setCategory(categories[0].value);
       setPriority('medium');
-      setMessage('Support ticket created.');
+      setMessage(t('support.ticket_created'));
       await loadTickets();
     } catch (requestError) {
-      setError(requestError?.response?.data?.error || 'Unable to create a support ticket right now.');
+      setError(requestError?.response?.data?.error || t('support.create_failed'));
     } finally {
       setSubmitting(false);
     }
@@ -102,15 +104,13 @@ const Support = () => {
     <main className="support-page">
       <section className="support-page__hero">
         <div>
-          <p className="support-page__eyebrow">Support Desk</p>
-          <h1>Open a support ticket</h1>
-          <p>
-            Use this desk to request help, track the staff member assigned to your ticket, and follow resolution status.
-          </p>
+          <p className="support-page__eyebrow">{t('support.eyebrow')}</p>
+          <h1>{t('support.title')}</h1>
+          <p>{t('support.lead')}</p>
         </div>
         <div className="support-page__hero-actions">
           <Link to="/dashboard" className="support-page__button support-page__button--ghost">
-            Back to dashboard
+            {t('support.back_to_dashboard')}
           </Link>
         </div>
       </section>
@@ -129,29 +129,29 @@ const Support = () => {
         <article className="support-page__card">
           <div className="support-page__card-head">
             <div>
-              <p className="support-page__section-label">New request</p>
-              <h2>Create a ticket</h2>
+              <p className="support-page__section-label">{t('support.new_request')}</p>
+              <h2>{t('support.create_ticket')}</h2>
             </div>
           </div>
 
           <form className="support-page__form" onSubmit={handleSubmit}>
             <label>
-              <span>Subject</span>
+              <span>{t('support.subject')}</span>
               <input
                 type="text"
                 value={subject}
                 onChange={(event) => setSubject(event.target.value)}
-                placeholder="What do you need help with?"
+                placeholder={t('support.subject_placeholder')}
                 required
               />
             </label>
 
             <label>
-              <span>Description</span>
+              <span>{t('support.description')}</span>
               <textarea
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
-                placeholder="Describe the issue, what you expected, and what happened instead."
+                placeholder={t('support.description_placeholder')}
                 rows="6"
                 required
               />
@@ -159,22 +159,22 @@ const Support = () => {
 
             <div className="support-page__grid">
               <label>
-                <span>Category</span>
+                <span>{t('support.category')}</span>
                 <select value={category} onChange={(event) => setCategory(event.target.value)}>
                   {categories.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
+                    <option key={item.value} value={item.value}>
+                      {t(`support.${item.key}`)}
                     </option>
                   ))}
                 </select>
               </label>
 
               <label>
-                <span>Priority</span>
+                <span>{t('support.priority')}</span>
                 <select value={priority} onChange={(event) => setPriority(event.target.value)}>
                   {priorities.map((item) => (
                     <option key={item.value} value={item.value}>
-                      {item.label}
+                      {t(`support.${item.key}`)}
                     </option>
                   ))}
                 </select>
@@ -185,7 +185,7 @@ const Support = () => {
             {message ? <p className="support-page__message support-page__message--success">{message}</p> : null}
 
             <button type="submit" className="support-page__button support-page__button--primary" disabled={submitting}>
-              {submitting ? 'Submitting...' : 'Submit ticket'}
+              {submitting ? t('support.submitting') : t('support.submit_ticket')}
             </button>
           </form>
         </article>
@@ -193,12 +193,12 @@ const Support = () => {
         <article className="support-page__card support-page__card--tickets">
           <div className="support-page__card-head">
             <div>
-              <p className="support-page__section-label">Your queue</p>
-              <h2>Ticket history</h2>
+              <p className="support-page__section-label">{t('support.your_queue')}</p>
+              <h2>{t('support.ticket_history')}</h2>
             </div>
           </div>
 
-          {loading ? <p className="support-page__hint">Loading tickets...</p> : null}
+          {loading ? <p className="support-page__hint">{t('support.loading_tickets')}</p> : null}
 
           <div className="support-page__ticket-list">
             {tickets.map((ticket) => (
@@ -209,7 +209,7 @@ const Support = () => {
                     <p>{ticket.category || 'General'}</p>
                   </div>
                   <span className={`support-page__status support-page__status--${ticket.status}`}>
-                    {statusLabels[ticket.status] || ticket.status}
+                    {t(`support.${statusKeys[ticket.status] || ticket.status}`)}
                   </span>
                 </div>
 
@@ -217,26 +217,26 @@ const Support = () => {
 
                 <dl className="support-page__ticket-meta">
                   <div>
-                    <dt>Priority</dt>
+                    <dt>{t('support.priority_label')}</dt>
                     <dd>{ticket.priority}</dd>
                   </div>
                   <div>
-                    <dt>Assigned staff</dt>
+                    <dt>{t('support.assigned_staff')}</dt>
                     <dd>{ticket.assigned_admin_email || 'Unassigned'}</dd>
                   </div>
                   <div>
-                    <dt>Attended by</dt>
+                    <dt>{t('support.attended_by')}</dt>
                     <dd>{ticket.attended_by_email || 'Not attended yet'}</dd>
                   </div>
                   <div>
-                    <dt>Created</dt>
+                    <dt>{t('support.created')}</dt>
                     <dd>{formatDateTime(ticket.created_at)}</dd>
                   </div>
                 </dl>
 
                 {ticket.resolution_summary ? (
                   <div className="support-page__resolution">
-                    <span>Resolution</span>
+                    <span>{t('support.resolution')}</span>
                     <p>{ticket.resolution_summary}</p>
                   </div>
                 ) : null}
@@ -244,16 +244,14 @@ const Support = () => {
             ))}
 
             {!loading && tickets.length === 0 ? (
-              <p className="support-page__hint">You have no support tickets yet.</p>
+              <p className="support-page__hint">{t('support.no_tickets')}</p>
             ) : null}
           </div>
         </article>
       </section>
 
       <section className="support-page__footer-note">
-        <p>
-          Support staff can mark who attended your ticket, when it was resolved, and what action was taken.
-        </p>
+          <p>{t('support.footer_note')}</p>
       </section>
     </main>
   );

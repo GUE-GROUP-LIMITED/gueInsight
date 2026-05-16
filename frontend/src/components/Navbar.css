@@ -59,6 +59,18 @@
   margin-right: 6px;
 }
 
+/* When meta has no children, remove spacing to avoid empty gap in header */
+.app-navbar__meta:empty {
+  margin-right: 0;
+  gap: 0;
+  display: none;
+}
+
+/* Slightly adjust primary CTA sizing in header */
+.app-navbar__link--primary {
+  padding: 0.5rem 0.9rem;
+}
+
 .app-navbar__role-badge {
   display: inline-flex;
   align-items: center;
@@ -136,6 +148,15 @@
   gap: 10px;
 }
 
+.app-navbar__language select {
+  border: 1px solid rgba(125, 211, 252, 0.3);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.6);
+  color: #dbeafe;
+  padding: 0.45rem 0.75rem;
+  font: inherit;
+}
+
 .app-navbar__account {
   position: relative;
 }
@@ -206,6 +227,13 @@
   height: 2px;
   background: #dbeafe;
   border-radius: 8px;
+}
+
+/* External link icon styling */
+.external-link-icon {
+  margin-left: 6px;
+  vertical-align: middle;
+  opacity: 0.92;
 }
 
 @media (max-width: 860px) {

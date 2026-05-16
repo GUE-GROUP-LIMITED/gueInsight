@@ -4,6 +4,7 @@ import { AuthContext } from '../context/AuthContext';
 import UserTopbarControls from '../components/UserTopbarControls';
 import { api } from '../services/api';
 import './Dashboard.css';
+import { useTranslation } from '../i18n/index';
 
 const threatQueue = [
   { id: 'Q-3391', category: 'Phishing domain', confidence: 'High', source: 'Email gateway' },
@@ -15,6 +16,7 @@ const quickActions = ['Upload indicators', 'Run enrichment', 'Export report', 'N
 
 export default function Dashboard() {
   const { user } = useContext(AuthContext);
+  const { t } = useTranslation();
   const [reportName, setReportName] = useState('incident-summary.pdf');
   const [reportSent, setReportSent] = useState(false);
   const [indicatorValue, setIndicatorValue] = useState('');
@@ -26,7 +28,7 @@ export default function Dashboard() {
   const [transactionPage, setTransactionPage] = useState(1);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
 
-  const firstName = user?.first_name || 'Analyst';
+  const firstName = user?.first_name || t('dashboard.analyst');
   const analysisLimits = user?.analysis_limits || null;
   const planLimitsText = analysisLimits
     ? `${analysisLimits.max_items_per_analysis} items/run • ${analysisLimits.max_text_chars} chars • ${analysisLimits.max_file_size_mb}MB file`
@@ -139,11 +141,11 @@ export default function Dashboard() {
 
   const dashboardStats = useMemo(
     () => [
-      { label: 'Recent actions', value: String(filteredTransactions.length), detail: 'Latest activity and analysis records' },
-      { label: 'Analyses this session', value: lastSubmission ? '1' : '0', detail: planLimitsText },
-      { label: 'Last report', value: reportName, detail: 'Generated from your latest analysis' },
+      { label: t('dashboard.recent_actions'), value: String(filteredTransactions.length), detail: t('dashboard.recent_actions_detail') },
+      { label: t('dashboard.analyses_this_session'), value: lastSubmission ? '1' : '0', detail: planLimitsText },
+      { label: t('dashboard.last_report'), value: reportName, detail: t('dashboard.last_report_detail') },
     ],
-    [filteredTransactions.length, lastSubmission, planLimitsText, reportName]
+    [filteredTransactions.length, lastSubmission, planLimitsText, reportName, t]
   );
 
   const handleGenerate = (event) => {
@@ -165,11 +167,9 @@ export default function Dashboard() {
 
       <section className="user-dashboard__hero">
         <div>
-          <p className="user-dashboard__eyebrow">SOC Workspace</p>
-          <h1>Operator Console: {firstName}</h1>
-          <p className="user-dashboard__lead">
-            Review active signals, run indicator analysis, and publish reports from one controlled command center.
-          </p>
+          <p className="user-dashboard__eyebrow">{t('dashboard.eyebrow')}</p>
+          <h1>{t('dashboard.title', { name: firstName })}</h1>
+          <p className="user-dashboard__lead">{t('dashboard.lead')}</p>
         </div>
         <UserTopbarControls />
       </section>
@@ -187,60 +187,60 @@ export default function Dashboard() {
       <section className="user-dashboard__grid">
         <article className="user-dashboard__card">
           <div className="user-dashboard__card-head">
-            <h2>Submit for analysis</h2>
-            <span>Paste IOC, hash, URL, or domain</span>
+            <h2>{t('dashboard.submit_analysis')}</h2>
+            <span>{t('dashboard.submit_analysis_sub')}</span>
           </div>
 
           <form className="user-dashboard__analysis-form" onSubmit={handleGenerate}>
-            <label htmlFor="inputText">Indicator input</label>
+            <label htmlFor="inputText">{t('dashboard.indicator_input')}</label>
             <input
               id="inputText"
-              placeholder="Example: 185.199.110.153 or suspicious-domain.com"
+              placeholder={t('dashboard.indicator_placeholder')}
               value={indicatorValue}
               onChange={(event) => setIndicatorValue(event.target.value)}
               required
             />
-            <button type="submit" className="user-dashboard__button user-dashboard__button--primary">Analyze now</button>
+            <button type="submit" className="user-dashboard__button user-dashboard__button--primary">{t('dashboard.analyze_now')}</button>
           </form>
 
           {lastSubmission ? (
             <p className="user-dashboard__hint">
-              Last submitted indicator: <strong>{lastSubmission}</strong>
+              {t('dashboard.last_submitted')} <strong>{lastSubmission}</strong>
             </p>
           ) : (
-            <p className="user-dashboard__hint">No submissions yet in this session.</p>
+            <p className="user-dashboard__hint">{t('dashboard.no_submissions')}</p>
           )}
 
           <p className="user-dashboard__hint">
-            Plan limits: <strong>{planLimitsText}</strong>
+            {t('dashboard.plan_limits')} <strong>{planLimitsText}</strong>
           </p>
         </article>
 
         <article className="user-dashboard__card">
           <div className="user-dashboard__card-head">
-            <h2>Reports</h2>
-            <span>Distribution and evidence handoff</span>
+            <h2>{t('dashboard.reports')}</h2>
+            <span>{t('dashboard.reports_sub')}</span>
           </div>
 
           <p className="user-dashboard__report-line">
-            Latest report: <strong>{reportName}</strong>
+            {t('dashboard.latest_report')} <strong>{reportName}</strong>
           </p>
 
           <div className="user-dashboard__button-row">
             <button type="button" className="user-dashboard__button user-dashboard__button--secondary" onClick={handleSend}>
-              Send via email
+              {t('dashboard.send_via_email')}
             </button>
-            <Link to="/profile" className="user-dashboard__button user-dashboard__button--ghost">View account details</Link>
-            <Link to="/support" className="user-dashboard__button user-dashboard__button--ghost">Create ticket</Link>
+            <Link to="/profile" className="user-dashboard__button user-dashboard__button--ghost">{t('dashboard.view_account_details')}</Link>
+            <Link to="/support" className="user-dashboard__button user-dashboard__button--ghost">{t('dashboard.create_ticket')}</Link>
           </div>
 
-          {reportSent ? <p className="user-dashboard__success">Report sent successfully.</p> : null}
+          {reportSent ? <p className="user-dashboard__success">{t('dashboard.report_sent')}</p> : null}
         </article>
 
         <article className="user-dashboard__card user-dashboard__card--queue">
           <div className="user-dashboard__card-head">
-            <h2>Threat queue</h2>
-            <span>Live triage priorities</span>
+            <h2>{t('dashboard.threat_queue')}</h2>
+            <span>{t('dashboard.threat_queue_sub')}</span>
           </div>
 
           <div className="user-dashboard__queue-list" role="list" aria-label="Threat queue list">
