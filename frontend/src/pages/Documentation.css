@@ -65,9 +65,6 @@ html {
 .documentation-page__header p {
   color: var(--doc-muted) !important;
 }
-  color: #666;
-  margin: 0;
-}
 
 /* Quick Navigation */
 .documentation-page__nav {
