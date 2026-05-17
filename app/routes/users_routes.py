@@ -37,6 +37,17 @@ try:
     from app.src.preprocessing.preprocess import preprocess_text
 except Exception:
     preprocess_text = None
+
+try:
+    from app.integrations.supabase_auth import (
+        sign_in_with_password,
+        sync_local_user_from_supabase,
+        supabase_auth_enabled,
+    )
+except Exception:
+    sign_in_with_password = None
+    sync_local_user_from_supabase = None
+    supabase_auth_enabled = lambda: False
 from werkzeug.exceptions import RequestEntityTooLarge
 from werkzeug.security import generate_password_hash
 from itsdangerous import URLSafeTimedSerializer
@@ -1065,7 +1076,21 @@ def auth_login():
         return {'error': 'Too many login attempts. Please try again later.'}, 429
 
     user = User.query.filter_by(email=email).first()
+    authenticated_via_supabase = False
+    auth_source = 'local'
+
     if not user or not user.check_password(password):
+        if sign_in_with_password and sync_local_user_from_supabase and supabase_auth_enabled():
+            supabase_payload, supabase_error = sign_in_with_password(email, password)
+            supabase_user = (supabase_payload or {}).get('user') if supabase_payload else None
+            if supabase_user:
+                user, _ = sync_local_user_from_supabase(supabase_user)
+                authenticated_via_supabase = True
+                auth_source = 'supabase'
+            else:
+                current_app.logger.info('Supabase auth fallback failed for %s: %s', email, supabase_error)
+
+    if not user or not (authenticated_via_supabase or user.check_password(password)):
         _log_security_event(
             event_type='auth.login.failed',
             severity='warning',
@@ -1094,7 +1119,7 @@ def auth_login():
     )
     db.session.commit()
     login_user(user)
-    return {'message': 'Login successful.', 'user': _serialize_auth_user(user)}, 200
+    return {'message': 'Login successful.', 'auth_source': auth_source, 'user': _serialize_auth_user(user)}, 200
 
 
 @users_bp.route('/auth/signup', methods=['POST'])

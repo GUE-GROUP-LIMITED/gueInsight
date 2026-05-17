@@ -1,17 +1,16 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useContext, useMemo } from 'react';
 import { useTranslation } from '../i18n/index';
+import SITE_CONFIG from '../config';
 import './Footer.css';
-import { AuthContext } from '../context/AuthContext';
-import { getNavLinks } from '../utils/navLinks';
 
 const Footer = () => {
-  const logoSrc = '/img/guecyber-logo.png';
-  const { user } = useContext(AuthContext);
-  const homePath = user?.role === 'admin' ? '/admin' : user ? '/dashboard' : '/';
   const { t } = useTranslation();
-  const navLinks = useMemo(() => getNavLinks(user, homePath, t), [user, homePath, t]);
+  const footerLinks = [
+    { to: '/subscription', label: t('nav.pricing') || 'Pricing' },
+    { to: '/docs', label: t('nav.docs') || 'Documentation' },
+    { to: 'https://www.guecyber.com', label: t('nav.company') || SITE_CONFIG.companyLabel || 'Gue Cyber', external: true },
+  ];
   return (
     <footer className="app-footer" role="contentinfo">
       <div className="app-footer__inner">
@@ -27,7 +26,7 @@ const Footer = () => {
 
         <div className="app-footer__meta">
           <nav className="app-footer__nav" aria-label="Footer navigation">
-            {navLinks.map((link) => (
+            {footerLinks.map((link) => (
               link.external ? (
                 <a key={link.label}
                    href={link.to}

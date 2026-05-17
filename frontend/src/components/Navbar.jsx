@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
+import { api } from '../services/api';
 import './Navbar.css';
 import SITE_CONFIG from '../config';
 import { getNavLinks } from '../utils/navLinks';
@@ -11,7 +12,10 @@ const Navbar = () => {
   const { user, logout } = useContext(AuthContext);
   const [menuOpen, setMenuOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
-  const accountMenuRef = useRef(null);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
+  const controlsRef = useRef(null);
   const homePath = user?.role === 'admin' ? '/admin' : user ? '/dashboard' : '/';
 
   const { t } = useTranslation();
@@ -21,17 +25,20 @@ const Navbar = () => {
     await logout();
     setMenuOpen(false);
     setAccountMenuOpen(false);
+    setNotificationsOpen(false);
   };
 
   const closeMenu = () => {
     setMenuOpen(false);
     setAccountMenuOpen(false);
+    setNotificationsOpen(false);
   };
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (!accountMenuRef.current?.contains(event.target)) {
+      if (!controlsRef.current?.contains(event.target)) {
         setAccountMenuOpen(false);
+        setNotificationsOpen(false);
       }
     };
 
@@ -39,12 +46,37 @@ const Navbar = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Only show a role label when a user is signed in and the flag is enabled
-  const roleLabel = (SITE_CONFIG.showRoleBadges && user) ? (user.role === 'admin' ? t('role.staff') : t('role.subscriber')) : null;
+  const unreadCount = Number(user?.unread_notifications || 0);
+
+  const loadNotifications = async () => {
+    setLoadingNotifications(true);
+    try {
+      const response = await api.get('/auth/notifications?limit=8');
+      setNotifications(Array.isArray(response.data?.notifications) ? response.data.notifications : []);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  };
+
+  const handleToggleNotifications = async () => {
+    const next = !notificationsOpen;
+    setNotificationsOpen(next);
+    setAccountMenuOpen(false);
+    if (next) {
+      await loadNotifications();
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    await api.post('/auth/notifications/read_all', {});
+    setNotifications((current) => current.map((item) => ({ ...item, read: true })));
+  };
+
   const firstName = user?.first_name || user?.user_metadata?.first_name || '';
   const lastName = user?.last_name || user?.user_metadata?.last_name || '';
   const fullName = `${firstName} ${lastName}`.trim();
-  const displayName = firstName || fullName || user?.email || '';
+  const welcomeLabel = firstName ? `Welcome, ${firstName}` : '';
+  const displayName = fullName || user?.email || '';
 
   return (
     <nav className="app-navbar" aria-label="Primary navigation">
@@ -77,8 +109,7 @@ const Navbar = () => {
 
         <div id="app-navbar-menu" className={`app-navbar__menu ${menuOpen ? 'is-open' : ''}`}>
           <div className="app-navbar__meta">
-            {roleLabel ? <span className="app-navbar__role-badge">{roleLabel}</span> : null}
-            {displayName ? <span className="app-navbar__email">{displayName}</span> : null}
+            {welcomeLabel ? <span className="app-navbar__role-badge">{welcomeLabel}</span> : null}
           </div>
 
           <div className="app-navbar__links">
@@ -114,7 +145,7 @@ const Navbar = () => {
             ))}
           </div>
 
-          <div className="app-navbar__actions">
+          <div className="app-navbar__actions" ref={controlsRef}>
             <LanguageSelector />
             {!user ? (
               <>
@@ -128,15 +159,57 @@ const Navbar = () => {
                 ) : null}
               </>
             ) : (
-              <div className="app-navbar__account" ref={accountMenuRef}>
+              <>
+                <div className="app-navbar__group">
+                  <button
+                    type="button"
+                    className="app-navbar__icon-button"
+                    onClick={handleToggleNotifications}
+                    aria-label={t('topbar.view_notifications')}
+                    aria-expanded={notificationsOpen}
+                    aria-haspopup="menu"
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-6V11a7 7 0 1 0-14 0v5L3 18v1h18v-1l-2-2Z" />
+                    </svg>
+                    {unreadCount > 0 ? <span className="app-navbar__badge">{unreadCount}</span> : null}
+                  </button>
+
+                  {notificationsOpen ? (
+                    <div className="app-navbar__dropdown" role="menu">
+                      <div className="app-navbar__dropdown-head">
+                        <strong>{t('topbar.notifications')}</strong>
+                        <span>{unreadCount} {t('topbar.unread')}</span>
+                      </div>
+                      {loadingNotifications ? <p className="app-navbar__dropdown-empty">{t('topbar.loading')}</p> : null}
+                      {!loadingNotifications && notifications.length === 0 ? <p className="app-navbar__dropdown-empty">{t('topbar.no_notifications')}</p> : null}
+                      <div className="app-navbar__notification-list">
+                        {notifications.map((notification) => (
+                          <article key={notification.id} className="app-navbar__notification-item">
+                            <strong>{notification.title}</strong>
+                            <p>{notification.message}</p>
+                          </article>
+                        ))}
+                      </div>
+                      {notifications.length ? (
+                        <button type="button" className="app-navbar__mark-read" onClick={handleMarkAllRead}>
+                          {t('topbar.mark_all_read')}
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+
+              <div className="app-navbar__account">
                 <button
                   type="button"
                   className="app-navbar__account-trigger"
                   onClick={() => setAccountMenuOpen((prev) => !prev)}
                   aria-expanded={accountMenuOpen}
                   aria-haspopup="menu"
+                  aria-label={displayName ? `${displayName} account menu` : t('nav.account')}
                 >
-                  {displayName || t('nav.account')}
+                  {t('nav.account')}
                 </button>
                 {accountMenuOpen ? (
                   <div className="app-navbar__account-menu" role="menu">
@@ -175,6 +248,7 @@ const Navbar = () => {
                   </div>
                 ) : null}
               </div>
+              </>
             )}
           </div>
         </div>

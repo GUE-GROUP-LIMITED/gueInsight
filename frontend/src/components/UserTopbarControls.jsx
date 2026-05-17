@@ -81,6 +81,9 @@ const UserTopbarControls = () => {
     <div className="user-topbar-controls" ref={controlsRef}>
       <div className="user-topbar-controls__left">
         <Link to="/support" className="user-topbar-controls__pill">{t('topbar.open_support')}</Link>
+        <button type="button" className="user-topbar-controls__pill user-topbar-controls__pill--ghost" onClick={handleLogout}>
+          {t('topbar.logout')}
+        </button>
       </div>
 
       <div className="user-topbar-controls__right">
