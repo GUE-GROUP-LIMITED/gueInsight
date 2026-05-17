@@ -7,7 +7,7 @@ import { useTranslation } from '../i18n/index';
 
 const Login = () => {
 	const navigate = useNavigate();
-	const { setUser } = useContext(AuthContext);
+	const { setAuthResponse } = useContext(AuthContext);
 	const { t } = useTranslation();
 	const [email, setEmail] = useState('');
 	const [password, setPassword] = useState('');
@@ -21,11 +21,10 @@ const Login = () => {
 		setError('');
 		try {
 			const response = await api.post('/auth/login', { email, password });
-			const authenticatedUser = response.data?.user || null;
-			setUser(authenticatedUser);
+			setAuthResponse(response.data || {});
 			setShowResetPassword(false);
 			const role = normalizeRole(
-				authenticatedUser?.role || authenticatedUser?.app_metadata?.role || authenticatedUser?.user_metadata?.role
+				response.data?.user?.role || response.data?.user?.app_metadata?.role || response.data?.user?.user_metadata?.role
 			);
 			navigate(role === 'admin' ? '/admin' : '/dashboard');
 		} catch (err) {

@@ -23,9 +23,20 @@
   padding: 0.68rem 0.94rem;
   text-decoration: none;
   font-weight: 700;
-  color: #c8f6ff;
-  border: 1px solid rgba(105, 184, 255, 0.34);
-  background: rgba(6, 24, 49, 0.7);
+  color: #d7eaf3;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(9, 19, 34, 0.74);
+}
+
+.user-topbar-controls__pill--ghost {
+  color: #e7f0f6;
+  background: rgba(9, 19, 34, 0.5);
+  cursor: pointer;
+}
+
+.user-topbar-controls__pill--ghost:hover {
+  border-color: rgba(96, 215, 200, 0.38);
+  background: rgba(11, 29, 46, 0.88);
 }
 
 .user-topbar-controls__group {
@@ -47,9 +58,9 @@
   border-radius: 50%;
   display: inline-grid;
   place-items: center;
-  background: rgba(6, 24, 49, 0.7);
-  color: #8ec7e5;
-  border: 1px solid rgba(105, 184, 255, 0.3);
+  background: rgba(9, 19, 34, 0.74);
+  color: #8fb8da;
+  border: 1px solid rgba(148, 163, 184, 0.2);
   cursor: pointer;
 }
 
@@ -81,9 +92,9 @@
   gap: 10px;
   padding: 7px 12px 7px 7px;
   border-radius: 999px;
-  background: rgba(6, 24, 49, 0.7);
-  border: 1px solid rgba(105, 184, 255, 0.3);
-  color: #d9f8ff;
+  background: rgba(9, 19, 34, 0.74);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: #dce8ef;
   cursor: pointer;
 }
 
@@ -93,7 +104,7 @@
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, #5a7cff, #34d1c6);
+  background: linear-gradient(135deg, #5b7cfa, #4bcabf);
   color: #fff;
   font-weight: 800;
   font-size: 0.78rem;
@@ -120,7 +131,7 @@
 
 .user-topbar-controls__avatar-copy span {
   font-size: 0.74rem;
-  color: #8eb9c8;
+  color: #a2b5c5;
 }
 
 .user-topbar-controls__dropdown {
@@ -130,9 +141,9 @@
   width: 290px;
   padding: 12px;
   border-radius: 14px;
-  background: #041021;
-  border: 1px solid rgba(105, 184, 255, 0.35);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+  background: #07111d;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  box-shadow: 0 18px 34px rgba(2, 8, 18, 0.36);
   z-index: 20;
 }
 
@@ -149,11 +160,11 @@
 }
 
 .user-topbar-controls__dropdown-head strong {
-  color: #dcfbff;
+  color: #eef7fb;
 }
 
 .user-topbar-controls__dropdown-head span {
-  color: #8eb9c8;
+  color: #a2b5c5;
   font-size: 0.76rem;
 }
 
@@ -165,9 +176,9 @@
 }
 
 .user-topbar-controls__notification-item {
-  border: 1px solid rgba(105, 184, 255, 0.24);
+  border: 1px solid rgba(148, 163, 184, 0.16);
   border-radius: 10px;
-  background: rgba(6, 24, 49, 0.7);
+  background: rgba(9, 19, 34, 0.82);
   padding: 10px;
   display: grid;
   gap: 6px;
@@ -179,21 +190,21 @@
 }
 
 .user-topbar-controls__notification-item strong {
-  color: #dcfbff;
+  color: #eef7fb;
 }
 
 .user-topbar-controls__notification-item p {
-  color: #9cc9d8;
+  color: #b3c4d0;
   font-size: 0.84rem;
 }
 
 .user-topbar-controls__mark-read {
   margin-top: 6px;
   width: 100%;
-  border: 1px solid rgba(105, 184, 255, 0.3);
+  border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 999px;
-  background: rgba(6, 24, 49, 0.7);
-  color: #c8f6ff;
+  background: rgba(9, 19, 34, 0.74);
+  color: #d7eaf3;
   padding: 0.46rem 0.66rem;
   cursor: pointer;
 }
@@ -206,12 +217,12 @@
   padding: 0.8rem 0.82rem;
   border-radius: 10px;
   text-decoration: none;
-  color: #dcfbff;
+  color: #eef7fb;
   cursor: pointer;
 }
 
 .user-topbar-controls__menu-item:hover {
-  background: rgba(105, 184, 255, 0.16);
+  background: rgba(96, 215, 200, 0.12);
 }
 
 .user-topbar-controls__menu-item--danger {
@@ -220,7 +231,7 @@
 
 .user-topbar-controls__empty {
   margin: 0;
-  color: #9cc9d8;
+  color: #b3c4d0;
 }
 
 @media (max-width: 700px) {

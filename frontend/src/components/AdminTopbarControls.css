@@ -22,11 +22,11 @@
 .admin-topbar-controls__search input {
   width: 220px;
   max-width: 100%;
-  border: 1px solid #d8e2f0;
+  border: 1px solid #d6e0ea;
   border-radius: 999px;
   padding: 0.76rem 1rem;
-  background: #f8fbff;
-  color: #344767;
+  background: #fff;
+  color: #243447;
 }
 
 .admin-topbar-controls__sidebar-toggle {
@@ -35,9 +35,9 @@
   border-radius: 50%;
   display: inline-grid;
   place-items: center;
-  background: #f3f7fd;
+  background: #f6f9fc;
   color: #5f7191;
-  border: 1px solid #d8e2f0;
+  border: 1px solid #d6e0ea;
   cursor: pointer;
   flex: 0 0 auto;
 }
@@ -54,11 +54,11 @@
   justify-content: center;
   padding: 0.74rem 1rem;
   border-radius: 999px;
-  background: linear-gradient(135deg, #5a7cff, #34d1c6);
+  background: linear-gradient(135deg, #5b7cfa, #4bcabf);
   color: #fff;
   text-decoration: none;
   font-weight: 700;
-  box-shadow: 0 10px 18px rgba(54, 207, 201, 0.18);
+  box-shadow: 0 10px 18px rgba(91, 124, 250, 0.14);
 }
 
 .admin-topbar-controls__support-link {
@@ -69,8 +69,8 @@
   border-radius: 999px;
   text-decoration: none;
   font-weight: 700;
-  border: 1px solid #d8e2f0;
-  background: #f8fbff;
+  border: 1px solid #d6e0ea;
+  background: #fff;
   color: #35507f;
 }
 
@@ -81,7 +81,7 @@
   border-radius: 999px;
   display: inline-grid;
   place-items: center;
-  background: #34d1c6;
+  background: #4bcabf;
   color: #fff;
   font-size: 0.75rem;
   font-weight: 800;
@@ -106,9 +106,9 @@
   border-radius: 50%;
   display: inline-grid;
   place-items: center;
-  background: #f3f7fd;
+  background: #f6f9fc;
   color: #5f7191;
-  border: 1px solid #d8e2f0;
+  border: 1px solid #d6e0ea;
   cursor: pointer;
 }
 
@@ -128,7 +128,7 @@
   border-radius: 999px;
   display: grid;
   place-items: center;
-  background: #34d1c6;
+  background: #4bcabf;
   color: #fff;
   font-size: 0.68rem;
   font-weight: 700;
@@ -140,9 +140,9 @@
   gap: 10px;
   padding: 7px 12px 7px 7px;
   border-radius: 999px;
-  background: #f8fbff;
-  border: 1px solid #d8e2f0;
-  color: #22304f;
+  background: #fff;
+  border: 1px solid #d6e0ea;
+  color: #1f2d3d;
   cursor: pointer;
 }
 
@@ -152,7 +152,7 @@
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, #5a7cff, #34d1c6);
+  background: linear-gradient(135deg, #5b7cfa, #4bcabf);
   color: #fff;
   font-weight: 800;
   font-size: 0.8rem;
@@ -185,8 +185,8 @@
   padding: 12px;
   border-radius: 18px;
   background: #fff;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.14);
+  border: 1px solid #dde6ee;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.1);
   z-index: 20;
 }
 
@@ -203,7 +203,7 @@
 }
 
 .admin-topbar-controls__dropdown-head strong {
-  color: #22304f;
+  color: #1f2d3d;
 }
 
 .admin-topbar-controls__notification-list {
@@ -223,7 +223,7 @@
   height: 10px;
   border-radius: 999px;
   margin-top: 5px;
-  background: #5a7cff;
+  background: #5b7cfa;
 }
 
 .admin-topbar-controls__notification-item strong,
@@ -233,26 +233,26 @@
 
 .admin-topbar-controls__notification-item strong,
 .admin-topbar-controls__menu-item {
-  color: #22304f;
+  color: #1f2d3d;
 }
 
 .admin-topbar-controls__notification-item p {
   margin-top: 3px;
-  color: #67809e;
+  color: #66798f;
   font-size: 0.86rem;
   line-height: 1.5;
 }
 
 .admin-topbar-controls__notification-item.is-alert .admin-topbar-controls__notification-dot {
-  background: #ea5455;
+  background: #e85d68;
 }
 
 .admin-topbar-controls__notification-item.is-neutral .admin-topbar-controls__notification-dot {
-  background: #5a7cff;
+  background: #5b7cfa;
 }
 
 .admin-topbar-controls__notification-item.is-success .admin-topbar-controls__notification-dot {
-  background: #34d1c6;
+  background: #4bcabf;
 }
 
 .admin-topbar-controls__menu-item {
@@ -267,7 +267,7 @@
 }
 
 .admin-topbar-controls__menu-item:hover {
-  background: #f4f7fb;
+  background: #eef4fb;
 }
 
 .admin-topbar-controls__menu-item--danger {
@@ -281,7 +281,7 @@
   margin: 0;
   padding: 0.55rem 0.8rem;
   border-radius: 999px;
-  background: #22304f;
+  background: #1f2d3d;
   color: #fff;
   font-size: 0.78rem;
   box-shadow: 0 10px 18px rgba(15, 23, 42, 0.18);

@@ -1,7 +1,6 @@
 import { useContext, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import UserTopbarControls from '../components/UserTopbarControls';
 import { api } from '../services/api';
 import './Dashboard.css';
 import { useTranslation } from '../i18n/index';
@@ -161,17 +160,36 @@ export default function Dashboard() {
 
   const handleSend = () => setReportSent(true);
 
+  const selectedTransactionStyle = useMemo(() => {
+    if (!selectedTransaction) return null;
+    const toneMap = {
+      analysis: 'analysis',
+      activity: 'activity',
+      billing: 'billing',
+    };
+    return toneMap[selectedTransaction.kind] || 'neutral';
+  }, [selectedTransaction]);
+
   return (
     <main className="user-dashboard">
       <div className="user-dashboard__grid-overlay" aria-hidden="true" />
 
       <section className="user-dashboard__hero">
-        <div>
+        <div className="user-dashboard__hero-copy">
           <p className="user-dashboard__eyebrow">{t('dashboard.eyebrow')}</p>
           <h1>{t('dashboard.title', { name: firstName })}</h1>
           <p className="user-dashboard__lead">{t('dashboard.lead')}</p>
         </div>
-        <UserTopbarControls />
+
+        <aside className="user-dashboard__hero-panel" aria-label="Account summary">
+          <p className="user-dashboard__hero-panel-label">{t('topbar.profile_menu')}</p>
+          <strong>{firstName}</strong>
+          <span>{user?.email}</span>
+          <div className="user-dashboard__hero-panel-meta">
+            <span>{String(user?.current_plan || 'free').replaceAll('_', ' ')}</span>
+            <span>{user?.role || 'user'}</span>
+          </div>
+        </aside>
       </section>
 
       <section className="user-dashboard__stats" aria-label="Workspace overview">
@@ -231,7 +249,6 @@ export default function Dashboard() {
               {t('dashboard.send_via_email')}
             </button>
             <Link to="/profile" className="user-dashboard__button user-dashboard__button--ghost">{t('dashboard.view_account_details')}</Link>
-            <Link to="/support" className="user-dashboard__button user-dashboard__button--ghost">{t('dashboard.create_ticket')}</Link>
           </div>
 
           {reportSent ? <p className="user-dashboard__success">{t('dashboard.report_sent')}</p> : null}
@@ -307,27 +324,24 @@ export default function Dashboard() {
 
           {!transactionsLoading && filteredTransactions.length ? (
             <>
-              <div className="user-dashboard__transactions-table-wrap">
-                <table className="user-dashboard__transactions-table">
-                  <thead>
-                    <tr>
-                      <th>Type</th>
-                      <th>Status</th>
-                      <th>Summary</th>
-                      <th>Time</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedTransactions.map((item) => (
-                      <tr key={item.id} onClick={() => setSelectedTransaction(item)}>
-                        <td>{item.type}</td>
-                        <td>{item.status}</td>
-                        <td>{item.detail}</td>
-                        <td>{item.created_at ? new Date(item.created_at).toLocaleString() : 'N/A'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="user-dashboard__transaction-card-grid">
+                {paginatedTransactions.map((item) => (
+                  <button
+                    type="button"
+                    key={item.id}
+                    className={`user-dashboard__transaction-card user-dashboard__transaction-card--${item.kind}`}
+                    onClick={() => setSelectedTransaction(item)}
+                  >
+                    <div className="user-dashboard__transaction-card-head">
+                      <span className="user-dashboard__transaction-type">{item.type}</span>
+                      <span className={`user-dashboard__transaction-status user-dashboard__transaction-status--${String(item.status).toLowerCase()}`}>
+                        {item.status}
+                      </span>
+                    </div>
+                    <strong>{item.detail}</strong>
+                    <p>{item.created_at ? new Date(item.created_at).toLocaleString() : 'N/A'}</p>
+                  </button>
+                ))}
               </div>
 
               <div className="user-dashboard__transactions-pagination">
@@ -351,7 +365,7 @@ export default function Dashboard() {
               </div>
 
               {selectedTransaction ? (
-                <div className="user-dashboard__transaction-detail">
+                <div className={`user-dashboard__transaction-detail user-dashboard__transaction-detail--${selectedTransactionStyle}`}>
                   <p className="user-dashboard__queue-id">Transaction detail</p>
                   <p className="user-dashboard__queue-type">{selectedTransaction.type} • {selectedTransaction.status}</p>
                   <p className="user-dashboard__queue-meta">{selectedTransaction.detail}</p>

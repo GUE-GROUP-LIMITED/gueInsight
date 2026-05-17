@@ -26,10 +26,16 @@ const normalizeUserUpdater = (updater) => (previous) => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setRawUser] = useState(null);
+  const [authSource, setAuthSource] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const setUser = (updater) => {
     setRawUser(normalizeUserUpdater(updater));
+  };
+
+  const setAuthResponse = (responseData) => {
+    setUser(responseData?.user || null);
+    setAuthSource(responseData?.auth_source || null);
   };
 
   useEffect(() => {
@@ -40,13 +46,15 @@ export const AuthProvider = ({ children }) => {
         const response = await api.get('/auth/session', { validateStatus: () => true });
         if (!isMounted) return;
         if (response.status >= 200 && response.status < 300) {
-          setUser(response.data?.user || null);
+          setAuthResponse(response.data || {});
         } else {
           setUser(null);
+          setAuthSource(null);
         }
       } catch {
         if (isMounted) {
           setUser(null);
+          setAuthSource(null);
         }
       } finally {
         if (isMounted) {
@@ -65,10 +73,11 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     await api.post('/auth/logout', {});
     setUser(null);
+    setAuthSource(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, logout, loading }}>
+    <AuthContext.Provider value={{ user, authSource, setUser, setAuthResponse, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
