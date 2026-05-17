@@ -373,6 +373,7 @@
     "analyst": "Analist",
     "eyebrow": "SOC-werkruimte",
     "title": "Operatorconsole: {name}",
+    "title_no_name": "Operatorconsole",
     "lead": "Bekijk actieve signalen, voer indicatoranalyse uit en publiceer rapporten vanuit één gecontroleerd commandocentrum.",
     "recent_actions": "Recente acties",
     "recent_actions_detail": "Laatste activiteiten en analysegegevens",

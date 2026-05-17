@@ -177,19 +177,11 @@ export default function Dashboard() {
       <section className="user-dashboard__hero">
         <div className="user-dashboard__hero-copy">
           <p className="user-dashboard__eyebrow">{t('dashboard.eyebrow')}</p>
-          <h1>{t('dashboard.title', { name: firstName })}</h1>
+          <h1>{t('dashboard.title_no_name') || t('dashboard.title', { name: firstName })}</h1>
           <p className="user-dashboard__lead">{t('dashboard.lead')}</p>
         </div>
 
-        <aside className="user-dashboard__hero-panel" aria-label="Account summary">
-          <p className="user-dashboard__hero-panel-label">{t('topbar.profile_menu')}</p>
-          <strong>{firstName}</strong>
-          <span>{user?.email}</span>
-          <div className="user-dashboard__hero-panel-meta">
-            <span>{String(user?.current_plan || 'free').replaceAll('_', ' ')}</span>
-            <span>{user?.role || 'user'}</span>
-          </div>
-        </aside>
+        {/* Profile moved to Account / Profile menu; removed from dashboard hero */}
       </section>
 
       <section className="user-dashboard__stats" aria-label="Workspace overview">
@@ -248,7 +240,7 @@ export default function Dashboard() {
             <button type="button" className="user-dashboard__button user-dashboard__button--secondary" onClick={handleSend}>
               {t('dashboard.send_via_email')}
             </button>
-            <Link to="/profile" className="user-dashboard__button user-dashboard__button--ghost">{t('dashboard.view_account_details')}</Link>
+            {/* Profile moved to Account menu; keep only useful actions here */}
           </div>
 
           {reportSent ? <p className="user-dashboard__success">{t('dashboard.report_sent')}</p> : null}

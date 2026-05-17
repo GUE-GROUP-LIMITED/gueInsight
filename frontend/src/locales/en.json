@@ -360,6 +360,7 @@
     "analyst": "Analyst",
     "eyebrow": "SOC Workspace",
     "title": "Operator Console: {name}",
+    "title_no_name": "Operator Console",
     "lead": "Review active signals, run indicator analysis, and publish reports from one controlled command center.",
     "recent_actions": "Recent actions",
     "recent_actions_detail": "Latest activity and analysis records",

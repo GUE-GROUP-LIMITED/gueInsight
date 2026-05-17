@@ -39,6 +39,14 @@
   font-size: 1.05rem;
 }
 
+/* Prevent long brand text from pushing nav items out of view */
+.app-navbar__brand {
+  max-width: 360px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .app-navbar__subtitle {
   color: #94a3b8;
   font-size: 0.78rem;
@@ -98,7 +106,16 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-wrap: wrap;
+  /* Prevent wrapping so badge and account controls stay aligned across locales */
+  flex-wrap: nowrap;
+}
+
+/* Prevent individual header controls from shrinking unexpectedly */
+.app-navbar__links .app-navbar__link,
+.app-navbar__links a,
+.app-navbar__account-trigger,
+.app-navbar__meta {
+  flex-shrink: 0;
 }
 
 .app-navbar__separator {
@@ -294,6 +311,33 @@
   gap: 4px;
 }
 
+.app-navbar__account-info {
+  padding: 12px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+  margin-bottom: 4px;
+  display: grid;
+  gap: 3px;
+}
+
+.app-navbar__account-name {
+  color: #f1f5f9;
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.app-navbar__account-email {
+  color: #cbd5e1;
+  font-size: 0.82rem;
+  margin: 0;
+}
+
+.app-navbar__account-plan {
+  color: #94a3b8;
+  font-size: 0.78rem;
+  margin: 0;
+}
+
 .app-navbar__account-item {
   border: none;
   width: 100%;
@@ -371,6 +415,14 @@
   .app-navbar__links {
     flex-direction: column;
     align-items: stretch;
+    /* Allow wrapping/visible overflow for the mobile menu */
+    overflow: visible;
+  }
+
+  /* make the mobile menu content scrollable if it grows too tall */
+  .app-navbar__menu {
+    max-height: calc(100vh - 92px);
+    overflow: auto;
   }
 
   .app-navbar__meta,
