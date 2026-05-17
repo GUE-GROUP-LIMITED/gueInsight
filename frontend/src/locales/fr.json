@@ -384,6 +384,7 @@
     "analyst": "Analyste",
     "eyebrow": "Espace SOC",
     "title": "Console opérateur : {name}",
+    "title_no_name": "Console opérateur",
     "lead": "Examinez les signaux actifs, lancez l'analyse d'indicateurs et publiez des rapports depuis un centre de commande contrôlé.",
     "recent_actions": "Actions récentes",
     "recent_actions_detail": "Dernières activités et analyses",

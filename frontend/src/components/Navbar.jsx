@@ -213,6 +213,11 @@ const Navbar = () => {
                 </button>
                 {accountMenuOpen ? (
                   <div className="app-navbar__account-menu" role="menu">
+                    <div className="app-navbar__account-info">
+                      <p className="app-navbar__account-name">{displayName}</p>
+                      <p className="app-navbar__account-email">{user?.email}</p>
+                      <p className="app-navbar__account-plan">{String(user?.current_plan || 'free').replaceAll('_', ' ')}</p>
+                    </div>
                     <NavLink
                       to="/support"
                       className="app-navbar__account-item"
