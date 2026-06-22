@@ -26,6 +26,8 @@ db = SQLAlchemy()
 mail = Mail()  # Initialize Mail here without passing an app
 migrate = Migrate()
 from .routes.stripe_webhooks import stripe_bp
+from .routes.stripe_recurring_billing import stripe_recurring_bp
+from .routes.belgian_payments_routes import belgian_bp
 login_manager = LoginManager()
 
 def create_app():
@@ -111,6 +113,8 @@ def create_app():
 
     # Register webhook routes before returning the app so Render serves them.
     app.register_blueprint(stripe_bp)
+    app.register_blueprint(stripe_recurring_bp)
+    app.register_blueprint(belgian_bp)
     
     # Initialize production error handlers
     from app.production_errors import init_production_errors, validate_production_config

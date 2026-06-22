@@ -65,6 +65,7 @@ from app.routes.users_auth_privacy_routes import register_auth_privacy_routes
 from app.routes.users_billing_routes import register_billing_routes
 from app.routes.users_support_routes import register_support_routes
 from app.routes.users_analysis_routes import register_analysis_routes
+from app.routes.users_enterprise_routes import register_enterprise_routes
 
 from app.subscription_service import COMPLIANCE_TIERS
 
@@ -683,3 +684,4 @@ register_auth_privacy_routes(users_bp)
 register_billing_routes(users_bp)
 register_support_routes(users_bp)
 register_analysis_routes(users_bp)
+register_enterprise_routes(users_bp)
