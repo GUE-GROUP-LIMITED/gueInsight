@@ -35,7 +35,7 @@ def create_app():
     # Allow browser calls from the local Vite frontend while keeping cookies enabled.
     configured_origins = os.getenv(
         'FRONTEND_ORIGINS',
-        'http://localhost:5173,http://127.0.0.1:5173,https://insights.guecyber.com,https://gue-insight-git-main-gabalohos-projects.vercel.app,https://gue-insight-jekcd18ru-gabalohos-projects.vercel.app'
+        'http://localhost:5173,http://127.0.0.1:5173,https://insights.guecyber.com'
     )
     allowed_origins = [origin.strip() for origin in configured_origins.split(',') if origin.strip()]
     CORS(
@@ -71,7 +71,8 @@ def create_app():
     mail.init_app(app)  # Bind Flask-Mail to the app
     migrate.init_app(app, db)  # Bind Flask-Migrate to the app
     login_manager.init_app(app)
-    login_manager.login_view = 'users.user_login'
+    # Ensure the login view matches the auth route defined in users_routes.py
+    login_manager.login_view = 'users.auth_login'
 
     @app.route('/')
     def index():
@@ -80,6 +81,11 @@ def create_app():
     @app.route('/healthz')
     def healthz():
         return {'status': 'ok'}, 200
+
+    @app.route('/<path:path>', methods=['OPTIONS'])
+    def handle_options(path):
+        """Handle CORS preflight OPTIONS requests."""
+        return '', 200
 
     @login_manager.user_loader
     def load_user(user_id):
