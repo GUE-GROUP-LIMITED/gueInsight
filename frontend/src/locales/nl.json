@@ -502,6 +502,8 @@
     "delete_confirm": "Verzend een verzoek tot accountverwijdering en deactiveer dit account nu?",
     "deletion_submitted": "Verwijderverzoek ingediend. Je account is gedeactiveerd.",
     "delete_failed": "Verwijderverzoek kan op dit moment niet worden ingediend."
+    ,"view_receipt": "Bekijk ontvangstbewijs",
+    "receipt_failed": "Ontvangstbewijs kan op dit moment niet worden geladen."
   },
   "admin_dashboard": {
     "compliance": "Compliance",

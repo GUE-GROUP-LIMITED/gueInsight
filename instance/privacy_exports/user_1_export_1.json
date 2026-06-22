@@ -1,0 +1,60 @@
+{
+  "exported_at": "2026-06-22T22:42:58.315073",
+  "user": {
+    "id": 1,
+    "email": "owner@example.com",
+    "first_name": "Test",
+    "last_name": "User",
+    "phone_number": "0000000000",
+    "company": null,
+    "job_title": null,
+    "team_size": null,
+    "primary_use_case": null,
+    "newsletter_opt_in": false,
+    "gdpr_consent_at": null,
+    "gdpr_consent_version": null,
+    "privacy_policy_version": null,
+    "terms_accepted_at": null,
+    "marketing_consent_at": null,
+    "role": "user",
+    "current_plan": "Free",
+    "analysis_limits": {
+      "max_file_size_mb": 2,
+      "max_text_chars": 10000,
+      "max_items_per_analysis": 5,
+      "max_url_length": 300,
+      "description": "Basic threat detection for individuals"
+    },
+    "avatar_url": null,
+    "preferences": null,
+    "unread_notifications": 0,
+    "plan_expires_at": null
+  },
+  "preferences": null,
+  "subscriptions": [],
+  "billing_transactions": [],
+  "analysis_transactions": [],
+  "support_tickets": [],
+  "activity_events": [],
+  "security_events": [
+    {
+      "id": 1,
+      "user_id": 1,
+      "event_type": "auth.login.success",
+      "severity": "info",
+      "ip_address": "127.0.0.1",
+      "user_agent": "Werkzeug/3.1.8",
+      "details": "{\"email\": \"owner@example.com\"}",
+      "created_at": "2026-06-22T22:42:58.296727"
+    }
+  ],
+  "data_export_requests": [
+    {
+      "id": 1,
+      "status": "processing",
+      "requested_at": "2026-06-22T22:42:58.313941",
+      "completed_at": null
+    }
+  ],
+  "data_deletion_requests": []
+}

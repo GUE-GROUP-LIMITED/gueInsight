@@ -473,6 +473,8 @@
     "save_preferences": "Save preferences",
     "billing_transactions": "Billing transactions",
     "no_billing_transactions": "No billing transactions yet.",
+    "view_receipt": "View receipt",
+    "receipt_failed": "Unable to load receipt right now.",
     "privacy_and_compliance": "Privacy and compliance",
     "privacy_subtitle": "Manage GDPR consent records and submit data subject requests.",
     "refresh_legal_consent": "Refresh legal consent",

@@ -174,6 +174,27 @@ const Profile = () => {
 		}
 	};
 
+	const viewReceipt = async (txnId) => {
+		setError('');
+		try {
+			const response = await api.get(`/auth/billing/${txnId}/receipt`, { responseType: 'text' });
+			const html = response.data;
+			const w = window.open('', '_blank');
+			if (w) {
+				w.document.open();
+				w.document.write(html);
+				w.document.close();
+			} else {
+				const blob = new Blob([html], { type: 'text/html' });
+				const url = URL.createObjectURL(blob);
+				window.open(url, '_blank');
+				setTimeout(() => URL.revokeObjectURL(url), 10000);
+			}
+		} catch (e) {
+			setError(e?.response?.data?.error || t('profile.receipt_failed'));
+		}
+	};
+
 	const exportPersonalData = async () => {
 		setPrivacyBusy(true);
 		setPrivacyError('');
@@ -378,9 +399,13 @@ const Profile = () => {
 					<div className="profile-page__meta-grid">
 						{billingTransactions.length ? billingTransactions.map((tx) => (
 							<div className="profile-page__meta-item" key={tx.id}>
-								<span>{tx.status}</span>
-								<strong>{tx.amount_minor} {String(tx.currency || '').toUpperCase()}</strong>
-								<p>{tx.created_at ? new Date(tx.created_at).toLocaleString() : 'N/A'}</p>
+								<span>{String(tx.status || '').toUpperCase()}</span>
+								<strong>{(tx.amount_minor/100).toFixed(2)} {String(tx.currency || '').toUpperCase()}</strong>
+								<p>{tx.period_start ? new Date(tx.period_start).toLocaleDateString() : ''} — {tx.period_end ? new Date(tx.period_end).toLocaleDateString() : ''}</p>
+								<p style={{ marginTop: 6 }}>{tx.created_at ? new Date(tx.created_at).toLocaleString() : 'N/A'}</p>
+								<div style={{ marginTop: 8 }}>
+									<button type="button" onClick={() => viewReceipt(tx.id)}>{t('profile.view_receipt')}</button>
+								</div>
 							</div>
 						)) : <p>{t('profile.no_billing_transactions')}</p>}
 					</div>

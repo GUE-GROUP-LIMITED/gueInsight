@@ -9,6 +9,12 @@ const PLANS = [
   { key: 'enterprise_elite', name: 'Enterprise Elite', price_cents: 99900, desc: 'EU residency, SOC2 readiness, dedicated support' },
 ];
 
+const PLAN_ALIASES = {
+  compliance_pro: 'premium',
+  enterprise_risk: 'growth',
+  enterprise_elite: 'scale',
+};
+
 const PlanSelector = ({ onClose }) => {
   const { t } = useTranslation();
   const [selected, setSelected] = useState(PLANS[0].key);
@@ -19,9 +25,9 @@ const PlanSelector = ({ onClose }) => {
     setLoading(true);
     setError(null);
     try {
-      const resp = await api.post('/checkout/create-session', { tier_id: selected, trial_days: trialDays });
-      if (resp.data && resp.data.checkout_url) {
-        window.location.href = resp.data.checkout_url;
+      const resp = await api.post('/auth/subscription/upgrade', { plan: PLAN_ALIASES[selected] || selected });
+      if (resp.status === 200) {
+        window.location.href = '/subscription?upgrade=success';
         return;
       }
       setError(t('plan_selector.failed_session'));

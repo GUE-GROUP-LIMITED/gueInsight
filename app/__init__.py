@@ -14,6 +14,7 @@ from flask_migrate import Migrate
 load_dotenv()
 
 from app.config import Config
+from app.observability import register_observability
 
 
 #from flask_wtf.csrf import CSRFProtect
@@ -31,6 +32,7 @@ def create_app():
     app = Flask(__name__)
     # Load configuration from Config class
     app.config.from_object(Config)
+    register_observability(app)
 
     # Allow browser calls from the local Vite frontend while keeping cookies enabled.
     configured_origins = os.getenv(
@@ -110,7 +112,13 @@ def create_app():
     # Register webhook routes before returning the app so Render serves them.
     app.register_blueprint(stripe_bp)
     
-
+    # Initialize production error handlers
+    from app.production_errors import init_production_errors, validate_production_config
+    init_production_errors(app)
+    
+    # Validate production configuration
+    if app.config.get('ENV') == 'production':
+        validate_production_config(app)
 
     return app
 

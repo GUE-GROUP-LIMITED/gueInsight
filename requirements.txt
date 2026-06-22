@@ -20,8 +20,10 @@ Flask-WTF==1.2.2
 Flask-Migrate
 gunicorn==22.0.0
 pytest==8.3.5
+pytest-cov==5.0.0
 python-dotenv==1.0.1
 psycopg2-binary
+prometheus-client==0.22.0
 fonttools==4.55.0
 fsspec==2024.10.0
 greenlet==3.1.1
