@@ -42,6 +42,15 @@ def stripe_webhook():
                         stripe_subscription = stripe.Subscription.retrieve(session.get('subscription'))
                     except Exception:
                         current_app.logger.exception('Failed to retrieve Stripe subscription for trial checkout')
+                
+                # Store customer ID on user for future transactions
+                customer_id = session.get('customer')
+                if customer_id and not user.stripe_customer_id:
+                    user.stripe_customer_id = customer_id
+                    db.session.add(user)
+                    db.session.commit()
+                    current_app.logger.info(f"Stored Stripe customer ID for user {user.id}: {customer_id}")
+                
                 # Idempotency: skip if we already processed this payment or session
                 session_id = session.get('id')
                 payment_intent = session.get('payment_intent')
@@ -68,6 +77,13 @@ def stripe_webhook():
                         subscription.is_trial = (trial_days and int(trial_days) > 0)
                     except Exception:
                         subscription.is_trial = False
+                    
+                    # Store Stripe subscription info for recurring billing
+                    if stripe_subscription:
+                        subscription.stripe_subscription_id = stripe_subscription.get('id')
+                        subscription.stripe_customer_id = customer_id
+                        current_app.logger.info(f"Stored Stripe subscription ID for user {user.id}: {stripe_subscription.get('id')}")
+                    
                     db.session.add(subscription)
 
                     # Billing transaction: save session id or payment_intent as provider_txn_id to help idempotency

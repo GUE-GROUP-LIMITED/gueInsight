@@ -77,6 +77,19 @@ class User(db.Model, UserMixin):
     role = Column(SQLAlchemyEnum(UserRole), nullable=False, default=UserRole.USER)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=_utc_now)
+    
+    # Stripe integration
+    stripe_customer_id = Column(String(120), nullable=True, unique=True)
+    stripe_subscription_id = Column(String(120), nullable=True)
+    
+    # Belgian payment methods
+    sepa_mandate_id = Column(String(120), nullable=True)  # SEPA Direct Debit mandate ID
+    sepa_iban_last4 = Column(String(4), nullable=True)    # Last 4 digits of IBAN
+    
+    # Address fields for invoicing
+    address = Column(String(255), nullable=True)
+    city = Column(String(100), nullable=True)
+    postal_code = Column(String(20), nullable=True)
 
     # Method to set password for User
     def set_password(self, password):
@@ -97,6 +110,14 @@ class Subscription(db.Model):
     start_date = Column(DateTime, nullable=False)
     end_date = Column(DateTime, nullable=False)
     is_trial = Column(Boolean, nullable=False, default=False)
+    
+    # Stripe integration
+    stripe_subscription_id = Column(String(120), nullable=True)
+    stripe_customer_id = Column(String(120), nullable=True)
+    
+    # Payment tracking
+    payment_method = Column(String(50), nullable=True, default='card')  # bancontact, sepa_debit, card, paypal, etc
+    last_payment_date = Column(DateTime, nullable=True)
 
     # Relationship with User
     user = db.relationship("User", backref="subscriptions")
@@ -462,7 +483,195 @@ class NIS2IncidentReport(db.Model):
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
         }
 
-  
+
+
+# ===== ENTERPRISE FEATURES =====
+
+class SubUser(db.Model):
+    """Sub-user management for enterprise plans (SME/Large Enterprise)."""
+    __tablename__ = 'sub_user'
+    
+    id = Column(Integer, primary_key=True)
+    parent_user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+    sub_user_id = Column(Integer, ForeignKey('user.id'), nullable=False, unique=True)
+    role = Column(String(50), nullable=False, default='analyst')  # analyst, manager, admin
+    permissions = Column(String(500), nullable=True)  # JSON: comma-separated permissions
+    added_at = Column(DateTime, default=_utc_now)
+    removed_at = Column(DateTime, nullable=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+    
+    parent = db.relationship('User', foreign_keys=[parent_user_id], backref=db.backref('sub_users', lazy=True))
+    sub_user = db.relationship('User', foreign_keys=[sub_user_id])
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'parent_user_id': self.parent_user_id,
+            'sub_user_id': self.sub_user_id,
+            'sub_user_email': self.sub_user.email if self.sub_user else None,
+            'role': self.role,
+            'permissions': self.permissions,
+            'is_active': bool(self.is_active),
+            'added_at': self.added_at.isoformat() if self.added_at else None,
+        }
+
+
+class BatchFileJob(db.Model):
+    """Batch file processing job for multiple file analysis."""
+    __tablename__ = 'batch_file_job'
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+    job_name = Column(String(255), nullable=False)
+    status = Column(String(30), nullable=False, default='queued')  # queued, processing, completed, failed
+    total_files = Column(Integer, nullable=False, default=0)
+    processed_files = Column(Integer, nullable=False, default=0)
+    failed_files = Column(Integer, nullable=False, default=0)
+    celery_task_id = Column(String(120), nullable=True)
+    progress_percentage = Column(Integer, nullable=False, default=0)
+    error_message = Column(String(2000), nullable=True)
+    created_at = Column(DateTime, default=_utc_now)
+    started_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    
+    user = db.relationship('User', backref=db.backref('batch_jobs', lazy=True))
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'job_name': self.job_name,
+            'status': self.status,
+            'total_files': self.total_files,
+            'processed_files': self.processed_files,
+            'failed_files': self.failed_files,
+            'progress_percentage': self.progress_percentage,
+            'error_message': self.error_message,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'completed_at': self.completed_at.isoformat() if self.completed_at else None,
+        }
+
+
+class BatchFileItem(db.Model):
+    """Individual file in a batch processing job."""
+    __tablename__ = 'batch_file_item'
+    
+    id = Column(Integer, primary_key=True)
+    batch_job_id = Column(Integer, ForeignKey('batch_file_job.id'), nullable=False)
+    file_name = Column(String(255), nullable=False)
+    file_path = Column(String(500), nullable=False)
+    status = Column(String(30), nullable=False, default='pending')  # pending, processing, completed, failed
+    analysis_transaction_id = Column(Integer, ForeignKey('analysis_transaction.id'), nullable=True)
+    error_message = Column(String(500), nullable=True)
+    processing_started_at = Column(DateTime, nullable=True)
+    processing_completed_at = Column(DateTime, nullable=True)
+    
+    batch_job = db.relationship('BatchFileJob', backref=db.backref('items', lazy=True))
+    analysis = db.relationship('AnalysisTransaction', backref=db.backref('batch_items', lazy=True))
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'batch_job_id': self.batch_job_id,
+            'file_name': self.file_name,
+            'status': self.status,
+            'analysis_transaction_id': self.analysis_transaction_id,
+            'error_message': self.error_message,
+            'processing_started_at': self.processing_started_at.isoformat() if self.processing_started_at else None,
+            'processing_completed_at': self.processing_completed_at.isoformat() if self.processing_completed_at else None,
+        }
+
+
+class AnalyticsMetric(db.Model):
+    """Store analytics metrics for advanced dashboards and reporting."""
+    __tablename__ = 'analytics_metric'
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('user.id'), nullable=True)  # None for global metrics
+    metric_type = Column(String(100), nullable=False)  # files_uploaded, analyses_completed, threats_detected, etc.
+    metric_value = Column(Integer, nullable=False, default=0)
+    metric_unit = Column(String(50), nullable=True)  # count, bytes, ms, percentage, etc.
+    time_period = Column(String(30), nullable=False, default='daily')  # daily, weekly, monthly
+    recorded_at = Column(DateTime, default=_utc_now)
+    
+    user = db.relationship('User', backref=db.backref('analytics_metrics', lazy=True))
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'metric_type': self.metric_type,
+            'metric_value': self.metric_value,
+            'metric_unit': self.metric_unit,
+            'time_period': self.time_period,
+            'recorded_at': self.recorded_at.isoformat() if self.recorded_at else None,
+        }
+
+
+class AlertProcessingLog(db.Model):
+    """Track real-time alert processing and execution."""
+    __tablename__ = 'alert_processing_log'
+    
+    id = Column(Integer, primary_key=True)
+    alert_id = Column(Integer, ForeignKey('alert.id'), nullable=False)
+    processing_status = Column(String(50), nullable=False, default='received')  # received, processing, completed, failed
+    processor_type = Column(String(100), nullable=True)  # webhook, email, sms, slack, pagerduty, etc.
+    notification_sent_at = Column(DateTime, nullable=True)
+    response_code = Column(String(10), nullable=True)
+    response_message = Column(String(500), nullable=True)
+    retry_count = Column(Integer, nullable=False, default=0)
+    max_retries = Column(Integer, nullable=False, default=3)
+    last_retry_at = Column(DateTime, nullable=True)
+    processing_time_ms = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=_utc_now)
+    
+    alert = db.relationship('Alert', backref=db.backref('processing_logs', lazy=True))
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'alert_id': self.alert_id,
+            'processing_status': self.processing_status,
+            'processor_type': self.processor_type,
+            'notification_sent_at': self.notification_sent_at.isoformat() if self.notification_sent_at else None,
+            'response_code': self.response_code,
+            'retry_count': self.retry_count,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class SecurityToolIntegration(db.Model):
+    """External security tool integrations (VirusTotal, AbuseIPDB, etc.)."""
+    __tablename__ = 'security_tool_integration'
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+    tool_name = Column(String(100), nullable=False)  # virustotal, abuseipdb, shodan, etc.
+    api_key_encrypted = Column(String(500), nullable=False)  # Should be encrypted in production
+    is_active = Column(Boolean, nullable=False, default=True)
+    webhook_url = Column(String(500), nullable=True)
+    webhook_secret = Column(String(500), nullable=True)
+    last_successful_call = Column(DateTime, nullable=True)
+    last_failed_call = Column(DateTime, nullable=True)
+    failure_reason = Column(String(500), nullable=True)
+    rate_limit_remaining = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=_utc_now)
+    updated_at = Column(DateTime, default=_utc_now, onupdate=_utc_now)
+    
+    user = db.relationship('User', backref=db.backref('tool_integrations', lazy=True))
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'tool_name': self.tool_name,
+            'is_active': bool(self.is_active),
+            'last_successful_call': self.last_successful_call.isoformat() if self.last_successful_call else None,
+            'last_failed_call': self.last_failed_call.isoformat() if self.last_failed_call else None,
+            'rate_limit_remaining': self.rate_limit_remaining,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
 
 class FileUpload(db.Model):
     id = db.Column(db.Integer, primary_key=True)
