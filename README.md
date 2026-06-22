@@ -118,7 +118,7 @@ GueInsight follows a modular architecture:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/gabrielaloho/gueInsight.git
+   git clone https://github.com/GUE-GROUP-LIMITED/gueInsight.git
    ```
 2. Navigate to the project directory:
    ```bash
