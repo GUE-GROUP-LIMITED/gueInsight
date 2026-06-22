@@ -13,6 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       PYTHONPATH: ${{ github.workspace }}
+      SECRET_KEY: ci-secret-key
+      SECURITY_PASSWORD_SALT: ci-security-salt
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,12 +29,25 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install pip-audit bandit
 
       - name: Compile backend sources
         run: python -m compileall migrations app
 
-      - name: Run compliance tests
-        run: python -m pytest -q tests/test_compliance_endpoints.py
+      - name: Security static analysis
+        run: bandit -r app -ll
+
+      - name: Dependency vulnerability audit
+        run: pip-audit
+
+      - name: Run backend tests with coverage
+        run: python -m pytest
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage-xml
+          path: coverage.xml
 
   frontend-build:
     runs-on: ubuntu-latest
@@ -52,6 +67,9 @@ jobs:
 
       - name: Install frontend dependencies
         run: npm ci
+
+      - name: Lint frontend
+        run: npm run lint
 
       - name: Build frontend
         run: npm run build

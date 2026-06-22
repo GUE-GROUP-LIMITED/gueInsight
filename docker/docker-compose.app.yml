@@ -1,0 +1,18 @@
+version: '3.9'
+services:
+  gueinsight-api:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    env_file:
+      - ../.env
+    environment:
+      SQLALCHEMY_DATABASE_URI: sqlite:////app/instance/app.db
+    volumes:
+      - gueinsight_data:/app/instance
+    restart: unless-stopped
+
+volumes:
+  gueinsight_data:
