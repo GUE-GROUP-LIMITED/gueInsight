@@ -3,7 +3,20 @@ import stripe
 
 class Config:
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-    # Use Supabase Postgres by default. Set SQLALCHEMY_DATABASE_URI in your environment for production secrets.
+    
+    # Validate critical secrets at startup
+    _SECRET_KEY = os.getenv('SECRET_KEY')
+    _SECURITY_SALT = os.getenv('SECURITY_PASSWORD_SALT')
+    
+    if not _SECRET_KEY:
+        raise ValueError('CRITICAL: SECRET_KEY environment variable is required for production')
+    if not _SECURITY_SALT:
+        raise ValueError('CRITICAL: SECURITY_PASSWORD_SALT environment variable is required for production')
+    
+    SECRET_KEY = _SECRET_KEY
+    SECURITY_PASSWORD_SALT = _SECURITY_SALT
+    
+    # Database configuration
     SQLALCHEMY_DATABASE_URI = os.getenv(
         'SQLALCHEMY_DATABASE_URI',
         'sqlite:///' + os.path.join(BASE_DIR, '..', 'instance', 'app.db')
@@ -12,14 +25,14 @@ class Config:
     OUTPUT_FOLDER = os.path.join(BASE_DIR, 'output/user_reports')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    
+    # Email configuration
     MAIL_SERVER = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
     MAIL_PORT = int(os.getenv('MAIL_PORT', '587'))
     MAIL_USE_TLS = str(os.getenv('MAIL_USE_TLS', 'true')).lower() in {'1', 'true', 'yes'}
     MAIL_USERNAME = os.getenv('MAIL_USERNAME', '')
     MAIL_PASSWORD = os.getenv('MAIL_PASSWORD', '')
-    MAIL_DEFAULT_SENDER = os.getenv('MAIL_DEFAULT_SENDER', MAIL_USERNAME or 'noreply@gueinsight.local')
-    SECURITY_PASSWORD_SALT = os.getenv('SECURITY_PASSWORD_SALT', 'change-this-security-password-salt')
-    SECRET_KEY = os.getenv('SECRET_KEY', 'change-this-secret-key')
+    MAIL_DEFAULT_SENDER = os.getenv('MAIL_DEFAULT_SENDER', 'noreply@guecyber.com')
     SESSION_TYPE = 'filesystem'
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = os.getenv('SESSION_COOKIE_SAMESITE', 'Lax')

@@ -153,10 +153,29 @@ GueInsight is licensed under [MIT License](LICENSE).
 
 ---
 
-## Contributors
-- Gabriel Aloho (Project Owner)
+## Contributors & Maintainers
+
+GueInsight is maintained by the **Gue Cyber** team. For contributions, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+- **Gue Cyber** — Cybersecurity, AI Automation, and Compliance Services  
+  Website: [guecyber.com](https://www.guecyber.com)  
+  Email: [info@guecyber.com](mailto:info@guecyber.com)
 
 ---
 
-## Support
-For support, contact [support@guecyber.com](mailto:support@guecyber.com).
+## Support & Issues
+
+**For product support:** [support@guecyber.com](mailto:support@guecyber.com)  
+**For bug reports & feature requests:** [GitHub Issues](https://github.com/GUE-GROUP-LIMITED/gueInsight/issues)  
+**For security vulnerabilities:** Please report privately to [security@guecyber.com](mailto:security@guecyber.com)
+
+---
+
+## About Gue Cyber
+
+Gue Cyber is a Belgian technology company specializing in:
+- **AI Automation Agency**: Workflow automation, intelligent agents, and business process integration
+- **Software Development**: Custom web applications, APIs, and platform engineering
+- **Cybersecurity Services**: Security assessments, threat detection, compliance reporting, and managed security
+
+GueInsight is our flagship compliance and threat analysis platform for the European market.
