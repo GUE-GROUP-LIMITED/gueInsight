@@ -7,9 +7,11 @@ const getDefaultApiBase = () => {
   }
 
   if (import.meta.env.PROD) {
-    return 'https://kuber.guecyber.com';
+    // Production: use company domain with api subdomain
+    return 'https://api.insights.guecyber.com';
   }
 
+  // Development: local backend
   return 'http://localhost:5000';
 };
 

@@ -1,8 +1,22 @@
-# React + Vite
+# GueInsight Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The frontend for **GueInsight** — a comprehensive compliance and threat analysis platform built on React + Vite.
 
-Currently, two official plugins are available:
+## About
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+GueInsight is a product of [Gue Cyber](https://www.guecyber.com), delivering threat detection, cloud tenant audits, and GDPR/NIS2 compliance reporting for security teams across Europe.
+
+**Frontend Technologies:**
+- **React 19** — UI framework
+- **Vite** — Fast build tooling with HMR
+- **React Router** — Application routing
+- **Axios** — HTTP client for backend integration
+
+## Features
+
+- 🔐 Secure authentication with role-based access control
+- 📊 Real-time threat analysis dashboard
+- ☁️ Microsoft 365 and Google Workspace integrations
+- 📋 Compliance report generation (GDPR, NIS2, ISO 27001)
+- 🌍 Multi-language support (EN, FR, NL)
+- 🎨 Accessible, responsive UI design
