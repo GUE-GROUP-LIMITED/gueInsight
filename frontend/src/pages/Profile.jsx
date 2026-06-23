@@ -1,6 +1,7 @@
 import { useContext, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
+import BrandingSettings from './BrandingSettings';
 import { api } from '../services/api';
 import './Profile.css';
 import { useTranslation } from '../i18n/index';
@@ -21,7 +22,6 @@ const Profile = () => {
 	const [savingPreferences, setSavingPreferences] = useState(false);
 	const [message, setMessage] = useState('');
 	const [error, setError] = useState('');
-	const [billingTransactions, setBillingTransactions] = useState([]);
 	const [preferenceMessage, setPreferenceMessage] = useState('');
 	const [privacyMessage, setPrivacyMessage] = useState('');
 	const [privacyError, setPrivacyError] = useState('');
@@ -43,8 +43,20 @@ const Profile = () => {
 		primary_use_case: useCaseOptions[0],
 		newsletter_opt_in: false,
 	});
+	
+	// Team management state
+	const [teamMembers, setTeamMembers] = useState([]);
+	const [teamLoading, setTeamLoading] = useState(false);
+	const [teamError, setTeamError] = useState('');
+	const [teamMessage, setTeamMessage] = useState('');
+	const [newMemberEmail, setNewMemberEmail] = useState('');
+	const [newMemberRole, setNewMemberRole] = useState('analyst');
+	const [addingMember, setAddingMember] = useState(false);
+	const [removingMemberId, setRemovingMemberId] = useState(null);
+	
 	const isAdminProfile = location.pathname.startsWith('/admin');
 	const backLinkHref = isAdminProfile ? '/admin' : '/dashboard';
+	const isEnterpriseUser = user && ['enterprise_risk', 'enterprise_elite', 'premium_small_business', 'premium_large_business'].includes(user.plan);
 
 	useEffect(() => {
 		if (!user) return;
@@ -73,10 +85,7 @@ const Profile = () => {
 		const loadProfileExtras = async () => {
 			if (!user) return;
 			try {
-				const [prefResponse, txResponse] = await Promise.all([
-					api.get('/auth/preferences'),
-					api.get('/auth/transactions?limit=12'),
-				]);
+				const prefResponse = await api.get('/auth/preferences');
 				if (!active) return;
 
 				const pref = prefResponse.data?.preferences || {};
@@ -89,12 +98,8 @@ const Profile = () => {
 					notification_email_enabled: pref.notification_email_enabled ?? current.notification_email_enabled,
 					notification_inapp_enabled: pref.notification_inapp_enabled ?? current.notification_inapp_enabled,
 				}));
-
-				setBillingTransactions(Array.isArray(txResponse.data?.billing_transactions) ? txResponse.data.billing_transactions : []);
 			} catch {
-				if (active) {
-					setBillingTransactions([]);
-				}
+				// Handle error silently
 			}
 		};
 
@@ -104,6 +109,38 @@ const Profile = () => {
 			active = false;
 		};
 	}, [user]);
+
+	// Load team members for enterprise users
+	useEffect(() => {
+		if (!isEnterpriseUser) return;
+
+		let active = true;
+
+		const loadTeamMembers = async () => {
+			setTeamLoading(true);
+			setTeamError('');
+			try {
+				const response = await api.get('/auth/sub-users');
+				if (active) {
+					setTeamMembers(Array.isArray(response.data?.sub_users) ? response.data.sub_users : []);
+				}
+			} catch (err) {
+				if (active) {
+					setTeamError('Failed to load team members');
+				}
+			} finally {
+				if (active) {
+					setTeamLoading(false);
+				}
+			}
+		};
+
+		loadTeamMembers();
+
+		return () => {
+			active = false;
+		};
+	}, [isEnterpriseUser]);
 
 	const readOnlyMeta = useMemo(() => {
 		if (!user) return [];
@@ -174,27 +211,6 @@ const Profile = () => {
 		}
 	};
 
-	const viewReceipt = async (txnId) => {
-		setError('');
-		try {
-			const response = await api.get(`/auth/billing/${txnId}/receipt`, { responseType: 'text' });
-			const html = response.data;
-			const w = window.open('', '_blank');
-			if (w) {
-				w.document.open();
-				w.document.write(html);
-				w.document.close();
-			} else {
-				const blob = new Blob([html], { type: 'text/html' });
-				const url = URL.createObjectURL(blob);
-				window.open(url, '_blank');
-				setTimeout(() => URL.revokeObjectURL(url), 10000);
-			}
-		} catch (e) {
-			setError(e?.response?.data?.error || t('profile.receipt_failed'));
-		}
-	};
-
 	const exportPersonalData = async () => {
 		setPrivacyBusy(true);
 		setPrivacyError('');
@@ -235,6 +251,57 @@ const Profile = () => {
 			setPrivacyError(requestError?.response?.data?.error || t('profile.delete_failed'));
 		} finally {
 			setPrivacyBusy(false);
+		}
+	};
+
+	// Team management functions
+	const addTeamMember = async (e) => {
+		e.preventDefault();
+		if (!newMemberEmail.trim()) {
+			setTeamError('Email is required');
+			return;
+		}
+
+		setAddingMember(true);
+		setTeamError('');
+		setTeamMessage('');
+
+		try {
+			const response = await api.post('/auth/sub-users', {
+				email: newMemberEmail.trim(),
+				role: newMemberRole,
+				permissions: '',
+			});
+
+			setTeamMembers([...teamMembers, response.data]);
+			setNewMemberEmail('');
+			setNewMemberRole('analyst');
+			setTeamMessage('Team member added successfully');
+		} catch (requestError) {
+			const errorMsg = requestError?.response?.data?.error || 'Failed to add team member';
+			setTeamError(errorMsg);
+		} finally {
+			setAddingMember(false);
+		}
+	};
+
+	const removeTeamMember = async (memberId) => {
+		const confirmed = window.confirm('Remove this team member from your organization?');
+		if (!confirmed) return;
+
+		setRemovingMemberId(memberId);
+		setTeamError('');
+		setTeamMessage('');
+
+		try {
+			await api.delete(`/auth/sub-users/${memberId}`);
+			setTeamMembers(teamMembers.filter((m) => m.id !== memberId));
+			setTeamMessage('Team member removed successfully');
+		} catch (requestError) {
+			const errorMsg = requestError?.response?.data?.error || 'Failed to remove team member';
+			setTeamError(errorMsg);
+		} finally {
+			setRemovingMemberId(null);
 		}
 	};
 
@@ -394,22 +461,106 @@ const Profile = () => {
 					</form>
 				</article>
 
-				<article className="profile-page__card">
-					<h2>{t('profile.billing_transactions')}</h2>
-					<div className="profile-page__meta-grid">
-						{billingTransactions.length ? billingTransactions.map((tx) => (
-							<div className="profile-page__meta-item" key={tx.id}>
-								<span>{String(tx.status || '').toUpperCase()}</span>
-								<strong>{(tx.amount_minor/100).toFixed(2)} {String(tx.currency || '').toUpperCase()}</strong>
-								<p>{tx.period_start ? new Date(tx.period_start).toLocaleDateString() : ''} — {tx.period_end ? new Date(tx.period_end).toLocaleDateString() : ''}</p>
-								<p style={{ marginTop: 6 }}>{tx.created_at ? new Date(tx.created_at).toLocaleString() : 'N/A'}</p>
-								<div style={{ marginTop: 8 }}>
-									<button type="button" onClick={() => viewReceipt(tx.id)}>{t('profile.view_receipt')}</button>
+				<BrandingSettings />
+
+				{isEnterpriseUser && (
+					<article className="profile-page__card" style={{ marginBottom: '30px' }}>
+						<h2 style={{ background: 'linear-gradient(135deg, rgb(110, 236, 229) 0%, rgb(103, 180, 255) 100%)', backgroundClip: 'text', WebkitTextFillColor: 'transparent', fontSize: '1.5rem', fontWeight: 700, margin: '0 0 10px 0' }}>👥 Team Members</h2>
+						<p className="subtitle" style={{ color: 'rgb(156, 163, 175)', fontSize: '0.95rem', margin: '0 0 20px 0' }}>Invite and manage team members in your organization. Team members can use GueInsight with your shared configuration.</p>
+
+						<div className="branding-section">
+							<h3 style={{ marginBottom: '15px' }}>Add Team Member</h3>
+							<form onSubmit={addTeamMember} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '10px', alignItems: 'flex-start' }}>
+								<div className="form-group" style={{ margin: 0 }}>
+									<label htmlFor="team-email">Email Address</label>
+									<input
+										type="email"
+										id="team-email"
+										name="email"
+										placeholder="colleague@company.com"
+										value={newMemberEmail}
+										onChange={(e) => setNewMemberEmail(e.target.value)}
+										required
+										disabled={addingMember}
+									/>
 								</div>
-							</div>
-						)) : <p>{t('profile.no_billing_transactions')}</p>}
-					</div>
-				</article>
+								<div className="form-group" style={{ margin: 0 }}>
+									<label htmlFor="team-role">Role</label>
+									<select
+										id="team-role"
+										value={newMemberRole}
+										onChange={(e) => setNewMemberRole(e.target.value)}
+										disabled={addingMember}
+									>
+										<option value="analyst">Analyst</option>
+										<option value="manager">Manager</option>
+										<option value="admin">Admin</option>
+									</select>
+								</div>
+								<button type="submit" disabled={addingMember} style={{ marginTop: '25px' }} className="btn btn-success">
+									{addingMember ? 'Adding...' : '➕ Add Member'}
+								</button>
+							</form>
+							{teamError && <p style={{ color: '#ef4444', marginTop: '10px', fontSize: '0.9rem' }}>⚠️ {teamError}</p>}
+							{teamMessage && <p style={{ color: '#10b981', marginTop: '10px', fontSize: '0.9rem' }}>✅ {teamMessage}</p>}
+						</div>
+
+						<div className="branding-section" style={{ marginTop: '20px' }}>
+							<h3 style={{ marginBottom: '15px' }}>Current Team</h3>
+							{teamLoading ? (
+								<p>Loading team members...</p>
+							) : teamMembers.length === 0 ? (
+								<p style={{ color: 'rgb(156, 163, 175)' }}>No team members added yet.</p>
+							) : (
+								<div style={{ display: 'grid', gap: '10px' }}>
+									{teamMembers.map((member) => (
+										<div key={member.id} style={{
+											display: 'flex',
+											justifyContent: 'space-between',
+											alignItems: 'center',
+											padding: '12px',
+											backgroundColor: 'rgba(110, 236, 229, 0.08)',
+											border: '1px solid rgba(110, 236, 229, 0.2)',
+											borderRadius: '6px'
+										}}>
+											<div>
+												<p style={{ margin: '0 0 4px 0', fontWeight: '500' }}>{member.sub_user_email}</p>
+												<p style={{ margin: 0, fontSize: '0.9rem', color: 'rgb(156, 163, 175)' }}>Role: <strong>{member.role || 'analyst'}</strong></p>
+											</div>
+											<button
+												type="button"
+												onClick={() => removeTeamMember(member.id)}
+												disabled={removingMemberId === member.id}
+												style={{
+													padding: '6px 12px',
+													backgroundColor: '#ef4444',
+													color: 'white',
+													border: 'none',
+													borderRadius: '4px',
+													cursor: 'pointer',
+													fontSize: '0.9rem'
+												}}
+											>
+												{removingMemberId === member.id ? 'Removing...' : '🗑️ Remove'}
+											</button>
+										</div>
+									))}
+								</div>
+							)}
+						</div>
+
+						<div className="info-box">
+							<h3>ℹ️ About Team Members</h3>
+							<ul>
+								<li><strong>Analyst:</strong> Can perform threat analysis and view reports</li>
+								<li><strong>Manager:</strong> Can manage team members and access analytics</li>
+								<li><strong>Admin:</strong> Full access including billing and settings</li>
+								<li>Team members share your company branding and subscription configuration</li>
+								<li>Each team member maintains their own analysis history and data</li>
+							</ul>
+						</div>
+					</article>
+				)}
 
 				<article className="profile-page__card">
 					<h2>{t('profile.privacy_and_compliance')}</h2>

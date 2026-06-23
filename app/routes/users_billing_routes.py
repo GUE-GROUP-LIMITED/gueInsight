@@ -1,7 +1,98 @@
 from datetime import timedelta
+import logging
 
 from flask import request, current_app, Response
 from flask_login import current_user, login_required
+
+logger = logging.getLogger(__name__)
+
+
+def _send_upgrade_receipt_email(user, transaction, new_plan, tier_config, previous_plan):
+    """Send customized receipt email when user upgrades or downgrades subscription."""
+    try:
+        from app.notifications.alerts import send_email
+        
+        plan_names = {
+            'free': 'Free',
+            'starter': 'Starter',
+            'compliance_pro': 'Compliance Pro',
+            'enterprise_professional': 'Enterprise Professional',
+            'enterprise_risk': 'Enterprise Risk',
+            'enterprise_elite': 'Enterprise Elite',
+            'premium_individual': 'Premium Individual',
+            'premium_small_business': 'Premium Small Business',
+            'premium_large_business': 'Premium Large Business',
+        }
+        
+        old_plan_name = plan_names.get(previous_plan, previous_plan.replace('_', ' ').title())
+        new_plan_name = tier_config.get('name', plan_names.get(new_plan, new_plan.replace('_', ' ').title()))
+        amount = transaction.amount_minor / 100.0
+        transaction_dt = getattr(transaction, 'created_at', None)
+        
+        subject = f"✓ Subscription Upgrade Confirmed - Receipt #{transaction.id}"
+        
+        body = f"""
+Hello {user.first_name or 'User'},
+
+Your subscription has been successfully upgraded!
+
+══════════════════════════════════════════
+UPGRADE DETAILS
+══════════════════════════════════════════
+
+Previous Plan:  {old_plan_name}
+New Plan:       {new_plan_name}
+Effective Date: {transaction.period_start.strftime('%B %d, %Y') if transaction.period_start else 'Today'}
+Upgrade Date:   {transaction_dt.strftime('%B %d, %Y %H:%M:%S UTC') if transaction_dt else 'Today'}
+
+══════════════════════════════════════════
+BILLING INFORMATION
+══════════════════════════════════════════
+
+Receipt Number: REC-{transaction.id:06d}
+Amount:         €{amount:.2f}/month
+Billing Cycle:  Monthly
+Currency:       EUR (€)
+Status:         ✓ Completed
+
+Subscription Period:
+  Start: {transaction.period_start.strftime('%B %d, %Y') if transaction.period_start else 'Today'}
+  End:   {transaction.period_end.strftime('%B %d, %Y') if transaction.period_end else 'In 30 days'}
+
+══════════════════════════════════════════
+NEW PLAN FEATURES
+══════════════════════════════════════════
+
+{new_plan_name} includes:
+
+"""
+        
+        if 'features' in tier_config:
+            for feature in tier_config['features']:
+                body += f"• {feature}\n"
+        
+        body += f"""
+══════════════════════════════════════════
+NEXT STEPS
+══════════════════════════════════════════
+
+Your new plan is active immediately. You can:
+
+1. View your billing history: https://app.gueinsight.com/billing
+2. Download your receipt: https://app.gueinsight.com/billing (Receipt #{transaction.id})
+3. Manage your subscription: https://app.gueinsight.com/subscription
+4. Contact support: support@gueinsight.com
+
+Thank you for upgrading to {new_plan_name}!
+
+Best regards,
+The gueInsight Team
+        """
+        
+        send_email(user.email, subject, body)
+        logger.info(f"Sent upgrade receipt email to {user.email} for upgrade to {new_plan}")
+    except Exception as e:
+        logger.error(f"Failed to send upgrade receipt email: {e}")
 
 
 def register_billing_routes(users_bp):
@@ -89,78 +180,239 @@ def register_billing_routes(users_bp):
     @users_bp.route('/auth/billing/<int:txn_id>/receipt', methods=['GET'])
     @login_required
     def auth_billing_receipt(txn_id):
+        import base64
+        import os
         current_app.logger.info('auth_billing_receipt called for txn_id=%s user_id=%s', txn_id, getattr(current_user, 'id', None))
         tx = ur.BillingTransaction.query.filter_by(id=txn_id, user_id=current_user.id).first()
         if not tx:
             current_app.logger.info('auth_billing_receipt not found txn=%s uid=%s', txn_id, getattr(current_user, 'id', None))
             return {'error': 'Transaction not found.'}, 404
 
+        # --- Logo (base64 inline so it works in blob windows and downloads) ---
+        logo_html = ''
+        logo_candidates = [
+            os.path.join(current_app.root_path, '..', 'frontend', 'public', 'img', 'logo.png'),
+            os.path.join(current_app.root_path, 'static', 'img', 'logo.png'),
+            os.path.join(current_app.root_path, '..', 'frontend', 'src', 'img', 'logo.png'),
+        ]
+        for logo_path in logo_candidates:
+            if os.path.isfile(logo_path):
+                try:
+                    with open(logo_path, 'rb') as logo_file:
+                        b64 = base64.b64encode(logo_file.read()).decode('ascii')
+                    logo_html = f'<img src="data:image/png;base64,{b64}" alt="GueInsight" style="height:48px; width:auto; display:block;">'
+                    break
+                except Exception:
+                    continue
+
+        if not logo_html:
+            logo_html = '<div style="font-size:22px; font-weight:700; color:#0b66c3; letter-spacing:-0.5px;">GueInsight</div>'
+
         amount_major = (tx.amount_minor or 0) / 100.0
-        created = (tx.created_at.isoformat() if getattr(tx, 'created_at', None) else '')
-        period_start = (tx.period_start.isoformat() if getattr(tx, 'period_start', None) else '')
-        period_end = (tx.period_end.isoformat() if getattr(tx, 'period_end', None) else '')
+        created_dt = getattr(tx, 'created_at', None)
+        created_fmt = created_dt.strftime('%d %B %Y, %H:%M UTC') if created_dt else ''
+        period_start = (tx.period_start.strftime('%d %b %Y') if getattr(tx, 'period_start', None) else '—')
+        period_end   = (tx.period_end.strftime('%d %b %Y')   if getattr(tx, 'period_end',   None) else '—')
         status = (tx.status.value if hasattr(tx.status, 'value') else str(tx.status))
+        status_color = {'succeeded': '#0b7c4d', 'failed': '#b81f2e', 'pending': '#7a5700'}.get(status.lower(), '#444')
+        status_bg    = {'succeeded': '#d4f4e5', 'failed': '#fde8e8', 'pending': '#fef3c7'}.get(status.lower(), '#f0f0f0')
 
-        item_label = getattr(tx, 'description', None) or tx.provider or 'Subscription'
+        item_label = getattr(tx, 'description', None) or 'Subscription'
 
-        html = f"""
-        <!doctype html>
-        <html>
-        <head>
-            <meta charset=\"utf-8\">
-            <title>Receipt #{tx.id}</title>
-            <style>
-                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; padding: 28px; color: #111; }}
-                .receipt {{ max-width: 720px; margin: 0 auto; border: 1px solid #e6e6e6; padding: 24px; }}
-                .header {{ display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }}
-                h1 {{ margin:0; font-size:20px; }}
-                table {{ width:100%; border-collapse:collapse; margin-top:12px; }}
-                td, th {{ text-align:left; padding:8px 6px; border-bottom:1px solid #f2f2f2; }}
-                .total {{ font-weight:700; font-size:18px; }}
-            </style>
-        </head>
-        <body>
-            <div class=\"receipt\">
-                <div class=\"header\">
-                    <div>
-                        <h1>gueInsight</h1>
-                        <div>Receipt #{tx.id}</div>
-                    </div>
-                    <div>
-                        <div>{current_app.config.get('COMPANY_NAME', 'gueInsight')}</div>
-                        <div>{current_app.config.get('COMPANY_ADDRESS', '')}</div>
-                    </div>
-                </div>
+        # Upgrade/downgrade plan-change section
+        upgrade_section = ''
+        provider_txn_label = (tx.provider_txn_id or '').strip()
+        if provider_txn_label.startswith('plan-change:'):
+            parts = provider_txn_label.split(':', 2)
+            if len(parts) == 3:
+                previous_plan = parts[1].replace('_', ' ').title()
+                new_plan      = parts[2].replace('_', ' ').title()
+                upgrade_section = f"""
+                <tr style="background:#f0f7ff;">
+                    <td style="padding:10px 6px;"><strong>Plan change</strong></td>
+                    <td style="padding:10px 6px; color:#666;">{previous_plan} → <strong style="color:#0b66c3;">{new_plan}</strong></td>
+                    <td></td>
+                </tr>"""
 
-                <div>
-                    <strong>Bill To</strong>
-                    <div>{current_user.first_name or ''} {current_user.last_name or ''}</div>
-                    <div>{current_user.email or ''}</div>
-                </div>
+        # Customer company name if available
+        customer_company = ''
+        if getattr(current_user, 'company_name', None):
+            customer_company = f'<div style="color:#555;">{current_user.company_name}</div>'
 
-                <table>
-                    <thead>
-                        <tr><th>Description</th><th>Period</th><th style=\"text-align:right\">Amount</th></tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>{item_label}</td>
-                            <td>{period_start} -> {period_end}</td>
-                            <td style=\"text-align:right\">{amount_major:.2f} { (tx.currency or '').upper() }</td>
-                        </tr>
-                    </tbody>
-                </table>
+        html = f"""<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Receipt #{tx.id:06d} — GueInsight</title>
+    <style>
+        * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+               background: #f4f6f9; color: #111; padding: 32px 16px; }}
+        .page {{ max-width: 740px; margin: 0 auto; background: #fff;
+                 border-radius: 10px; box-shadow: 0 2px 16px rgba(0,0,0,.10); overflow: hidden; }}
 
-                <div style=\"margin-top:18px; display:flex; justify-content:space-between; align-items:center;\">
-                    <div>Status: {status}</div>
-                    <div class=\"total\">Total: {amount_major:.2f} { (tx.currency or '').upper() }</div>
-                </div>
+        /* ── Header band ── */
+        .hd {{ background: linear-gradient(135deg, #03275e 0%, #0b66c3 100%);
+               padding: 28px 32px; display: flex; justify-content: space-between; align-items: center; }}
+        .hd-logo {{ display: flex; align-items: center; gap: 14px; }}
+        .hd-wordmark {{ color: #fff; }}
+        .hd-wordmark-title {{ font-size: 20px; font-weight: 700; letter-spacing: -.3px; }}
+        .hd-wordmark-sub {{ font-size: 11px; opacity: .75; margin-top: 2px; }}
+        .hd-right {{ text-align: right; color: #fff; }}
+        .hd-right h2 {{ font-size: 15px; font-weight: 600; opacity: .9; }}
+        .hd-right .rec-num {{ font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }}
 
-                <div style=\"margin-top:18px; font-size:12px; color:#666\">Created: {created}</div>
+        /* ── Body ── */
+        .body {{ padding: 32px; }}
+
+        /* ── Two-column address row ── */
+        .addr-row {{ display: flex; gap: 32px; margin-bottom: 28px; }}
+        .addr-block {{ flex: 1; }}
+        .addr-block h4 {{ font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+                          color: #888; margin-bottom: 8px; }}
+        .addr-block p {{ font-size: 13px; line-height: 1.7; color: #333; }}
+        .addr-block a {{ color: #0b66c3; text-decoration: none; }}
+
+        /* ── Table ── */
+        table {{ width: 100%; border-collapse: collapse; margin-bottom: 24px; }}
+        thead tr {{ background: #f0f4f8; }}
+        th {{ font-size: 11px; text-transform: uppercase; letter-spacing: .6px;
+              color: #666; padding: 10px 12px; text-align: left; }}
+        th:last-child {{ text-align: right; }}
+        td {{ padding: 12px; font-size: 13px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }}
+        td:last-child {{ text-align: right; font-weight: 600; }}
+        tbody tr:last-child td {{ border-bottom: none; }}
+
+        /* ── Totals row ── */
+        .totals {{ border-top: 2px solid #e0e0e0; padding-top: 16px;
+                   display: flex; justify-content: flex-end; margin-bottom: 24px; }}
+        .totals-box {{ text-align: right; }}
+        .totals-box .lbl {{ font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: .6px; margin-bottom: 4px; }}
+        .totals-box .amt {{ font-size: 26px; font-weight: 700; color: #0b66c3; }}
+
+        /* ── Status badge ── */
+        .badge {{ display: inline-block; padding: 4px 10px; border-radius: 20px;
+                  font-size: 11px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; }}
+
+        /* ── Meta row ── */
+        .meta {{ font-size: 11px; color: #888; line-height: 1.8; margin-bottom: 24px; }}
+
+        /* ── Footer band ── */
+        .ft {{ background: #f0f4f8; border-top: 1px solid #e0e0e0;
+               padding: 20px 32px; font-size: 11px; color: #666;
+               display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }}
+        .ft a {{ color: #0b66c3; text-decoration: none; }}
+
+        @media print {{
+            body {{ background: #fff; padding: 0; }}
+            .page {{ box-shadow: none; border-radius: 0; }}
+        }}
+    </style>
+</head>
+<body>
+<div class="page">
+
+    <!-- Header -->
+    <div class="hd">
+        <div class="hd-logo">
+            {logo_html}
+            <div class="hd-wordmark">
+                <div class="hd-wordmark-title">GueInsight</div>
+                <div class="hd-wordmark-sub">A Gue Cyber Product</div>
             </div>
-        </body>
-        </html>
-        """
+        </div>
+        <div class="hd-right">
+            <h2>Payment Receipt</h2>
+            <div class="rec-num">#{tx.id:06d}</div>
+        </div>
+    </div>
+
+    <!-- Body -->
+    <div class="body">
+
+        <!-- From / Bill To -->
+        <div class="addr-row">
+            <div class="addr-block">
+                <h4>From</h4>
+                <p>
+                    <strong>Gue Cyber BV</strong><br>
+                    Doorniksesteenweg 3B bus 101<br>
+                    8580 Avelgem, Belgium<br>
+                    Enterprise no. 1037.163.392<br>
+                    <a href="mailto:support@gueinsight.com">support@gueinsight.com</a>
+                </p>
+            </div>
+            <div class="addr-block">
+                <h4>Bill To</h4>
+                <p>
+                    <strong>{current_user.first_name or ''} {current_user.last_name or ''}</strong><br>
+                    {customer_company}
+                    <a href="mailto:{current_user.email or ''}">{current_user.email or ''}</a>
+                </p>
+            </div>
+            <div class="addr-block">
+                <h4>Details</h4>
+                <p>
+                    <strong>Date:</strong> {created_fmt}<br>
+                    <strong>Period:</strong> {period_start} – {period_end}<br>
+                    <strong>Status:</strong>
+                    <span class="badge" style="background:{status_bg}; color:{status_color};">{status.upper()}</span>
+                </p>
+            </div>
+        </div>
+
+        <!-- Line items -->
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:50%">Description</th>
+                    <th>Period</th>
+                    <th>Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>{item_label}</td>
+                    <td style="color:#666;">{period_start} – {period_end}</td>
+                    <td>{amount_major:.2f} {(tx.currency or 'EUR').upper()}</td>
+                </tr>
+                {upgrade_section}
+            </tbody>
+        </table>
+
+        <!-- Total -->
+        <div class="totals">
+            <div class="totals-box">
+                <div class="lbl">Total due</div>
+                <div class="amt">{amount_major:.2f} {(tx.currency or 'EUR').upper()}</div>
+            </div>
+        </div>
+
+        <!-- Meta -->
+        <div class="meta">
+            Transaction ID: <strong>{tx.id}</strong> &nbsp;·&nbsp;
+            Receipt: <strong>#{tx.id:06d}</strong> &nbsp;·&nbsp;
+            Generated: {created_fmt}
+        </div>
+
+    </div><!-- /body -->
+
+    <!-- Footer -->
+    <div class="ft">
+        <span>
+            <strong>Gue Cyber BV</strong> · Doorniksesteenweg 3B bus 101, 8580 Avelgem, Belgium ·
+            Enterprise no. 1037.163.392
+        </span>
+        <span>
+            <a href="https://www.guecyber.com">guecyber.com</a> ·
+            <a href="mailto:support@gueinsight.com">support@gueinsight.com</a>
+        </span>
+    </div>
+
+</div>
+</body>
+</html>"""
 
         return Response(html, mimetype='text/html')
 
@@ -171,17 +423,28 @@ def register_billing_routes(users_bp):
         requested_plan = str(payload.get('plan') or '').strip().lower()
 
         plan_aliases = {
-            'starter': 'premium_individual',
-            'growth': 'premium_small_business',
-            'scale': 'premium_large_business',
-            'premium': 'premium_individual',
+            'starter': 'starter',
+            'growth': 'enterprise_professional',
+            'scale': 'enterprise_elite',
+            'premium': 'compliance_pro',
+            'premium_individual': 'compliance_pro',
+            'premium_small_business': 'enterprise_risk',
+            'premium_large_business': 'enterprise_elite',
+            'freemium': 'free',
         }
         normalized_plan = plan_aliases.get(requested_plan, requested_plan)
-        allowed_plans = {'premium_individual', 'premium_small_business', 'premium_large_business'}
-
+        
+        # Support all new tier plans
+        allowed_plans = {
+            'free', 'starter', 'compliance_pro', 'enterprise_professional',
+            'enterprise_risk', 'enterprise_elite',
+            # Legacy names for backward compatibility
+            'premium_individual', 'premium_small_business', 'premium_large_business'
+        }
+        
         if normalized_plan not in allowed_plans:
             return {
-                'error': 'Invalid plan. Use premium_individual, premium_small_business, or premium_large_business.'
+                'error': 'Invalid plan. Supported plans: free, starter, compliance_pro, enterprise_professional, enterprise_risk, enterprise_elite'
             }, 400
 
         now = ur._utc_now()
@@ -196,19 +459,108 @@ def register_billing_routes(users_bp):
         if current_subscription and current_plan == normalized_plan and current_subscription.end_date and current_subscription.end_date >= now:
             return {'error': 'You are already on this active plan.'}, 400
 
-        start_date = now
-        if current_subscription and current_subscription.end_date and current_subscription.end_date > now:
-            start_date = current_subscription.end_date
+        # Get tier configuration
+        from app.subscription_service import COMPLIANCE_TIERS
+        tier_config = COMPLIANCE_TIERS.get(normalized_plan, {})
+        
+        # Check if payment is required for this plan
+        requires_payment = tier_config.get('requires_payment', False)
+        
+        if not requires_payment:
+            # Free plan - create subscription directly without payment
+            start_date = now
+            if current_subscription and current_subscription.end_date and current_subscription.end_date > now:
+                start_date = current_subscription.end_date
 
-        new_subscription = ur.Subscription(
-            user_id=current_user.id,
-            plan=normalized_plan,
-            start_date=start_date,
-            end_date=start_date + timedelta(days=30),
-        )
-        ur.db.session.add(new_subscription)
-        ur.db.session.commit()
-        return {'message': 'Subscription created'}, 200
+            new_subscription = ur.Subscription(
+                user_id=current_user.id,
+                plan=normalized_plan,
+                start_date=start_date,
+                end_date=start_date + timedelta(days=365),  # Free tier: 1 year validity
+                payment_method='none',
+            )
+            ur.db.session.add(new_subscription)
+            ur.db.session.commit()
+            
+            # Create billing transaction for free plan
+            amount_minor = tier_config.get('price_monthly_eur', 0)
+            transaction = ur.BillingTransaction(
+                user_id=current_user.id,
+                subscription_id=new_subscription.id,
+                provider='internal',
+                provider_txn_id=f'plan-change:{current_plan or "free"}:{normalized_plan}',
+                amount_minor=amount_minor,
+                currency='EUR',
+                status=ur.BillingStatus.SUCCEEDED,
+                period_start=start_date,
+                period_end=start_date + timedelta(days=365),
+            )
+            ur.db.session.add(transaction)
+            ur.db.session.commit()
+            
+            return {
+                'message': 'Free plan activated',
+                'transaction_id': transaction.id,
+                'receipt_url': f'/auth/billing/{transaction.id}/receipt'
+            }, 200
+        
+        # Paid plan - redirect to Stripe Checkout
+        try:
+            import stripe
+            from flask import current_app
+            
+            stripe.api_key = current_app.config.get('STRIPE_SECRET_KEY')
+            
+            # Get or create Stripe customer
+            stripe_customer_id = current_user.stripe_customer_id
+            if not stripe_customer_id:
+                customer = stripe.Customer.create(
+                    email=current_user.email,
+                    name=f"{current_user.first_name} {current_user.last_name}",
+                    metadata={'user_id': str(current_user.id)},
+                )
+                stripe_customer_id = customer.id
+                current_user.stripe_customer_id = stripe_customer_id
+                ur.db.session.add(current_user)
+                ur.db.session.commit()
+            
+            # Get Stripe price ID for plan
+            price_id = tier_config.get('stripe_price_id')
+            if not price_id:
+                return {'error': f'Stripe integration not configured for {normalized_plan} plan'}, 500
+            
+            # Create Stripe Checkout session
+            checkout_session = stripe.checkout.Session.create(
+                payment_method_types=['card'],
+                customer=stripe_customer_id,
+                line_items=[
+                    {
+                        'price': price_id,
+                        'quantity': 1,
+                    }
+                ],
+                mode='subscription',
+                success_url=current_app.config.get('FRONTEND_URL', 'http://localhost:5173') + '/subscription?upgrade=success',
+                cancel_url=current_app.config.get('FRONTEND_URL', 'http://localhost:5173') + '/subscription?upgrade=cancelled',
+                metadata={
+                    'user_id': str(current_user.id),
+                    'tier': normalized_plan,
+                    'current_plan': current_plan or 'free',
+                    'trial_days': '14',
+                },
+                billing_address_collection='auto',
+                phone_number_collection={'enabled': True},
+            )
+            
+            return {
+                'message': 'Checkout session created',
+                'checkout_url': checkout_session.url,
+                'session_id': checkout_session.id,
+            }, 200
+            
+        except Exception as e:
+            current_app.logger.error(f"Failed to create Stripe checkout session: {e}")
+            return {'error': f'Failed to initiate checkout: {str(e)}'}, 500
 
     @users_bp.route('/auth/billing/receipt/raw/<int:txn_id>', methods=['GET'])
     @login_required
@@ -238,148 +590,3 @@ def register_billing_routes(users_bp):
         """
 
         return Response(html, mimetype='text/html')
-
-    @users_bp.route('/auth/subscription/plans', methods=['GET'])
-    def auth_subscription_plans():
-        from app.subscription_service import COMPLIANCE_TIERS
-        plans = []
-        for tier_key, config in COMPLIANCE_TIERS.items():
-            plans.append({
-                'id': tier_key,
-                'name': config.get('name'),
-                'price': config.get('price_monthly_eur') / 100,  # Convert from cents to euros
-                'price_eur': f"€{config.get('price_monthly_eur', 0) / 100:.2f}",
-                'price_monthly_eur': config.get('price_monthly_eur'),
-                'price_annually_eur': config.get('price_annually_eur'),
-                'description': config.get('description'),
-                'features': config.get('features', []),
-                'compliance_level': config.get('compliance_level'),
-                'gdpr_ready': config.get('gdpr_ready', False),
-                'nis2_ready': config.get('nis2_ready', False),
-                'storage_gb': config.get('storage_gb'),
-            })
-        return plans, 200
-
-    @users_bp.route('/auth/subscription', methods=['GET'])
-    @login_required
-    def auth_subscription():
-        latest_subscription = (
-            ur.Subscription.query
-            .filter_by(user_id=current_user.id)
-            .order_by(ur.Subscription.end_date.desc())
-            .first()
-        )
-        
-        if not latest_subscription:
-            return {
-                'tier': 'Free',
-                'status': 'active',
-                'start_date': None,
-                'end_date': None,
-                'is_trial': False,
-            }, 200
-
-        status = 'active' if latest_subscription.end_date and latest_subscription.end_date >= ur._utc_now() else 'expired'
-        return {
-            'id': latest_subscription.id,
-            'tier': latest_subscription.plan,
-            'status': status,
-            'start_date': latest_subscription.start_date.isoformat() if latest_subscription.start_date else None,
-            'end_date': latest_subscription.end_date.isoformat() if latest_subscription.end_date else None,
-            'is_trial': bool(getattr(latest_subscription, 'is_trial', False)),
-            'stripe_subscription_id': getattr(latest_subscription, 'stripe_subscription_id', None),
-        }, 200
-
-    @users_bp.route('/auth/user', methods=['GET'])
-    @login_required
-    def auth_user():
-        return ur._serialize_auth_user(current_user), 200
-
-    @users_bp.route('/checkout/create-session', methods=['POST'])
-    @login_required
-    def checkout_create_session():
-        import stripe
-        payload = request.get_json(silent=True) or request.form
-        plan_name = str(payload.get('plan_name') or '').strip().lower()
-        billing_cycle = str(payload.get('billing_cycle') or 'monthly').strip().lower()
-
-        from app.subscription_service import COMPLIANCE_TIERS
-        plan_map = {v.get('name', '').lower(): k for k, v in COMPLIANCE_TIERS.items()}
-        tier_key = plan_map.get(plan_name)
-        
-        if not tier_key or tier_key not in COMPLIANCE_TIERS:
-            return {'error': f'Invalid plan: {plan_name}'}, 400
-
-        tier_config = COMPLIANCE_TIERS[tier_key]
-        stripe_key = current_app.config.get('STRIPE_API_KEY')
-        if not stripe_key:
-            return {'error': 'Stripe configuration missing'}, 500
-
-        stripe.api_key = stripe_key
-        customer_id = getattr(current_user, 'stripe_customer_id', None)
-        
-        # Create or retrieve customer
-        if not customer_id:
-            try:
-                customer = stripe.Customer.create(
-                    email=current_user.email,
-                    name=f"{current_user.first_name} {current_user.last_name}",
-                    metadata={'user_id': current_user.id}
-                )
-                customer_id = customer.id
-                current_user.stripe_customer_id = customer_id
-                ur.db.session.commit()
-            except Exception as e:
-                current_app.logger.exception('Failed to create Stripe customer')
-                return {'error': f'Failed to create checkout: {str(e)}'}, 500
-
-        # Create checkout session
-        try:
-            price_cents = tier_config.get('price_monthly_eur') if billing_cycle == 'monthly' else tier_config.get('price_annually_eur')
-            
-            session = stripe.checkout.Session.create(
-                customer=customer_id,
-                payment_method_types=['card'],
-                line_items=[{
-                    'price_data': {
-                        'currency': 'eur',
-                        'product_data': {
-                            'name': tier_config.get('name'),
-                            'description': tier_config.get('description'),
-                        },
-                        'unit_amount': price_cents,
-                        'recurring': {
-                            'interval': 'month' if billing_cycle == 'monthly' else 'year',
-                            'interval_count': 1,
-                        } if billing_cycle in ['monthly', 'annual'] else None,
-                    },
-                    'quantity': 1,
-                }] if billing_cycle in ['monthly', 'annual'] else [{
-                    'price_data': {
-                        'currency': 'eur',
-                        'product_data': {
-                            'name': tier_config.get('name'),
-                            'description': tier_config.get('description'),
-                        },
-                        'unit_amount': price_cents,
-                    },
-                    'quantity': 1,
-                }],
-                mode='subscription' if billing_cycle in ['monthly', 'annual'] else 'payment',
-                success_url=f"{current_app.config.get('FRONTEND_URL', 'http://localhost:5174')}/subscription?session_id={{CHECKOUT_SESSION_ID}}",
-                cancel_url=f"{current_app.config.get('FRONTEND_URL', 'http://localhost:5174')}/subscription",
-                metadata={
-                    'user_id': current_user.id,
-                    'tier': tier_key,
-                    'trial_days': 14,
-                }
-            )
-            
-            return {
-                'message': 'Checkout session created',
-                'session_id': session.id,
-                'checkout_url': session.url,
-            }, 201
-        except Exception as e:
-            current_app.logger.exception('Failed to create Stripe checkout session')
-            return {'error': f'Failed to create checkout: {str(e)}'}, 500

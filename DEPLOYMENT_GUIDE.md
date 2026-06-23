@@ -93,12 +93,23 @@ pytest tests/ -v --cov=app --cov-report=term-missing
 
 ### 5. Start Staging Application
 
+**Linux/macOS:**
 ```bash
-# Using Gunicorn (recommended for production)
-gunicorn -w 4 -b 0.0.0.0:8000 --timeout 120 app:app
+# Using provided script (recommended)
+chmod +x ./scripts/run_production_linux.sh
+./scripts/run_production_linux.sh --port 8000 --workers 4
 
-# Or using Flask development server (NOT for production)
-FLASK_APP=app.app FLASK_ENV=staging python -m flask run --host=0.0.0.0 --port=8000
+# Or manually with Gunicorn
+gunicorn -w 4 -b 0.0.0.0:8000 --timeout 120 app:app
+```
+
+**Windows:**
+```powershell
+# Using provided script (recommended)
+.\scripts\run_production_windows.ps1 -Port 8000 -Workers 2
+
+# Or manually with Waitress
+.\.venv\Scripts\waitress-serve.exe --listen=0.0.0.0:8000 wsgi:app
 ```
 
 ### 6. Smoke Tests on Staging

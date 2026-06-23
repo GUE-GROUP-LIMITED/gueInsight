@@ -6,43 +6,77 @@ from app import db
 
 # Compliance-focused pricing tiers with feature matrix
 COMPLIANCE_TIERS = {
-    "starter": {
-        "name": "Starter",
+    "free": {
+        "name": "Free",
         "price_monthly_eur": 0,
         "price_annually_eur": 0,
-        "description": "Basic threat detection for individuals and small teams",
+        "description": "Get started with basic analysis and learning",
         "features": [
-            "Manual file/text analysis",
-            "2 MB file limit",
-            "10k character text limit",
-            "Basic threat scoring",
-            "Email alerts",
+            "Basic file types (TXT, JSON, XML, logs)",
+            "Manual analysis",
+            "Community support",
         ],
         "compliance_level": "None",
         "gdpr_ready": False,
         "nis2_ready": False,
         "storage_gb": 1,
+        "stripe_price_id": None,  # Free tier - no payment
+        "requires_payment": False,
+    },
+    "starter": {
+        "name": "Starter",
+        "price_monthly_eur": 4990,  # €49.90/month in cents
+        "price_annually_eur": 49900,
+        "description": "For small teams and individual professionals",
+        "features": [
+            "PDF, PCAP, logs analysis",
+            "Basic threat detection",
+            "Email support",
+            "30-day retention",
+        ],
+        "compliance_level": "Basic",
+        "gdpr_ready": False,
+        "nis2_ready": False,
+        "storage_gb": 5,
+        "stripe_price_id": "price_starter_eur_monthly",  # Test mode price ID - update with actual Stripe ID
+        "requires_payment": True,
     },
     "compliance_pro": {
         "name": "Compliance Pro",
-        "price_monthly_eur": 2990,  # €29.90/month in cents
-        "price_annually_eur": 29900,
+        "price_monthly_eur": 9990,  # €99.90/month in cents
+        "price_annually_eur": 99900,
         "description": "GDPR-focused threat detection with compliance audit trails",
         "features": [
-            "All Starter features",
-            "GDPR data export/deletion",
-            "Audit logging (90 days)",
-            "Email + Slack alerts",
-            "8 MB file limit",
-            "50k character text limit",
-            "Threat history (30 days)",
-            "M365 basic integration",
+            "PDF, PCAP, logs analysis",
+            "GDPR export & deletion tools",
+            "90-day retention",
+            "M365 connector (basic)",
         ],
         "compliance_level": "GDPR Article 5",
         "gdpr_ready": True,
         "nis2_ready": False,
         "storage_gb": 10,
-        "stripe_price_id": None,  # Set to your Stripe Price ID in production, e.g. 'price_1N...'
+        "stripe_price_id": "price_compliance_pro_eur_monthly",  # Test mode price ID - update with actual Stripe ID
+        "requires_payment": True,
+    },
+    "enterprise_professional": {
+        "name": "Enterprise Professional",
+        "price_monthly_eur": 29990,  # €299.90/month in cents
+        "price_annually_eur": 299900,
+        "description": "GDPR + NIS2 compliance for growing enterprises",
+        "features": [
+            "All file types + databases",
+            "Full GDPR compliance tools",
+            "NIS2 risk management",
+            "M365 + Google Workspace",
+            "90-day retention & audit logs",
+        ],
+        "compliance_level": "GDPR + NIS2",
+        "gdpr_ready": True,
+        "nis2_ready": True,
+        "storage_gb": 50,
+        "stripe_price_id": "price_enterprise_prof_eur_monthly",  # Test mode price ID - update with actual Stripe ID
+        "requires_payment": True,
     },
     "enterprise_risk": {
         "name": "Enterprise Risk",
@@ -50,23 +84,22 @@ COMPLIANCE_TIERS = {
         "price_annually_eur": 499000,
         "description": "NIS2 + ISO27001 critical infrastructure risk management",
         "features": [
-            "All Compliance Pro features",
+            "All Enterprise Professional features",
             "NIS2 incident reporting",
             "M365 + Google Workspace connectors",
             "Advanced DLP policy assessment",
             "Privilege escalation detection",
             "Device compliance monitoring",
-            "Audit logging (1 year)",
+            "1-year retention & audit logs",
             "Custom alert rules",
-            "16 MB file limit",
-            "150k character text limit",
             "Priority support",
         ],
         "compliance_level": "NIS2 + ISO27001",
         "gdpr_ready": True,
         "nis2_ready": True,
         "storage_gb": 100,
-        "stripe_price_id": None,
+        "stripe_price_id": "price_enterprise_risk_eur_monthly",  # Test mode price ID - update with actual Stripe ID
+        "requires_payment": True,
     },
     "enterprise_elite": {
         "name": "Enterprise Elite",
@@ -88,7 +121,8 @@ COMPLIANCE_TIERS = {
         "gdpr_ready": True,
         "nis2_ready": True,
         "storage_gb": 1000,
-        "stripe_price_id": None,
+        "stripe_price_id": "price_enterprise_elite_eur_monthly",  # Test mode price ID - update with actual Stripe ID
+        "requires_payment": True,
     },
 }
 

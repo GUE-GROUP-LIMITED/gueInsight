@@ -1,0 +1,18 @@
+{
+  "indicator": "suspiciousfile.rar",
+  "file_type": "text/plain",
+  "metadata": {
+    "size": 18,
+    "last_modified": null
+  },
+  "indicators_of_compromise": [],
+  "suspicious_patterns": [],
+  "alerts_triggered": [],
+  "enrichment": {
+    "virustotal": {
+      "status": "error",
+      "message": "VirusTotal URL check failed: 400"
+    }
+  },
+  "threat_level": "Low"
+}

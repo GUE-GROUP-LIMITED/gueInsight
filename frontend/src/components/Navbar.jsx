@@ -242,6 +242,14 @@ const Navbar = () => {
                     >
                       {t('topbar.account_settings')}
                     </NavLink>
+                    <NavLink
+                      to="/billing"
+                      className="app-navbar__account-item"
+                      role="menuitem"
+                      onClick={closeMenu}
+                    >
+                      💳 Billing &amp; Invoices
+                    </NavLink>
                     <button
                       type="button"
                       className="app-navbar__account-item app-navbar__account-item--danger"

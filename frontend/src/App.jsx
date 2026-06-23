@@ -9,8 +9,10 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
+import AnalysisResults from './pages/AnalysisResults';
 import Profile from './pages/Profile';
 import Subscription from './pages/Subscription';
+import Billing from './pages/Billing';
 import Payment from './pages/Payment';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
@@ -34,8 +36,10 @@ const AppShell = () => {
         <Route path="/signup" element={<Signup />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/dashboard" element={<ProtectedRoute userOnly={true}><Dashboard /></ProtectedRoute>} />
+        <Route path="/analysis/:analysisId" element={<ProtectedRoute userOnly={true}><AnalysisResults /></ProtectedRoute>} />
         <Route path="/support" element={<ProtectedRoute userOnly={true}><Support /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
         <Route path="/subscription" element={<Subscription />} />
         <Route path="/docs" element={<Documentation />} />
         <Route path="/payment" element={<ProtectedRoute><Payment /></ProtectedRoute>} />

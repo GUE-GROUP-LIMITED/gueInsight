@@ -207,6 +207,10 @@ class UserPreference(db.Model):
     notification_email_enabled = Column(Boolean, nullable=False, default=True)
     notification_inapp_enabled = Column(Boolean, nullable=False, default=True)
     dashboard_layout = Column(String(2000), nullable=True)
+    company_name = Column(String(255), nullable=True)
+    company_logo_url = Column(String(500), nullable=True)
+    company_address = Column(String(500), nullable=True)
+    company_contact = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=_utc_now)
     updated_at = Column(DateTime, default=_utc_now, onupdate=_utc_now)
 
@@ -221,6 +225,10 @@ class UserPreference(db.Model):
             'notification_email_enabled': bool(self.notification_email_enabled),
             'notification_inapp_enabled': bool(self.notification_inapp_enabled),
             'dashboard_layout': self.dashboard_layout,
+            'company_name': self.company_name,
+            'company_logo_url': self.company_logo_url,
+            'company_address': self.company_address,
+            'company_contact': self.company_contact,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
         }
 

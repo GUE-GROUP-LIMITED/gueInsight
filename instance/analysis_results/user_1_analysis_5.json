@@ -1,0 +1,25 @@
+{
+  "indicator": "suspicious-domain.com",
+  "file_type": "text/plain",
+  "metadata": {
+    "size": 21,
+    "last_modified": null
+  },
+  "indicators_of_compromise": [],
+  "suspicious_patterns": [
+    {
+      "name": "Suspicious Pattern Match",
+      "description": "domain contains hyphen; possible typosquatting",
+      "confidence": 0.8,
+      "evidence": "domain contains hyphen; possible typosquatting"
+    }
+  ],
+  "alerts_triggered": [],
+  "enrichment": {
+    "virustotal": {
+      "status": "error",
+      "message": "VirusTotal API key not configured"
+    }
+  },
+  "threat_level": "Low"
+}

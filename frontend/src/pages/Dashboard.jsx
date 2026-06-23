@@ -1,5 +1,5 @@
 import { useContext, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { api } from '../services/api';
 import './Dashboard.css';
@@ -16,6 +16,7 @@ const quickActions = ['Upload indicators', 'Run enrichment', 'Export report', 'N
 export default function Dashboard() {
   const { user } = useContext(AuthContext);
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [reportName, setReportName] = useState('incident-summary.pdf');
   const [reportSent, setReportSent] = useState(false);
   const [indicatorValue, setIndicatorValue] = useState('');
@@ -147,15 +148,28 @@ export default function Dashboard() {
     [filteredTransactions.length, lastSubmission, planLimitsText, reportName, t]
   );
 
-  const handleGenerate = (event) => {
+  const handleGenerate = async (event) => {
     event.preventDefault();
     const cleaned = indicatorValue.trim();
     if (!cleaned) return;
 
-    setReportSent(false);
-    setLastSubmission(cleaned);
-    setReportName(`report-${Date.now()}.pdf`);
-    setIndicatorValue('');
+    try {
+      const response = await api.post('/api/analysis/submit', { indicator: cleaned });
+      const analysisId = response?.data?.analysisId;
+
+      setReportSent(false);
+      setLastSubmission(cleaned);
+      setReportName(`report-${analysisId || Date.now()}.pdf`);
+      setIndicatorValue('');
+
+      if (analysisId) {
+        navigate(`/analysis/${analysisId}`);
+      }
+    } catch (error) {
+      const message = error?.response?.data?.error || 'Failed to submit analysis.';
+      // Keep current UX simple and visible in-browser.
+      alert(message);
+    }
   };
 
   const handleSend = () => setReportSent(true);
