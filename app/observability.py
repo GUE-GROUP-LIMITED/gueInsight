@@ -43,7 +43,11 @@ class JsonFormatter(logging.Formatter):
 
 class RequestIdFilter(logging.Filter):
     def filter(self, record):
-        record.request_id = getattr(g, 'request_id', None)
+        try:
+            record.request_id = getattr(g, 'request_id', None)
+        except RuntimeError:
+            # Outside of application context
+            record.request_id = None
         return True
 
 

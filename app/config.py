@@ -62,4 +62,8 @@ class Config:
         return os.path.join(Config.OUTPUT_FOLDER, str(user_id))
 
     # Stripe API key
-    stripe.api_key = os.getenv('STRIPE_API_KEY', '')
+    STRIPE_API_KEY = os.getenv('STRIPE_API_KEY', '')
+    stripe.api_key = STRIPE_API_KEY
+    
+    # Frontend configuration
+    FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5174')

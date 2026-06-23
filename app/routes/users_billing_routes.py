@@ -238,3 +238,148 @@ def register_billing_routes(users_bp):
         """
 
         return Response(html, mimetype='text/html')
+
+    @users_bp.route('/auth/subscription/plans', methods=['GET'])
+    def auth_subscription_plans():
+        from app.subscription_service import COMPLIANCE_TIERS
+        plans = []
+        for tier_key, config in COMPLIANCE_TIERS.items():
+            plans.append({
+                'id': tier_key,
+                'name': config.get('name'),
+                'price': config.get('price_monthly_eur') / 100,  # Convert from cents to euros
+                'price_eur': f"€{config.get('price_monthly_eur', 0) / 100:.2f}",
+                'price_monthly_eur': config.get('price_monthly_eur'),
+                'price_annually_eur': config.get('price_annually_eur'),
+                'description': config.get('description'),
+                'features': config.get('features', []),
+                'compliance_level': config.get('compliance_level'),
+                'gdpr_ready': config.get('gdpr_ready', False),
+                'nis2_ready': config.get('nis2_ready', False),
+                'storage_gb': config.get('storage_gb'),
+            })
+        return plans, 200
+
+    @users_bp.route('/auth/subscription', methods=['GET'])
+    @login_required
+    def auth_subscription():
+        latest_subscription = (
+            ur.Subscription.query
+            .filter_by(user_id=current_user.id)
+            .order_by(ur.Subscription.end_date.desc())
+            .first()
+        )
+        
+        if not latest_subscription:
+            return {
+                'tier': 'Free',
+                'status': 'active',
+                'start_date': None,
+                'end_date': None,
+                'is_trial': False,
+            }, 200
+
+        status = 'active' if latest_subscription.end_date and latest_subscription.end_date >= ur._utc_now() else 'expired'
+        return {
+            'id': latest_subscription.id,
+            'tier': latest_subscription.plan,
+            'status': status,
+            'start_date': latest_subscription.start_date.isoformat() if latest_subscription.start_date else None,
+            'end_date': latest_subscription.end_date.isoformat() if latest_subscription.end_date else None,
+            'is_trial': bool(getattr(latest_subscription, 'is_trial', False)),
+            'stripe_subscription_id': getattr(latest_subscription, 'stripe_subscription_id', None),
+        }, 200
+
+    @users_bp.route('/auth/user', methods=['GET'])
+    @login_required
+    def auth_user():
+        return ur._serialize_auth_user(current_user), 200
+
+    @users_bp.route('/checkout/create-session', methods=['POST'])
+    @login_required
+    def checkout_create_session():
+        import stripe
+        payload = request.get_json(silent=True) or request.form
+        plan_name = str(payload.get('plan_name') or '').strip().lower()
+        billing_cycle = str(payload.get('billing_cycle') or 'monthly').strip().lower()
+
+        from app.subscription_service import COMPLIANCE_TIERS
+        plan_map = {v.get('name', '').lower(): k for k, v in COMPLIANCE_TIERS.items()}
+        tier_key = plan_map.get(plan_name)
+        
+        if not tier_key or tier_key not in COMPLIANCE_TIERS:
+            return {'error': f'Invalid plan: {plan_name}'}, 400
+
+        tier_config = COMPLIANCE_TIERS[tier_key]
+        stripe_key = current_app.config.get('STRIPE_API_KEY')
+        if not stripe_key:
+            return {'error': 'Stripe configuration missing'}, 500
+
+        stripe.api_key = stripe_key
+        customer_id = getattr(current_user, 'stripe_customer_id', None)
+        
+        # Create or retrieve customer
+        if not customer_id:
+            try:
+                customer = stripe.Customer.create(
+                    email=current_user.email,
+                    name=f"{current_user.first_name} {current_user.last_name}",
+                    metadata={'user_id': current_user.id}
+                )
+                customer_id = customer.id
+                current_user.stripe_customer_id = customer_id
+                ur.db.session.commit()
+            except Exception as e:
+                current_app.logger.exception('Failed to create Stripe customer')
+                return {'error': f'Failed to create checkout: {str(e)}'}, 500
+
+        # Create checkout session
+        try:
+            price_cents = tier_config.get('price_monthly_eur') if billing_cycle == 'monthly' else tier_config.get('price_annually_eur')
+            
+            session = stripe.checkout.Session.create(
+                customer=customer_id,
+                payment_method_types=['card'],
+                line_items=[{
+                    'price_data': {
+                        'currency': 'eur',
+                        'product_data': {
+                            'name': tier_config.get('name'),
+                            'description': tier_config.get('description'),
+                        },
+                        'unit_amount': price_cents,
+                        'recurring': {
+                            'interval': 'month' if billing_cycle == 'monthly' else 'year',
+                            'interval_count': 1,
+                        } if billing_cycle in ['monthly', 'annual'] else None,
+                    },
+                    'quantity': 1,
+                }] if billing_cycle in ['monthly', 'annual'] else [{
+                    'price_data': {
+                        'currency': 'eur',
+                        'product_data': {
+                            'name': tier_config.get('name'),
+                            'description': tier_config.get('description'),
+                        },
+                        'unit_amount': price_cents,
+                    },
+                    'quantity': 1,
+                }],
+                mode='subscription' if billing_cycle in ['monthly', 'annual'] else 'payment',
+                success_url=f"{current_app.config.get('FRONTEND_URL', 'http://localhost:5174')}/subscription?session_id={{CHECKOUT_SESSION_ID}}",
+                cancel_url=f"{current_app.config.get('FRONTEND_URL', 'http://localhost:5174')}/subscription",
+                metadata={
+                    'user_id': current_user.id,
+                    'tier': tier_key,
+                    'trial_days': 14,
+                }
+            )
+            
+            return {
+                'message': 'Checkout session created',
+                'session_id': session.id,
+                'checkout_url': session.url,
+            }, 201
+        except Exception as e:
+            current_app.logger.exception('Failed to create Stripe checkout session')
+            return {'error': f'Failed to create checkout: {str(e)}'}, 500

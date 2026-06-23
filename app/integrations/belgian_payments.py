@@ -48,7 +48,12 @@ class BelgianPaymentProcessor:
     }
     
     def __init__(self):
-        stripe.api_key = current_app.config.get('STRIPE_API_KEY')
+        pass
+    
+    def _ensure_stripe_key(self):
+        """Ensure Stripe API key is set before making requests."""
+        if not stripe.api_key:
+            stripe.api_key = current_app.config.get('STRIPE_API_KEY')
     
     # ========== BANCONTACT ==========
     
@@ -64,6 +69,7 @@ class BelgianPaymentProcessor:
         Returns:
             Payment intent or redirect URL
         """
+        self._ensure_stripe_key()
         try:
             user = User.query.get(user_id)
             if not user:
@@ -471,7 +477,14 @@ class BelgianInvoiceGenerator:
     """
     
     def __init__(self):
-        self.payment_processor = BelgianPaymentProcessor()
+        self._payment_processor = None
+    
+    @property
+    def payment_processor(self):
+        """Lazy-load payment processor."""
+        if self._payment_processor is None:
+            self._payment_processor = BelgianPaymentProcessor()
+        return self._payment_processor
     
     def generate_invoice_data(self, user_id, subscription_id, invoice_number, 
                              invoice_date, due_date, items, vat_rate='standard',

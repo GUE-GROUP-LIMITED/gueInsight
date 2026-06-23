@@ -26,8 +26,13 @@ from io import BytesIO
 belgian_bp = Blueprint('belgian', __name__, url_prefix='/belgium')
 logger = logging.getLogger(__name__)
 
-payment_processor = BelgianPaymentProcessor()
-invoice_generator = BelgianInvoiceGenerator()
+def get_payment_processor():
+    """Get or create BelgianPaymentProcessor instance."""
+    return BelgianPaymentProcessor()
+
+def get_invoice_generator():
+    """Get or create BelgianInvoiceGenerator instance."""
+    return BelgianInvoiceGenerator()
 
 
 # ========== PAYMENT METHODS ==========
@@ -105,7 +110,7 @@ def create_bancontact_payment():
             return jsonify({'error': 'Invalid amount'}), 400
         
         # Create payment
-        payment_intent = payment_processor.create_bancontact_payment(
+        payment_intent = get_payment_processor().create_bancontact_payment(
             current_user.id,
             amount_minor,
             description
@@ -137,7 +142,7 @@ def confirm_bancontact_payment(payment_intent_id):
         data = request.get_json()
         subscription_id = data.get('subscription_id')
         
-        success = payment_processor.confirm_bancontact_payment(
+        success = get_payment_processor().confirm_bancontact_payment(
             payment_intent_id,
             current_user.id,
             subscription_id
@@ -185,7 +190,7 @@ def register_sepa_mandate():
             }), 400
         
         # Create mandate
-        mandate = payment_processor.create_sepa_mandate(
+        mandate = get_payment_processor().create_sepa_mandate(
             current_user.id,
             iban,
             current_user.email
@@ -236,7 +241,7 @@ def charge_sepa_mandate():
             }), 400
         
         # Charge via SEPA
-        payment_intent = payment_processor.charge_sepa_mandate(
+        payment_intent = get_payment_processor().charge_sepa_mandate(
             current_user.id,
             amount_minor,
             description
@@ -264,7 +269,7 @@ def charge_sepa_mandate():
 def revoke_sepa_mandate():
     """Revoke the SEPA mandate."""
     try:
-        success = payment_processor.revoke_sepa_mandate(current_user.id)
+        success = get_payment_processor().revoke_sepa_mandate(current_user.id)
         
         if success:
             return jsonify({
@@ -302,14 +307,14 @@ def initiate_bank_transfer():
             return jsonify({'error': 'Invalid amount'}), 400
         
         # Generate transfer details
-        details = payment_processor.generate_bank_transfer_details(
+        details = get_payment_processor().generate_bank_transfer_details(
             current_user.id,
             amount_minor,
             invoice_number
         )
         
         # Log the intent
-        txn_id = payment_processor.log_bank_transfer_intent(
+        txn_id = get_payment_processor().log_bank_transfer_intent(
             current_user.id,
             amount_minor,
             invoice_number
@@ -347,7 +352,7 @@ def confirm_bank_transfer():
         if not transaction_id or not reference_code:
             return jsonify({'error': 'Transaction ID and reference code required'}), 400
         
-        success = payment_processor.confirm_bank_transfer(transaction_id, reference_code)
+        success = get_payment_processor().confirm_bank_transfer(transaction_id, reference_code)
         
         if success:
             return jsonify({
@@ -401,7 +406,7 @@ def generate_invoice():
         due_date = invoice_date + timedelta(days=30)
         
         # Generate invoice data
-        invoice_data = invoice_generator.generate_invoice_data(
+        invoice_data = get_invoice_generator().generate_invoice_data(
             current_user.id,
             subscription_id,
             invoice_number,
@@ -419,7 +424,7 @@ def generate_invoice():
             'invoice_date': invoice_date.isoformat(),
             'due_date': due_date.isoformat(),
             'total': f"€{invoice_data['total']/100:.2f}",
-            'vat_breakdown': invoice_generator.payment_processor.format_vat_breakdown(
+            'vat_breakdown': get_invoice_generator().get_payment_processor().format_vat_breakdown(
                 sum(item['amount_minor'] * item.get('quantity', 1) for item in items),
                 vat_rate
             ),
@@ -449,7 +454,7 @@ def get_invoice_xml(invoice_number):
         
         # Generate invoice data (simplified for demo)
         items = [{'description': f'{subscription.plan} subscription', 'amount_minor': 2990, 'quantity': 1}]
-        invoice_data = invoice_generator.generate_invoice_data(
+        invoice_data = get_invoice_generator().generate_invoice_data(
             current_user.id,
             subscription_id,
             invoice_number,
@@ -460,7 +465,7 @@ def get_invoice_xml(invoice_number):
         )
         
         # Generate UBL-BE XML
-        xml_content = invoice_generator.generate_ubl_be_xml(invoice_data)
+        xml_content = get_invoice_generator().generate_ubl_be_xml(invoice_data)
         
         return send_file(
             BytesIO(xml_content.encode('utf-8')),
@@ -489,7 +494,7 @@ def get_invoice_pdf(invoice_number):
         
         # Generate invoice data
         items = [{'description': f'{subscription.plan} subscription', 'amount_minor': 2990, 'quantity': 1}]
-        invoice_data = invoice_generator.generate_invoice_data(
+        invoice_data = get_invoice_generator().generate_invoice_data(
             current_user.id,
             subscription_id,
             invoice_number,
@@ -499,7 +504,7 @@ def get_invoice_pdf(invoice_number):
         )
         
         # Generate invoice summary (can be converted to PDF with weasyprint or reportlab)
-        invoice_text = invoice_generator.generate_invoice_summary(invoice_data)
+        invoice_text = get_invoice_generator().generate_invoice_summary(invoice_data)
         
         return send_file(
             BytesIO(invoice_text.encode('utf-8')),
@@ -566,7 +571,7 @@ def calculate_vat():
         if not amount_minor or amount_minor <= 0:
             return jsonify({'error': 'Invalid amount'}), 400
         
-        vat_calc = payment_processor.calculate_vat(amount_minor, vat_rate)
+        vat_calc = get_payment_processor().calculate_vat(amount_minor, vat_rate)
         
         return jsonify({
             'net_amount': f"€{vat_calc['net']/100:.2f}",
