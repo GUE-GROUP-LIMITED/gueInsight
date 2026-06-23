@@ -66,6 +66,7 @@ from app.routes.users_billing_routes import register_billing_routes
 from app.routes.users_support_routes import register_support_routes
 from app.routes.users_analysis_routes import register_analysis_routes
 from app.routes.users_enterprise_routes import register_enterprise_routes
+from app.routes.company_branding_routes import register_company_branding_routes
 
 from app.subscription_service import COMPLIANCE_TIERS
 
@@ -83,12 +84,19 @@ def _utc_now():
 
 
 PLAN_ANALYSIS_LIMITS = {
-    'starter': {
+    'free': {
         'max_file_size_mb': 2,
         'max_text_chars': 10000,
         'max_items_per_analysis': 5,
         'max_url_length': 300,
-        'description': 'Basic threat detection for individuals',
+        'description': 'Basic analysis for individuals',
+    },
+    'starter': {
+        'max_file_size_mb': 4,
+        'max_text_chars': 20000,
+        'max_items_per_analysis': 15,
+        'max_url_length': 500,
+        'description': 'For small teams and professionals',
     },
     'compliance_pro': {
         'max_file_size_mb': 8,
@@ -96,6 +104,13 @@ PLAN_ANALYSIS_LIMITS = {
         'max_items_per_analysis': 30,
         'max_url_length': 1200,
         'description': 'GDPR-compliant threat detection with audit trails',
+    },
+    'enterprise_professional': {
+        'max_file_size_mb': 12,
+        'max_text_chars': 100000,
+        'max_items_per_analysis': 75,
+        'max_url_length': 1800,
+        'description': 'GDPR + NIS2 compliance for enterprises',
     },
     'enterprise_risk': {
         'max_file_size_mb': 16,
@@ -112,13 +127,6 @@ PLAN_ANALYSIS_LIMITS = {
         'description': 'White-glove SOC2 + EU residency enforcement',
     },
     # Legacy tier names for backward compatibility
-    'free': {
-        'max_file_size_mb': 2,
-        'max_text_chars': 10000,
-        'max_items_per_analysis': 5,
-        'max_url_length': 300,
-        'description': 'Starter tier',
-    },
     'premium_individual': {
         'max_file_size_mb': 8,
         'max_text_chars': 50000,
@@ -145,27 +153,29 @@ PLAN_ANALYSIS_LIMITS = {
 
 def _normalize_plan_key(plan_like):
     """Normalize plan names to canonical tier keys, handling legacy names."""
-    value = str(plan_like or 'starter').strip().lower()
+    value = str(plan_like or 'free').strip().lower()
     
     # Map legacy names to new compliance-focused tiers
     legacy_mapping = {
-        'free': 'starter',
-        'freemium': 'starter',
+        'free': 'free',
+        'freemium': 'free',
         'premium': 'compliance_pro',
         'premium_individual': 'compliance_pro',
         'starter': 'starter',
-        'growth': 'enterprise_risk',
+        'growth': 'enterprise_professional',
         'premium_small_business': 'enterprise_risk',
         'scale': 'enterprise_elite',
         'premium_large_business': 'enterprise_elite',
+        'free': 'free',
         'compliance_pro': 'compliance_pro',
+        'enterprise_professional': 'enterprise_professional',
         'enterprise_risk': 'enterprise_risk',
         'enterprise_elite': 'enterprise_elite',
     }
     
-    normalized = legacy_mapping.get(value, 'starter')
+    normalized = legacy_mapping.get(value, 'free')
     if normalized not in PLAN_ANALYSIS_LIMITS:
-        return 'starter'
+        return 'free'
     return normalized
 
 
@@ -685,3 +695,4 @@ register_billing_routes(users_bp)
 register_support_routes(users_bp)
 register_analysis_routes(users_bp)
 register_enterprise_routes(users_bp)
+register_company_branding_routes(users_bp)

@@ -67,11 +67,13 @@ class SignupForm(FlaskForm):
 
     # Add a select field for the subscription plan
     subscription_plan = SelectField('Subscription Plan', choices=[
-        ('freemium', 'Freemium'),
-        ('premium_individual', 'Premium Individual'),
-        ('premium_small_business', 'Premium Small Business'),
-        ('premium_large_business', 'Premium Large Business')
-    ], default='freemium')
+        ('free', 'Free'),
+        ('starter', 'Starter'),
+        ('compliance_pro', 'Compliance Pro'),
+        ('enterprise_professional', 'Enterprise Professional'),
+        ('enterprise_risk', 'Enterprise Risk'),
+        ('enterprise_elite', 'Enterprise Elite')
+    ], default='free')
 
     submit = SubmitField('Sign Up')
 

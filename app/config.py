@@ -63,7 +63,10 @@ class Config:
 
     # Stripe API key
     STRIPE_API_KEY = os.getenv('STRIPE_API_KEY', '')
-    stripe.api_key = STRIPE_API_KEY
+    STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', os.getenv('STRIPE_API_KEY', ''))
+    STRIPE_PUBLIC_KEY = os.getenv('STRIPE_PUBLIC_KEY', '')
+    STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
+    stripe.api_key = STRIPE_SECRET_KEY or STRIPE_API_KEY
     
     # Frontend configuration
-    FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5174')
+    FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')

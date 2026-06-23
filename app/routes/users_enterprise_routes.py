@@ -40,7 +40,7 @@ def register_enterprise_routes(users_bp):
         subscription = Subscription.query.filter_by(user_id=current_user.id).first()
         
         # Verify enterprise plan
-        if not subscription or subscription.plan not in ['enterprise_risk', 'enterprise_elite', 'premium_small_business', 'premium_large_business']:
+        if not subscription or subscription.plan not in ['enterprise_professional', 'enterprise_risk', 'enterprise_elite', 'premium_small_business', 'premium_large_business']:
             return jsonify({'error': 'Enterprise plan required'}), 403
         
         sub_users = SubUser.query.filter_by(
@@ -60,7 +60,7 @@ def register_enterprise_routes(users_bp):
         """Add a new sub-user to enterprise account."""
         subscription = Subscription.query.filter_by(user_id=current_user.id).first()
         
-        if not subscription or subscription.plan not in ['enterprise_risk', 'enterprise_elite', 'premium_small_business', 'premium_large_business']:
+        if not subscription or subscription.plan not in ['enterprise_professional', 'enterprise_risk', 'enterprise_elite', 'premium_small_business', 'premium_large_business']:
             return jsonify({'error': 'Enterprise plan required'}), 403
         
         data = request.get_json()

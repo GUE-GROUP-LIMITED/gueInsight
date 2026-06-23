@@ -213,7 +213,7 @@ def check_expired_subscriptions():
                     user = sub.user
                     
                     # Downgrade to free plan
-                    user.current_plan = 'starter'
+                    user.current_plan = 'free'
                     user.plan_expires_at = None
                     db.session.add(user)
                     

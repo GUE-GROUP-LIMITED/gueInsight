@@ -1,0 +1,31 @@
+{
+  "indicator": "http://example.com/login-verify",
+  "file_type": "text/plain",
+  "metadata": {
+    "size": 31,
+    "last_modified": null
+  },
+  "indicators_of_compromise": [
+    {
+      "type": "url",
+      "value": "http://example.com/login-verify",
+      "severity": "Medium"
+    }
+  ],
+  "suspicious_patterns": [
+    {
+      "name": "Suspicious Pattern Match",
+      "description": "possible phishing lure keyword",
+      "confidence": 0.8,
+      "evidence": "possible phishing lure keyword"
+    }
+  ],
+  "alerts_triggered": [],
+  "enrichment": {
+    "virustotal": {
+      "status": "error",
+      "message": "VirusTotal API key not configured"
+    }
+  },
+  "threat_level": "Low"
+}

@@ -411,6 +411,10 @@ def register_auth_privacy_routes(users_bp):
             'notification_email_enabled',
             'notification_inapp_enabled',
             'dashboard_layout',
+            'company_name',
+            'company_logo_url',
+            'company_address',
+            'company_contact',
         }
 
         for field_name in allowed_fields:
