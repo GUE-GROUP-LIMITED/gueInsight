@@ -67,6 +67,23 @@ class OutputHandler:
         return report_path
 
     @staticmethod
+    def count_uploads_in_month(user_id, current_month):
+        """Count file analysis transactions for a user within a calendar month."""
+        try:
+            from sqlalchemy import extract
+            from app.models import AnalysisTransaction
+
+            month_value = int(current_month)
+            return AnalysisTransaction.query.filter(
+                AnalysisTransaction.user_id == user_id,
+                AnalysisTransaction.source_type == 'file',
+                extract('month', AnalysisTransaction.created_at) == month_value,
+            ).count()
+        except Exception as exc:
+            logging.error(f"Error counting monthly uploads for user {user_id}: {exc}")
+            return 0
+
+    @staticmethod
     def export_to_json(data, filename):
         """Export analysis results to a JSON file."""
         try:
@@ -164,20 +181,22 @@ def process_text_file(file_path):
 
 
 def generate_report(analysis_results, visualization_results=None):
-        report_path = f"/Users/gabrielaloho/gueInsight/app/user_reports/{current_user.id}_analysis_report.pdf"
-        c = canvas.Canvas(report_path, pagesize=letter)
-        
-        # Add content (analysis results and visuals) to the PDF
-        c.drawString(100, 750, "Analysis Report")
-        c.drawString(100, 730, f"Analysis Results: {analysis_results}")
-    
-        if visualization_results:
-            # Add visualization to the PDF
-            c.drawImage(visualization_results, 100, 500)
-    
-        # Save the PDF
-        c.save()
-        return report_path
+    reports_dir = os.path.join(current_app.instance_path, 'user_reports')
+    os.makedirs(reports_dir, exist_ok=True)
+    report_path = os.path.join(reports_dir, f"{current_user.id}_analysis_report.pdf")
+    c = canvas.Canvas(report_path, pagesize=letter)
+
+    # Add content (analysis results and visuals) to the PDF
+    c.drawString(100, 750, "Analysis Report")
+    c.drawString(100, 730, f"Analysis Results: {analysis_results}")
+
+    if visualization_results:
+        # Add visualization to the PDF
+        c.drawImage(visualization_results, 100, 500)
+
+    # Save the PDF
+    c.save()
+    return report_path
 
 
 def process_pdf(file_path):

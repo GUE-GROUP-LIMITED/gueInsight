@@ -9,6 +9,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
+import FileUpload from './pages/FileUpload';
 import AnalysisResults from './pages/AnalysisResults';
 import Profile from './pages/Profile';
 import Subscription from './pages/Subscription';
@@ -36,6 +37,8 @@ const AppShell = () => {
         <Route path="/signup" element={<Signup />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/dashboard" element={<ProtectedRoute userOnly={true}><Dashboard /></ProtectedRoute>} />
+        <Route path="/upload" element={<ProtectedRoute userOnly={true}><FileUpload /></ProtectedRoute>} />
+        <Route path="/dashboard/upload" element={<ProtectedRoute userOnly={true}><FileUpload /></ProtectedRoute>} />
         <Route path="/analysis/:analysisId" element={<ProtectedRoute userOnly={true}><AnalysisResults /></ProtectedRoute>} />
         <Route path="/support" element={<ProtectedRoute userOnly={true}><Support /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />

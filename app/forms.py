@@ -111,6 +111,9 @@ class UploadFileForm(FlaskForm):
     ])
     submit = SubmitField('Upload')
 
+    class Meta:
+        csrf = False
+
 class SubmitCloudLinkForm(FlaskForm):
     cloud_link = StringField('Cloud File Link', validators=[DataRequired(), URL()])
     submit = SubmitField('Submit')

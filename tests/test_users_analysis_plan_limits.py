@@ -1,10 +1,11 @@
+import io
 import types
 
 import pytest
 from werkzeug.security import generate_password_hash
 
 from app import create_app, db
-from app.models import User, UserRole
+from app.models import AnalysisStatus, AnalysisTransaction, User, UserRole
 import app.subscription_service as subscription_service_module
 
 
@@ -60,6 +61,14 @@ class _UploadFormFalse:
 
     def validate_on_submit(self):
         return False
+
+
+class _UploadFormTrue:
+    def __init__(self):
+        self.file = _Field(None)
+
+    def validate_on_submit(self):
+        return True
 
 
 class _UrlFormFalse:
@@ -171,3 +180,109 @@ def test_upload_url_plan_limit_branch_returns_400(client, monkeypatch):
     data = response.get_json()
     assert data["status"] == "error"
     assert "URL input exceeds your plan limit" in data["message"]
+
+
+def test_upload_file_success_returns_redirect_payload(client, monkeypatch, tmp_path):
+    user = _create_user(email="uploadsuccess@example.com")
+    _login(client, email=user.email)
+
+    _patch_upload_runtime(
+        monkeypatch,
+        client,
+        _UploadFormTrue,
+        _UrlFormFalse,
+        _TextFormFalse,
+        max_text_chars=2000,
+        max_url_length=400,
+    )
+    monkeypatch.setattr(subscription_service_module, "get_subscription_status", lambda _: "Freemium")
+
+    import app.src.ingestion.file_ingestion as ingestion_module
+    import app.src.analysis.file_analysis as analysis_module
+
+    def _fake_save_uploaded_file(uploaded_file, user_id):
+        saved_path = tmp_path / f"user_{user_id}_{uploaded_file.filename}"
+        saved_path.write_bytes(uploaded_file.read())
+        uploaded_file.seek(0)
+        return str(saved_path)
+
+    monkeypatch.setattr(ingestion_module, "save_uploaded_file", _fake_save_uploaded_file)
+    monkeypatch.setattr(
+        analysis_module.Analyzer,
+        "analyze",
+        lambda self, file_path: {
+            "file_type": "text/plain",
+            "metadata": {"size": 12, "last_modified": None},
+            "indicators_of_compromise": [],
+            "suspicious_patterns": [],
+            "alerts_triggered": [],
+            "enrichment": {},
+            "threat_level": "Low",
+        },
+    )
+
+    upload_view = client.application.view_functions["users.upload_file"]
+    wrapped_upload_view = getattr(upload_view, "__wrapped__", upload_view)
+    route_globals = wrapped_upload_view.__globals__
+    monkeypatch.setitem(route_globals, "generate_report", lambda _: str(tmp_path / "report.pdf"))
+    monkeypatch.setattr(
+        route_globals["OutputHandler"],
+        "save_to_user_dashboard",
+        staticmethod(lambda user_id, report_file, file_path=None: report_file),
+        raising=False,
+    )
+
+    response = client.post(
+        "/upload",
+        data={"file": (io.BytesIO(b"hello world"), "sample.txt")},
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 201
+    payload = response.get_json()
+    assert payload["status"] == AnalysisStatus.SUCCESS.value
+    assert payload["redirect_url"].startswith("/analysis/")
+
+    tx = AnalysisTransaction.query.filter_by(user_id=user.id, source_type="file").order_by(AnalysisTransaction.id.desc()).first()
+    assert tx is not None
+    assert tx.status == AnalysisStatus.SUCCESS
+
+
+def test_upload_file_processing_exception_returns_json_error(client, monkeypatch):
+    user = _create_user(email="uploadfailure@example.com")
+    _login(client, email=user.email)
+
+    _patch_upload_runtime(
+        monkeypatch,
+        client,
+        _UploadFormTrue,
+        _UrlFormFalse,
+        _TextFormFalse,
+        max_text_chars=2000,
+        max_url_length=400,
+    )
+    monkeypatch.setattr(subscription_service_module, "get_subscription_status", lambda _: "Freemium")
+
+    import app.src.ingestion.file_ingestion as ingestion_module
+
+    def _raise_save_uploaded_file(uploaded_file, user_id):
+        raise RuntimeError("ingestion exploded")
+
+    monkeypatch.setattr(ingestion_module, "save_uploaded_file", _raise_save_uploaded_file)
+
+    response = client.post(
+        "/upload",
+        data={"file": (io.BytesIO(b"boom"), "sample.txt")},
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 500
+    payload = response.get_json()
+    assert "error" in payload
+    assert "Error processing file" in payload["error"]
+    assert "ingestion exploded" in payload["error"]
+
+    tx = AnalysisTransaction.query.filter_by(user_id=user.id, source_type="file").order_by(AnalysisTransaction.id.desc()).first()
+    assert tx is not None
+    assert tx.status == AnalysisStatus.FAILED
+    assert "ingestion exploded" in (tx.error_message or "")
