@@ -1,4 +1,4 @@
-"""
+﻿"""
 User analysis and dashboard routes for file upload, text analysis, and URL inspection.
 Extracted from users_routes.py to reduce monolith complexity.
 """
@@ -293,27 +293,27 @@ def _generate_threat_insights(indicator, iocs, patterns, enrichment, threat_leve
         insights['summary'] = f"This indicator demonstrates HIGH threat potential with {ioc_count} extracted indicators and {pattern_count} suspicious pattern(s) detected."
         insights['severity_rationale'] = 'High severity assigned due to multiple indicators of compromise and suspicious behavioral patterns.'
         insights['recommendations'] = [
-            '🚨 Immediate Action: Block this indicator across all security controls',
-            '📋 Document incident for compliance and audit trail',
-            '🔔 Alert relevant stakeholders and incident response team',
-            '🔍 Investigate any historical interactions with this indicator',
+            '­ƒÜ¿ Immediate Action: Block this indicator across all security controls',
+            '­ƒôï Document incident for compliance and audit trail',
+            '­ƒöö Alert relevant stakeholders and incident response team',
+            '­ƒöì Investigate any historical interactions with this indicator',
         ]
     elif threat_level == 'Medium':
         insights['summary'] = f"This indicator shows MEDIUM threat with {ioc_count} indicator(s) and {pattern_count} suspicious pattern(s)."
         insights['severity_rationale'] = 'Medium severity due to mixed signals: some suspicious patterns detected but not consistently malicious.'
         insights['recommendations'] = [
-            '⚠️ Enhanced Monitoring: Increase monitoring frequency for this indicator',
-            '📊 Collect More Data: Gather additional context before blocking',
-            '🔗 Correlate: Check against threat intelligence feeds',
-            '⏱️ Review: Reassess in 24-48 hours',
+            'ÔÜá´©Å Enhanced Monitoring: Increase monitoring frequency for this indicator',
+            '­ƒôè Collect More Data: Gather additional context before blocking',
+            '­ƒöù Correlate: Check against threat intelligence feeds',
+            'ÔÅ▒´©Å Review: Reassess in 24-48 hours',
         ]
     else:
         insights['summary'] = f"This indicator shows LOW threat level with minimal indicators detected."
         insights['severity_rationale'] = 'Low severity: limited indicators and patterns suggest this may be benign or low-risk.'
         insights['recommendations'] = [
-            '✓ No Immediate Action Required',
-            '📝 Log for historical reference',
-            '🔄 Periodic Review: Monitor in routine scans',
+            'Ô£ô No Immediate Action Required',
+            '­ƒôØ Log for historical reference',
+            '­ƒöä Periodic Review: Monitor in routine scans',
         ]
 
     if ioc_count > 0:
@@ -430,39 +430,48 @@ def register_analysis_routes(users_bp):
     @users_bp.route('/upload', methods=['POST'])
     @login_required
     def upload_file():
+        def _error(message, status_code=400, **extra):
+            payload = {'error': message}
+            payload.update(extra)
+            return jsonify(payload), status_code
+
         # Get the form data already passed from the dashboard
         file_upload_form = UploadFileForm()
         url_submission_form = SubmitCloudLinkForm()
         text_submission_form = SubmitTextForm()
 
         # Initialize the SubscriptionService to get subscription details
-        from app.subscription_service import SubscriptionService
+        from app.subscription_service import SubscriptionService, get_subscription_status as resolve_subscription_status
         subscription_service = SubscriptionService(current_user.id)
-        subscription_status = subscription_service.get_subscription_status(current_user)
+        subscription_status = resolve_subscription_status(current_user)
         subscription = subscription_service.subscription
         plan_key = ur._get_active_plan_key(current_user.id)
-        analysis_limits = ur._get_analysis_limits_for_plan(plan_key)
+        analysis_limits = ur._get_analysis_limits_for_plan(plan_key) or {}
+        max_file_size_mb = int(analysis_limits.get('max_file_size_mb') or 2)
+        max_url_length = int(analysis_limits.get('max_url_length') or 300)
+        max_text_chars = int(analysis_limits.get('max_text_chars') or 10000)
+        max_items_per_analysis = int(analysis_limits.get('max_items_per_analysis') or 5)
+        subscription_plan = getattr(subscription, 'plan', None) or plan_key or 'free'
 
         # Check the subscription status and upload limits
         if subscription_status == "Inactive" or subscription_status == "Expired":
-            flash("Your subscription is inactive or expired. Please renew your subscription.", "danger")
-            return redirect(url_for('users.user_dashboard'))
+            return _error("Your subscription is inactive or expired. Please renew your subscription.", 403)
 
-        if subscription_status == "Freemium":
-            upload_limit = 1  # Freemium users can upload only once per month
-        elif subscription_status == "Premium":
-            # Determine upload limit based on the user's subscription plan
-            if subscription.plan == 'premium_individual':
-                upload_limit = 4
-            elif subscription.plan == 'premium_small_business':
-                upload_limit = 6
-            elif subscription.plan == 'premium_large_business':
-                upload_limit = 10
-            else:
-                upload_limit = 4
-        else:
-            flash("Invalid subscription status.", "danger")
-            return redirect(url_for('users.user_dashboard'))
+        # Determine upload limits by active plan key (new + legacy plan names).
+        effective_plan = (plan_key or subscription_plan or 'free').lower()
+        plan_upload_limits = {
+            'free': 1,
+            'starter': 4,
+            'compliance_pro': 6,
+            'enterprise_professional': 10,
+            'enterprise_risk': 15,
+            'enterprise_elite': 25,
+            # Legacy plans
+            'premium_individual': 4,
+            'premium_small_business': 6,
+            'premium_large_business': 10,
+        }
+        upload_limit = plan_upload_limits.get(effective_plan, 4)
 
         # Count the user's uploads in the current month
         current_month = datetime.datetime.now().month
@@ -470,12 +479,15 @@ def register_analysis_routes(users_bp):
 
         # Check if the user has exceeded the allowed number of uploads
         if upload_count >= upload_limit:
-            flash(f"You've exceeded your upload limit of {upload_limit} uploads for this month.", "danger")
-            return redirect(url_for('users.user_dashboard'))
+            return _error(
+                f"You've exceeded your upload limit of {upload_limit} uploads for this month.",
+                429,
+                upload_limit=upload_limit,
+            )
 
         # Handle File Upload
-        if file_upload_form.validate_on_submit() and file_upload_form.file.data:
-            uploaded_file = file_upload_form.file.data
+        uploaded_file = file_upload_form.file.data or request.files.get('file')
+        if uploaded_file:
             file_analysis_started_at = ur._utc_now()
 
             # Check the file type
@@ -496,12 +508,11 @@ def register_analysis_routes(users_bp):
                 )
                 db.session.add(file_tx)
                 db.session.commit()
-                flash("Invalid file type. Please upload a valid file.", "danger")
-                return redirect(url_for('users.user_dashboard'))
+                return _error("Invalid file type. Please upload a valid file.", 400)
 
             # Check if the file size is within both global and plan-specific limits.
             file_size_bytes = len(uploaded_file.read())
-            max_plan_file_size_bytes = analysis_limits['max_file_size_mb'] * 1024 * 1024
+            max_plan_file_size_bytes = max_file_size_mb * 1024 * 1024
             max_allowed_bytes = min(Config.MAX_CONTENT_LENGTH, max_plan_file_size_bytes)
             if file_size_bytes > max_allowed_bytes:
                 file_tx = AnalysisTransaction(
@@ -518,42 +529,25 @@ def register_analysis_routes(users_bp):
                 )
                 db.session.add(file_tx)
                 db.session.commit()
-                flash(
-                    f"File exceeds your plan limit of {analysis_limits['max_file_size_mb']}MB per analysis.",
-                    "danger",
+                return _error(
+                    f"File exceeds your plan limit of {max_file_size_mb}MB per analysis.",
+                    413,
+                    max_file_size_mb=max_file_size_mb,
                 )
-                return redirect(url_for('users.user_dashboard'))
 
             # Reset the file pointer after checking the size
             uploaded_file.seek(0)
 
 
             try:
-                # Process the file
-                from app.src.ingestion.file_ingestion import FileIngestion
-                file_ingestion = FileIngestion(uploaded_file)
-                file_path, file_hash = file_ingestion.save_and_ingest()
+                from app.src.ingestion.file_ingestion import save_uploaded_file
+                file_path = save_uploaded_file(uploaded_file, current_user.id)
 
-                # Preprocess the file
-                from app.src.preprocessing.preprocess import Preprocessor
-                preprocessor = Preprocessor(file_path)
-                processed_data = preprocessor.process()
-
-                # Analyze the file
                 from app.src.analysis.file_analysis import Analyzer
-                analyzer = Analyzer(processed_data)
-                analysis_results = analyzer.analyze()
+                analyzer = Analyzer()
+                analysis_results = analyzer.analyze(file_path)
 
-                # Generate visualization (if any)
-                from app.src.visualization.visualization import Visualization
-                visualization = Visualization(analysis_results)
-                visualization_result = visualization.generate()
-
-                report_generator = generate_report()
-                report_file = report_generator.generate_report(analysis_results, visualization_result)
-
-                # Save the report to the user's dashboard
-               
+                report_file = generate_report(analysis_results)
                 OutputHandler.save_to_user_dashboard(current_user.id, report_file, file_path)
 
                 completed_at = ur._utc_now()
@@ -580,11 +574,27 @@ def register_analysis_routes(users_bp):
                 )
                 db.session.commit()
 
-                # Render the results page
-                return render_template('results.html', 
-                                       results=analysis_results, 
-                                       visualization=visualization_result,
-                                       report_link='/Users/gabrielaloho/gueInsight/app/user_reports')  # Replace with actual path
+                analysis_payload = {
+                    'file_path': file_path,
+                    'file_type': analysis_results.get('file_type') or file_extension,
+                    'metadata': analysis_results.get('metadata') or {
+                        'size': file_size_bytes,
+                        'last_modified': None,
+                    },
+                    'indicators_of_compromise': analysis_results.get('indicators_of_compromise') or [],
+                    'suspicious_patterns': analysis_results.get('suspicious_patterns') or [],
+                    'alerts_triggered': analysis_results.get('alerts_triggered') or [],
+                    'enrichment': analysis_results.get('enrichment') or {},
+                    'threat_level': analysis_results.get('threat_level') or 'Low',
+                    'report_link': report_file,
+                }
+                _persist_analysis_payload(current_user.id, file_tx.id, analysis_payload)
+
+                response_payload = _build_analysis_response(file_tx, analysis_payload)
+                response_payload['redirect_url'] = f'/analysis/{file_tx.id}'
+                response_payload['report_link'] = report_file
+                return jsonify(response_payload), 201
+
             except Exception as e:
                 file_tx = AnalysisTransaction(
                     user_id=current_user.id,
@@ -600,8 +610,7 @@ def register_analysis_routes(users_bp):
                 )
                 db.session.add(file_tx)
                 db.session.commit()
-                flash(f"Error processing file: {str(e)}", "danger")
-                return redirect(url_for('users.user_dashboard'))
+                return jsonify({'error': f'Error processing file: {str(e)}'}), 500
 
 
         # Handle URL Submission
@@ -609,7 +618,7 @@ def register_analysis_routes(users_bp):
         elif url_submission_form.validate_on_submit() and url_submission_form.cloud_link.data:
             cloud_link = url_submission_form.cloud_link.data
             url_analysis_started_at = ur._utc_now()
-            if len(cloud_link) > analysis_limits['max_url_length']:
+            if len(cloud_link) > max_url_length:
                 url_tx = AnalysisTransaction(
                     user_id=current_user.id,
                     source_type='url',
@@ -627,7 +636,7 @@ def register_analysis_routes(users_bp):
                 return jsonify({
                     'status': 'error',
                     'message': (
-                        f"URL input exceeds your plan limit of {analysis_limits['max_url_length']} characters per analysis."
+                        f"URL input exceeds your plan limit of {max_url_length} characters per analysis."
                     )
                 }), 400
             try:
@@ -683,8 +692,7 @@ def register_analysis_routes(users_bp):
                 )
                 db.session.add(url_tx)
                 db.session.commit()
-                flash(f"Error processing cloud link: {str(e)}", "danger")
-                return redirect(url_for('users.user_dashboard'))
+                return _error(f"Error processing cloud link: {str(e)}", 500)
 
         # Handle Text/Hash Submission
 
@@ -694,7 +702,7 @@ def register_analysis_routes(users_bp):
             input_length = len(input_data)
             analysis_item_count = ur._count_analysis_items(input_data)
 
-            if input_length > analysis_limits['max_text_chars']:
+            if input_length > max_text_chars:
                 text_tx = AnalysisTransaction(
                     user_id=current_user.id,
                     source_type='text',
@@ -712,11 +720,11 @@ def register_analysis_routes(users_bp):
                 return jsonify({
                     'status': 'error',
                     'message': (
-                        f"Text input exceeds your plan limit of {analysis_limits['max_text_chars']} characters per analysis."
+                        f"Text input exceeds your plan limit of {max_text_chars} characters per analysis."
                     )
                 }), 400
 
-            if analysis_item_count > analysis_limits['max_items_per_analysis']:
+            if analysis_item_count > max_items_per_analysis:
                 text_tx = AnalysisTransaction(
                     user_id=current_user.id,
                     source_type='text',
@@ -735,7 +743,7 @@ def register_analysis_routes(users_bp):
                     'status': 'error',
                     'message': (
                         f"This request has {analysis_item_count} items, but your plan allows "
-                        f"up to {analysis_limits['max_items_per_analysis']} items per analysis."
+                        f"up to {max_items_per_analysis} items per analysis."
                     )
                 }), 400
             try:
@@ -791,12 +799,10 @@ def register_analysis_routes(users_bp):
                 )
                 db.session.add(text_tx)
                 db.session.commit()
-                flash(f"Error processing text input: {str(e)}", "danger")
-                return redirect(url_for('users.user_dashboard'))
+                return _error(f"Error processing text input: {str(e)}", 500)
 
-        # If no valid form submission, return an error message
-        flash("Please submit a valid file, text, or URL.", "danger")
-        return redirect(url_for('users.user_dashboard'))
+        # If no valid submission, return an API-friendly error for the SPA uploader.
+        return _error('Please submit a valid file, text, or URL.', 400)
 
     @users_bp.route('/api/analysis/submit', methods=['POST'])
     @login_required

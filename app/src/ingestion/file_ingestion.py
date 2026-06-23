@@ -59,7 +59,7 @@ def scan_with_clamav(file_path):
 
 
 
-from config import Config
+from app.config import Config
 
 def get_user_upload_folder(user_id):
     """Returns the upload folder for a specific user."""

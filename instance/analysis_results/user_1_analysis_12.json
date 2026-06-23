@@ -1,0 +1,14 @@
+{
+  "file_path": "C:\\Users\\User\\source\\repos\\gueInsight\\app\\uploads\\1\\test_run_full.txt",
+  "file_type": "text/plain",
+  "metadata": {
+    "size": 0,
+    "last_modified": 1782232215.445344
+  },
+  "indicators_of_compromise": [],
+  "suspicious_patterns": [],
+  "alerts_triggered": [],
+  "enrichment": {},
+  "threat_level": "Low",
+  "report_link": "C:\\Users\\User\\source\\repos\\gueInsight\\instance\\user_reports\\1_analysis_report.pdf"
+}

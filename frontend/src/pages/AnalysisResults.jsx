@@ -127,6 +127,7 @@ export default function AnalysisResults() {
           <button className="btn btn-secondary" onClick={() => downloadReport('csv')}>
             📊 Export CSV
           </button>
+
         </div>
 
         <div className="actions-right">
