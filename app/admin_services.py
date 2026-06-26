@@ -56,7 +56,12 @@ def some_condition_for_critical_alert():
 def get_failed_login_attempts_for_recent_period():
     """Fetch the number of failed login attempts in the last hour."""
     one_hour_ago = datetime.now() - timedelta(hours=1)
-    failed_attempts = Logs.query.filter(Logs.timestamp > one_hour_ago, Logs.success == False).count()
+    # Logs table stores a free-form action string, not a boolean success flag.
+    failed_attempts = Logs.query.filter(
+        Logs.timestamp > one_hour_ago,
+        Logs.action.ilike('%login%'),
+        Logs.action.ilike('%fail%')
+    ).count()
     return failed_attempts
 
 def check_file_hash_against_ransomware_hashes(file):

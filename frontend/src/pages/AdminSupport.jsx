@@ -59,7 +59,7 @@ const AdminSupport = () => {
     try {
       setLoading(true);
       setError('');
-      const response = await api.get('/admin/support_tickets');
+      const response = await api.get('/support_tickets');
       const loadedTickets = Array.isArray(response.data?.tickets) ? response.data.tickets : [];
       setTickets(loadedTickets);
       setSelectedTicketId((current) => current || loadedTickets[0]?.id || null);
@@ -74,7 +74,7 @@ const AdminSupport = () => {
     if (!ticketId) return;
     try {
       setDetailLoading(true);
-      const response = await api.get(`/admin/support_tickets/${ticketId}`);
+      const response = await api.get(`/support_tickets/${ticketId}`);
       const ticket = response.data?.ticket || null;
       setSelectedTicket(ticket);
       setTicketForm({
@@ -136,7 +136,7 @@ const AdminSupport = () => {
     setError('');
 
     try {
-      const response = await api.patch(`/admin/support_tickets/${selectedTicket.id}`, {
+      const response = await api.patch(`/support_tickets/${selectedTicket.id}`, {
         assigned_admin_id: user.id,
         status: 'in_progress',
       });
@@ -164,7 +164,7 @@ const AdminSupport = () => {
     setError('');
 
     try {
-      const response = await api.patch(`/admin/support_tickets/${selectedTicket.id}`, {
+      const response = await api.patch(`/support_tickets/${selectedTicket.id}`, {
         status: ticketForm.status,
         resolution_summary: ticketForm.resolution_summary,
         assigned_admin_id: ticketForm.assigned_admin_id ? Number(ticketForm.assigned_admin_id) : null,

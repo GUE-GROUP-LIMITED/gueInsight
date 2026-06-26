@@ -96,7 +96,7 @@ const AdminTopbarControls = ({
 
     const loadSupportCount = async () => {
       try {
-        const response = await api.get('/admin/support_tickets');
+        const response = await api.get('/support_tickets');
         if (!active) return;
         const tickets = Array.isArray(response.data?.tickets) ? response.data.tickets : [];
         const openCount = tickets.filter((ticket) => ['open', 'in_progress', 'waiting_on_user'].includes(ticket.status)).length;

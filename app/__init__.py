@@ -2,7 +2,7 @@
 
 import os
 
-from flask import Flask, request
+from flask import Flask, request, redirect
 from flask_cors import CORS
 from dotenv import load_dotenv
 from flask_login import LoginManager
@@ -77,6 +77,14 @@ def create_app():
     login_manager.init_app(app)
     # Ensure the login view matches the auth route defined in users_routes.py
     login_manager.login_view = 'users.auth_login'
+
+    @login_manager.unauthorized_handler
+    def handle_unauthorized():
+        # API consumers should receive JSON 401 instead of a redirect to a POST-only login route.
+        wants_json = request.path.startswith('/auth') or request.path.startswith('/api') or request.path.startswith('/admin')
+        if wants_json:
+            return {'error': 'Authentication required'}, 401
+        return redirect('/login')
 
     @app.route('/')
     def index():

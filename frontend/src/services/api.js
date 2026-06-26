@@ -11,8 +11,11 @@ const getDefaultApiBase = () => {
     return 'https://api.insights.guecyber.com';
   }
 
-  // Development: local backend
-  return 'http://localhost:5000';
+  // Development: match the active frontend host to avoid cross-site cookie issues.
+  const devHost = typeof window !== 'undefined' && window.location?.hostname
+    ? window.location.hostname
+    : 'localhost';
+  return `http://${devHost}:5000`;
 };
 
 const API_BASE = getDefaultApiBase();
