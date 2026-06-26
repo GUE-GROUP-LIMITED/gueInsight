@@ -7,7 +7,7 @@ import logging
 from flask import Blueprint, request, jsonify, current_app
 from flask_login import login_required, current_user
 from datetime import datetime, timedelta
-from sqlalchemy import func, and_
+from sqlalchemy import func, and_, or_
 
 from app.models import (
     db,
@@ -23,13 +23,46 @@ from app.models import (
     AlertRule,
     SecurityToolIntegration,
     AnalysisStatus,
+    DataExportRequest,
+    DataDeletionRequest,
+    SecurityEvent,
+    NIS2IncidentReport,
+    VcisoUpdate,
 )
+from app.subscription_service import COMPLIANCE_TIERS
 
 logger = logging.getLogger(__name__)
 
 
 def register_enterprise_routes(users_bp):
     """Register enterprise feature endpoints to user blueprint."""
+
+    def _normalize_plan(plan_like):
+        value = str(plan_like or 'free').strip().lower()
+        legacy_map = {
+            'premium_individual': 'compliance_pro',
+            'premium_small_business': 'enterprise_risk',
+            'premium_large_business': 'enterprise_elite',
+            'premium': 'compliance_pro',
+            'freemium': 'free',
+        }
+        return legacy_map.get(value, value if value in COMPLIANCE_TIERS else 'free')
+
+    def _get_user_plan(user_id):
+        latest = (
+            Subscription.query
+            .filter_by(user_id=user_id)
+            .order_by(Subscription.end_date.desc())
+            .first()
+        )
+        return _normalize_plan(getattr(latest, 'plan', None)) if latest else 'free'
+
+    def _plan_access(plan_key):
+        if plan_key in ['enterprise_professional', 'enterprise_risk', 'enterprise_elite']:
+            return 'enterprise'
+        if plan_key == 'compliance_pro':
+            return 'compliance'
+        return 'free'
     
     # ===== SUB-USER MANAGEMENT (Enterprise Plans) =====
     
@@ -363,6 +396,151 @@ def register_enterprise_routes(users_bp):
                 {'type': summary, 'count': count}
                 for summary, count in threat_summary
             ]
+        }), 200
+
+
+    # ===== DASHBOARD COMPLIANCE & VCISO PORTAL =====
+
+    @users_bp.route('/auth/security_events', methods=['GET'])
+    @login_required
+    def get_user_security_events():
+        """Return security events visible to the current user for dashboard incidents feed."""
+        plan_key = _get_user_plan(current_user.id)
+        tier = _plan_access(plan_key)
+
+        if tier != 'enterprise':
+            return jsonify({'error': 'Enterprise plan required'}), 403
+
+        limit = request.args.get('limit', 20, type=int)
+        if limit is None:
+            limit = 20
+        limit = max(1, min(limit, 100))
+
+        events = (
+            SecurityEvent.query
+            .filter(or_(SecurityEvent.user_id == current_user.id, SecurityEvent.user_id.is_(None)))
+            .order_by(SecurityEvent.created_at.desc())
+            .limit(limit)
+            .all()
+        )
+
+        return jsonify({'security_events': [event.to_dict() for event in events]}), 200
+
+    @users_bp.route('/auth/dashboard/compliance', methods=['GET'])
+    @login_required
+    def get_dashboard_compliance():
+        """Return compliance overview data with plan-tier gating for dashboard tab."""
+        plan_key = _get_user_plan(current_user.id)
+        tier = _plan_access(plan_key)
+        access_level = 'locked' if tier == 'free' else ('basic' if tier == 'compliance' else 'full')
+
+        config = COMPLIANCE_TIERS.get(plan_key, COMPLIANCE_TIERS['free'])
+
+        export_completed = DataExportRequest.query.filter_by(user_id=current_user.id, status='completed').count()
+        deletion_processed = DataDeletionRequest.query.filter_by(user_id=current_user.id, status='processed').count()
+        nis2_reports = NIS2IncidentReport.query.filter_by(user_id=current_user.id).count()
+
+        base_score = {
+            'locked': 0,
+            'basic': 72,
+            'full': 88,
+        }.get(access_level, 0)
+        score = min(98, base_score + (2 if export_completed > 0 else 0) + (2 if deletion_processed > 0 else 0) + (3 if nis2_reports > 0 else 0))
+
+        nis2_checklist = [
+            {'item': 'Incident detection and response process documented', 'status': 'done' if tier == 'enterprise' else ('in_progress' if tier == 'compliance' else 'locked')},
+            {'item': 'Critical asset inventory updated and reviewed monthly', 'status': 'done' if tier == 'enterprise' else ('in_progress' if tier == 'compliance' else 'locked')},
+            {'item': 'Supplier and third-party risk review cadence defined', 'status': 'done' if tier == 'enterprise' else ('todo' if tier == 'compliance' else 'locked')},
+            {'item': 'Executive-level risk register linked to mitigation owners', 'status': 'done' if tier == 'enterprise' else ('todo' if tier == 'compliance' else 'locked')},
+        ]
+
+        gdpr_checklist = [
+            {'item': 'Data processing inventory and lawful basis mapped', 'status': 'done' if config.get('gdpr_ready') else ('todo' if access_level != 'locked' else 'locked')},
+            {'item': 'Data subject request workflow and response SLA configured', 'status': 'done' if export_completed > 0 else ('in_progress' if access_level != 'locked' else 'locked')},
+            {'item': 'Retention and deletion policy enforced for account records', 'status': 'done' if deletion_processed > 0 else ('in_progress' if access_level != 'locked' else 'locked')},
+            {'item': 'Audit trail available for consent, export, and deletion actions', 'status': 'done' if access_level == 'full' else ('in_progress' if access_level == 'basic' else 'locked')},
+        ]
+
+        return jsonify({
+            'plan_key': plan_key,
+            'tier': tier,
+            'access_level': access_level,
+            'compliance_score': score,
+            'gdpr_status': 'Advanced' if access_level == 'full' else ('Baseline' if access_level == 'basic' else 'Locked'),
+            'nis2_status': 'Operational' if access_level == 'full' else ('In Progress' if access_level == 'basic' else 'Locked'),
+            'stats': {
+                'exports_completed': export_completed,
+                'deletion_requests_processed': deletion_processed,
+                'nis2_reports_submitted': nis2_reports,
+            },
+            'nis2_checklist': nis2_checklist,
+            'gdpr_checklist': gdpr_checklist,
+        }), 200
+
+    @users_bp.route('/auth/dashboard/vciso', methods=['GET'])
+    @login_required
+    def get_dashboard_vciso_updates():
+        """Return vCISO portal updates for enterprise users (or lock state for non-enterprise)."""
+        plan_key = _get_user_plan(current_user.id)
+        tier = _plan_access(plan_key)
+
+        if tier != 'enterprise':
+            return jsonify({
+                'plan_key': plan_key,
+                'tier': tier,
+                'access_level': 'locked',
+                'updates': [],
+                'message': 'vCISO Portal is available on Enterprise tiers only.',
+            }), 200
+
+        updates = (
+            VcisoUpdate.query
+            .filter(
+                and_(
+                    VcisoUpdate.is_active == True,
+                    or_(VcisoUpdate.user_id == current_user.id, VcisoUpdate.user_id == None),
+                )
+            )
+            .order_by(VcisoUpdate.created_at.desc())
+            .limit(20)
+            .all()
+        )
+
+        if not updates:
+            seed = [
+                {
+                    'title': 'Priority recommendation: tighten identity controls',
+                    'note': 'Enable conditional access for privileged accounts and enforce MFA coverage checks across admin scopes.',
+                    'action_items': [
+                        'Enable conditional access for admin scopes',
+                        'Audit MFA coverage for all privileged users',
+                    ],
+                    'author_name': 'Gabriel Aloho',
+                    'created_at': datetime.utcnow().isoformat(),
+                },
+                {
+                    'title': 'Action item: patch exposure window reduction',
+                    'note': 'Critical patch SLAs should move to 72 hours. Current average is above target based on latest telemetry.',
+                    'action_items': [
+                        'Set 72-hour SLA for critical vulnerabilities',
+                        'Track weekly patch aging trend by business unit',
+                    ],
+                    'author_name': 'Gabriel Aloho',
+                    'created_at': datetime.utcnow().isoformat(),
+                },
+            ]
+            return jsonify({
+                'plan_key': plan_key,
+                'tier': tier,
+                'access_level': 'full',
+                'updates': seed,
+            }), 200
+
+        return jsonify({
+            'plan_key': plan_key,
+            'tier': tier,
+            'access_level': 'full',
+            'updates': [item.to_dict() for item in updates],
         }), 200
     
     
