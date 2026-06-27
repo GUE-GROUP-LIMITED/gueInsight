@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import PublicHeader from '../components/PublicHeader';
 import './Documentation.css';
 import { useTranslation } from '../i18n/index';
 
@@ -31,7 +32,9 @@ const Documentation = () => {
   };
 
   return (
-    <main className="documentation-page">
+    <>
+      <PublicHeader featureTo="/#features" howTo="#getting-started" whoTo="/#who" pricingTo="/#pricing" trialTo="/signup" />
+      <main className="documentation-page">
       {/* Header */}
       <header className="documentation-page__header">
         <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
@@ -514,7 +517,8 @@ const Documentation = () => {
           </div>
         </section>
       </article>
-    </main>
+      </main>
+    </>
   );
 };
 

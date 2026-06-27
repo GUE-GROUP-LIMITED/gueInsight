@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GueInsight — Threat Intelligence Platform by Gue Cyber</title>
+<meta name="description" content="GueInsight is a subscription-based threat intelligence platform giving your team real-time security alerts, threat analysis, and cyber risk scoring. Built by Gue Cyber." />
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --bg:         #07101C;
+  --bg-mid:     #0C1A2B;
+  --bg-soft:    #101F30;
+  --blue:       #1565C0;
+  --cyan:       #00C2E0;
+  --cyan-dim:   rgba(0,194,224,0.1);
+  --cyan-border:rgba(0,194,224,0.18);
+  --green:      #00E5A0;
+  --green-dim:  rgba(0,229,160,0.1);
+  --red:        #FF5C5C;
+  --amber:      #FFB84D;
+  --white:      #EEF6FF;
+  --gray:       #6E8499;
+  --gray-light: #9FBBD0;
+  --text:       #C0D4E8;
+  --font-head:  'Syne', sans-serif;
+  --font-body:  'Inter', sans-serif;
+  --font-mono:  'JetBrains Mono', monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── NAV ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 15px 6%;
+  background: rgba(7,16,28,0.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--cyan-border);
+}
+.nav-brand {
+  display: flex; align-items: center; gap: 10px;
+  text-decoration: none;
+}
+.nav-logo-mark {
+  width: 32px; height: 32px; border-radius: 6px;
+  background: linear-gradient(135deg, var(--blue), var(--cyan));
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-head); font-weight: 800;
+  font-size: 0.8rem; color: white;
+}
+.nav-name {
+  font-family: var(--font-head); font-weight: 800;
+  font-size: 1.1rem; color: var(--white);
+  letter-spacing: -0.02em;
+}
+.nav-name span { color: var(--cyan); }
+.nav-by {
+  font-size: 0.7rem; color: var(--gray);
+  font-family: var(--font-mono);
+  border-left: 1px solid rgba(255,255,255,0.1);
+  padding-left: 10px; margin-left: 2px;
+}
+.nav-by a { color: var(--cyan); text-decoration: none; }
+.nav-links { display: flex; align-items: center; gap: 28px; list-style: none; }
+.nav-links a {
+  font-size: 0.84rem; color: var(--gray);
+  text-decoration: none; font-weight: 500;
+  transition: color 0.2s;
+}
+.nav-links a:hover { color: var(--cyan); }
+.nav-cta {
+  background: var(--cyan); color: #05101C;
+  padding: 9px 22px; border-radius: 4px;
+  font-weight: 700; font-size: 0.83rem;
+  text-decoration: none; transition: background 0.2s;
+  white-space: nowrap;
+}
+.nav-cta:hover { background: #00D9F9; }
+
+/* ── HERO ── */
+.hero {
+  min-height: 100vh;
+  display: flex; align-items: center;
+  padding: 130px 6% 90px;
+  position: relative; overflow: hidden;
+}
+.hero-bg-glow {
+  position: absolute; pointer-events: none;
+  top: -10%; left: 50%; transform: translateX(-50%);
+  width: 900px; height: 600px;
+  background: radial-gradient(ellipse, rgba(21,101,192,0.14) 0%, transparent 65%);
+}
+.hero-grid {
+  position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    linear-gradient(var(--cyan-border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--cyan-border) 1px, transparent 1px);
+  background-size: 56px 56px;
+  opacity: 0.4;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, black 20%, transparent 80%);
+}
+.hero-inner {
+  position: relative;
+  display: grid; grid-template-columns: 1fr 480px;
+  gap: 64px; align-items: center; width: 100%;
+}
+
+/* LEFT */
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--font-mono); font-size: 0.72rem;
+  color: var(--cyan); letter-spacing: 0.1em;
+  background: var(--cyan-dim); border: 1px solid var(--cyan-border);
+  padding: 5px 14px; border-radius: 20px; margin-bottom: 26px;
+}
+.pulse { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.8)} }
+
+.hero h1 {
+  font-family: var(--font-head);
+  font-size: clamp(2.6rem, 4.8vw, 3.8rem);
+  font-weight: 800; line-height: 1.1;
+  color: var(--white); letter-spacing: -0.03em;
+  margin-bottom: 22px;
+}
+.hero h1 em { font-style: normal; color: var(--cyan); }
+.hero-sub {
+  font-size: 1.05rem; color: var(--gray-light);
+  max-width: 500px; line-height: 1.8; margin-bottom: 36px;
+}
+.hero-sub strong { color: var(--white); font-weight: 600; }
+
+.hero-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 40px; }
+.btn-primary {
+  background: var(--cyan); color: #05101C;
+  padding: 14px 30px; border-radius: 4px;
+  font-weight: 700; font-size: 0.9rem;
+  text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+  transition: background 0.2s, transform 0.15s;
+}
+.btn-primary:hover { background: #00D9F9; transform: translateY(-1px); }
+.btn-ghost {
+  border: 1px solid var(--cyan-border); color: var(--cyan);
+  padding: 14px 30px; border-radius: 4px;
+  font-weight: 600; font-size: 0.9rem;
+  text-decoration: none; transition: all 0.2s;
+}
+.btn-ghost:hover { background: var(--cyan-dim); border-color: var(--cyan); }
+
+.hero-trust { display: flex; gap: 20px; flex-wrap: wrap; align-items: center; }
+.trust-item {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 0.78rem; color: var(--gray);
+  font-family: var(--font-mono);
+}
+.trust-item::before { content: '✓'; color: var(--green); font-weight: 700; }
+
+/* RIGHT — live dashboard mockup */
+.dashboard {
+  background: #081522;
+  border: 1px solid var(--cyan-border);
+  border-radius: 10px; overflow: hidden;
+  box-shadow: 0 32px 96px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,194,224,0.06);
+}
+.dash-topbar {
+  background: #050F1C;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(0,194,224,0.1);
+  display: flex; align-items: center; gap: 8px;
+}
+.d-dot { width: 8px; height: 8px; border-radius: 50%; }
+.dash-url {
+  flex: 1; margin-left: 10px;
+  background: rgba(0,194,224,0.05);
+  border: 1px solid var(--cyan-border);
+  border-radius: 4px; padding: 4px 12px;
+  font-family: var(--font-mono); font-size: 0.68rem; color: var(--gray);
+}
+.dash-body { padding: 20px; }
+
+/* header row */
+.dash-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 16px;
+}
+.dash-title { font-family: var(--font-head); font-size: 0.9rem; color: var(--white); font-weight: 700; }
+.dash-live {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono); font-size: 0.65rem; color: var(--green);
+}
+
+/* score ring */
+.dash-score-row {
+  display: grid; grid-template-columns: auto 1fr;
+  gap: 16px; align-items: center; margin-bottom: 16px;
+  padding: 14px; background: rgba(0,194,224,0.04);
+  border: 1px solid var(--cyan-border); border-radius: 6px;
+}
+.score-ring {
+  width: 60px; height: 60px; border-radius: 50%;
+  background: conic-gradient(var(--cyan) 0% 78%, rgba(0,194,224,0.1) 78% 100%);
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
+.score-ring::after {
+  content: ''; position: absolute;
+  width: 44px; height: 44px; border-radius: 50%;
+  background: #081522;
+}
+.score-val {
+  position: relative; z-index: 1;
+  font-family: var(--font-head); font-size: 1rem;
+  color: var(--cyan); font-weight: 800;
+}
+.score-label { font-size: 0.75rem; color: var(--white); font-weight: 600; margin-bottom: 2px; }
+.score-sub { font-size: 0.68rem; color: var(--gray); font-family: var(--font-mono); }
+
+/* alert feed */
+.alert-feed { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.alert-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border-radius: 5px;
+  border: 1px solid transparent;
+  font-size: 0.75rem;
+}
+.alert-item.high { background: rgba(255,92,92,0.07); border-color: rgba(255,92,92,0.2); }
+.alert-item.med  { background: rgba(255,184,77,0.07); border-color: rgba(255,184,77,0.2); }
+.alert-item.low  { background: rgba(0,229,160,0.05); border-color: rgba(0,229,160,0.12); }
+.alert-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.alert-dot.high { background: var(--red); }
+.alert-dot.med  { background: var(--amber); }
+.alert-dot.low  { background: var(--green); }
+.alert-name { flex: 1; color: var(--gray-light); }
+.alert-badge {
+  font-family: var(--font-mono); font-size: 0.62rem;
+  padding: 2px 7px; border-radius: 3px; font-weight: 600;
+}
+.badge-high { color: var(--red); background: rgba(255,92,92,0.12); }
+.badge-med  { color: var(--amber); background: rgba(255,184,77,0.12); }
+.badge-low  { color: var(--green); background: rgba(0,229,160,0.1); }
+.alert-time { font-family: var(--font-mono); font-size: 0.6rem; color: var(--gray); }
+
+/* mini stats */
+.dash-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+.dash-stat {
+  padding: 10px; border-radius: 5px;
+  background: rgba(0,194,224,0.04);
+  border: 1px solid var(--cyan-border);
+  text-align: center;
+}
+.dash-stat-val {
+  font-family: var(--font-head); font-size: 1.2rem;
+  color: var(--cyan); font-weight: 800; line-height: 1;
+}
+.dash-stat-label { font-size: 0.62rem; color: var(--gray); font-family: var(--font-mono); margin-top: 3px; }
+
+/* ── SECTION ── */
+section { padding: 88px 6%; }
+.mono { font-family: var(--font-mono); font-size: 0.72rem; color: var(--cyan); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 10px; }
+.sh { font-family: var(--font-head); font-size: clamp(1.9rem,3.5vw,2.7rem); font-weight: 800; color: var(--white); letter-spacing: -0.025em; line-height: 1.15; margin-bottom: 14px; }
+.sp { color: var(--gray-light); font-size: 1rem; max-width: 520px; line-height: 1.75; margin-bottom: 52px; }
+
+/* ── PROBLEM STRIP ── */
+.problem-strip { background: var(--bg-mid); border-top: 1px solid var(--cyan-border); border-bottom: 1px solid var(--cyan-border); }
+.problem-inner {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px,1fr));
+  gap: 0;
+}
+.problem-item {
+  padding: 36px 32px;
+  border-right: 1px solid var(--cyan-border);
+  position: relative;
+}
+.problem-item:last-child { border-right: none; }
+.prob-icon { font-size: 1.5rem; margin-bottom: 12px; }
+.prob-title { font-family: var(--font-head); font-size: 1rem; font-weight: 700; color: var(--white); margin-bottom: 8px; }
+.prob-desc { font-size: 0.845rem; color: var(--gray); line-height: 1.65; }
+.prob-arrow {
+  position: absolute; bottom: 32px; right: 28px;
+  font-size: 1.2rem; color: var(--cyan); opacity: 0.3;
+}
+
+/* ── FEATURES ── */
+.features-bg { background: var(--bg-mid); }
+.features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: 20px; }
+.feature-card {
+  padding: 28px; border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--cyan-border);
+  transition: border-color 0.2s, transform 0.2s;
+  position: relative; overflow: hidden;
+}
+.feature-card::before {
+  content: ''; position: absolute;
+  top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--cyan), var(--blue));
+  opacity: 0; transition: opacity 0.2s;
+}
+.feature-card:hover { border-color: rgba(0,194,224,0.35); transform: translateY(-2px); }
+.feature-card:hover::before { opacity: 1; }
+.feat-icon { font-size: 1.4rem; margin-bottom: 14px; }
+.feat-title { font-family: var(--font-head); font-weight: 700; font-size: 1rem; color: var(--white); margin-bottom: 8px; }
+.feat-desc { font-size: 0.855rem; color: var(--gray); line-height: 1.65; }
+.feat-tag { display: inline-block; margin-top: 14px; font-family: var(--font-mono); font-size: 0.65rem; color: var(--cyan); background: var(--cyan-dim); border: 1px solid var(--cyan-border); padding: 2px 8px; border-radius: 3px; }
+
+/* ── HOW IT WORKS ── */
+.how-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap: 0; counter-reset: steps; }
+.how-step {
+  padding: 36px 28px;
+  border-right: 1px solid var(--cyan-border);
+  position: relative;
+  counter-increment: steps;
+}
+.how-step:last-child { border-right: none; }
+.how-step::before {
+  content: counter(steps, decimal-leading-zero);
+  display: block; font-family: var(--font-mono); font-size: 0.65rem;
+  color: var(--cyan); letter-spacing: 0.12em; margin-bottom: 14px;
+}
+.step-icon { font-size: 1.4rem; margin-bottom: 12px; }
+.step-title { font-family: var(--font-head); font-size: 0.95rem; font-weight: 700; color: var(--white); margin-bottom: 8px; }
+.step-desc { font-size: 0.835rem; color: var(--gray); line-height: 1.65; }
+.step-connector {
+  position: absolute; right: -1px; top: 50%;
+  width: 0; height: 0;
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  border-left: 10px solid var(--bg-mid);
+  transform: translateY(-50%);
+  z-index: 1;
+}
+
+/* ── WHO IS IT FOR ── */
+.who-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap: 16px; }
+.who-card {
+  padding: 24px;
+  background: var(--bg-mid);
+  border: 1px solid var(--cyan-border);
+  border-radius: 8px;
+  transition: border-color 0.2s;
+}
+.who-card:hover { border-color: rgba(0,194,224,0.35); }
+.who-icon { font-size: 1.3rem; margin-bottom: 12px; }
+.who-title { font-family: var(--font-head); font-weight: 700; font-size: 0.95rem; color: var(--white); margin-bottom: 8px; }
+.who-desc { font-size: 0.835rem; color: var(--gray); line-height: 1.6; }
+
+/* ── PRICING ── */
+.pricing-bg { background: var(--bg-mid); }
+.pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: 20px; max-width: 960px; }
+.price-card {
+  padding: 32px 28px;
+  background: var(--bg);
+  border: 1px solid var(--cyan-border);
+  border-radius: 10px;
+  position: relative;
+  transition: transform 0.2s;
+}
+.price-card:hover { transform: translateY(-3px); }
+.price-card.featured {
+  border-color: var(--cyan);
+  background: linear-gradient(180deg, rgba(0,194,224,0.06) 0%, var(--bg) 100%);
+}
+.featured-badge {
+  position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+  background: var(--cyan); color: #05101C;
+  font-family: var(--font-mono); font-size: 0.65rem; font-weight: 700;
+  padding: 3px 14px; border-radius: 20px; white-space: nowrap;
+  letter-spacing: 0.08em;
+}
+.price-tier { font-family: var(--font-mono); font-size: 0.7rem; color: var(--cyan); letter-spacing: 0.1em; margin-bottom: 8px; }
+.price-name { font-family: var(--font-head); font-size: 1.2rem; font-weight: 800; color: var(--white); margin-bottom: 12px; }
+.price-amount { display: flex; align-items: flex-start; gap: 4px; margin-bottom: 6px; }
+.price-currency { font-size: 1rem; color: var(--gray); margin-top: 6px; font-family: var(--font-mono); }
+.price-num { font-family: var(--font-head); font-size: 2.6rem; font-weight: 800; color: var(--white); line-height: 1; }
+.price-period { font-size: 0.78rem; color: var(--gray); font-family: var(--font-mono); margin-top: 8px; }
+.price-note { font-size: 0.75rem; color: var(--gray); margin-bottom: 24px; }
+.price-divider { height: 1px; background: var(--cyan-border); margin-bottom: 20px; }
+.price-features { display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; }
+.pf { display: flex; align-items: flex-start; gap: 9px; font-size: 0.82rem; color: var(--gray-light); }
+.pf::before { content: '✓'; color: var(--green); font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+.pf.off { color: var(--gray); opacity: 0.5; }
+.pf.off::before { content: '—'; color: var(--gray); }
+.price-btn {
+  display: block; text-align: center;
+  padding: 12px; border-radius: 4px;
+  font-weight: 700; font-size: 0.85rem;
+  text-decoration: none; transition: all 0.2s;
+}
+.price-btn-primary { background: var(--cyan); color: #05101C; }
+.price-btn-primary:hover { background: #00D9F9; }
+.price-btn-ghost { border: 1px solid var(--cyan-border); color: var(--cyan); }
+.price-btn-ghost:hover { background: var(--cyan-dim); }
+
+/* ── BUILT BY STRIP ── */
+.built-by {
+  background: linear-gradient(90deg, rgba(21,101,192,0.12) 0%, rgba(7,16,28,0) 100%);
+  border: 1px solid var(--cyan-border); border-radius: 10px;
+  padding: 40px 48px;
+  display: flex; align-items: center; gap: 40px; flex-wrap: wrap;
+}
+.built-avatar {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--blue), var(--cyan));
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-head); font-size: 1.3rem; font-weight: 800;
+  color: white; flex-shrink: 0;
+}
+.built-text { flex: 1; }
+.built-label { font-family: var(--font-mono); font-size: 0.7rem; color: var(--cyan); letter-spacing: 0.1em; margin-bottom: 6px; }
+.built-title { font-family: var(--font-head); font-size: 1.15rem; font-weight: 800; color: var(--white); margin-bottom: 6px; }
+.built-desc { font-size: 0.875rem; color: var(--gray); line-height: 1.65; max-width: 520px; }
+.built-links { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
+.built-link {
+  font-size: 0.78rem; color: var(--cyan);
+  text-decoration: none; font-family: var(--font-mono);
+  display: flex; align-items: center; gap: 5px;
+}
+
+/* ── CTA ── */
+.cta-section {
+  text-align: center;
+  background: var(--bg-mid);
+  border-top: 1px solid var(--cyan-border);
+  padding: 96px 6%;
+}
+.cta-section .sh { margin: 0 auto 14px; }
+.cta-section .sp { margin: 0 auto 40px; }
+.cta-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.cta-legal { font-size: 0.75rem; color: var(--gray); margin-top: 20px; font-family: var(--font-mono); }
+
+/* ── FOOTER ── */
+footer {
+  background: #040C17;
+  border-top: 1px solid var(--cyan-border);
+  padding: 44px 6% 28px;
+}
+.footer-top {
+  display: flex; justify-content: space-between;
+  gap: 40px; flex-wrap: wrap; margin-bottom: 36px;
+}
+.footer-brand-name { font-family: var(--font-head); font-weight: 800; font-size: 1rem; color: var(--white); margin-bottom: 4px; }
+.footer-brand-name span { color: var(--cyan); }
+.footer-brand-sub { font-size: 0.75rem; color: var(--gray); max-width: 220px; line-height: 1.55; font-family: var(--font-mono); }
+.footer-nav-group h4 { font-size: 0.68rem; color: var(--gray); font-family: var(--font-mono); letter-spacing: 0.1em; margin-bottom: 12px; }
+.footer-nav-group ul { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.footer-nav-group a { font-size: 0.8rem; color: var(--gray); text-decoration: none; transition: color 0.2s; }
+.footer-nav-group a:hover { color: var(--cyan); }
+.footer-bottom {
+  border-top: 1px solid rgba(255,255,255,0.04); padding-top: 22px;
+  display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--gray); flex-wrap: wrap; gap: 8px;
+}
+.footer-bottom a { color: var(--gray); text-decoration: none; }
+.footer-bottom a:hover { color: var(--cyan); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .hero-inner { grid-template-columns: 1fr; }
+  .dashboard { max-width: 420px; }
+  .nav-links { display: none; }
+  .how-step { border-right: none; border-bottom: 1px solid var(--cyan-border); }
+  .how-step:last-child { border-bottom: none; }
+  .step-connector { display: none; }
+  .problem-item { border-right: none; border-bottom: 1px solid var(--cyan-border); }
+  .problem-item:last-child { border-bottom: none; }
+  .built-by { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-brand">
+    <div class="nav-logo-mark">GI</div>
+    <div>
+      <div class="nav-name">Gue<span>Insight</span></div>
+    </div>
+    <div class="nav-by">by <a href="https://www.guecyber.com" target="_blank">Gue Cyber</a></div>
+  </a>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#how">How It Works</a></li>
+    <li><a href="#who">Who It's For</a></li>
+    <li><a href="#pricing">Pricing</a></li>
+    <li><a href="https://www.guecyber.com" target="_blank">Gue Cyber</a></li>
+  </ul>
+  <a href="#pricing" class="nav-cta">Start Free Trial</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg-glow"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-inner">
+
+    <!-- LEFT -->
+    <div>
+      <div class="hero-eyebrow">
+        <div class="pulse"></div>
+        LIVE THREAT INTELLIGENCE · SUBSCRIPTION PLATFORM
+      </div>
+      <h1>Know Every Threat.<br/><em>Before It Hits.</em></h1>
+      <p class="hero-sub">
+        GueInsight is a <strong>subscription-based threat intelligence platform</strong> that gives your team and organisation real-time security alerts, threat analysis, and cyber risk scoring — built in-house by <strong><a href="https://www.guecyber.com" target="_blank" style="color:var(--cyan);text-decoration:none">Gue Cyber</a></strong>.
+      </p>
+      <div class="hero-actions">
+        <a href="#pricing" class="btn-primary">⚡ Start Free Trial</a>
+        <a href="#features" class="btn-ghost">See Features →</a>
+      </div>
+      <div class="hero-trust">
+        <div class="trust-item">Real-time alerts</div>
+        <div class="trust-item">No setup needed</div>
+        <div class="trust-item">Cancel anytime</div>
+        <div class="trust-item">Built in Belgium</div>
+      </div>
+    </div>
+
+    <!-- RIGHT — dashboard mockup -->
+    <div class="dashboard">
+      <div class="dash-topbar">
+        <div class="d-dot" style="background:#FF5F57"></div>
+        <div class="d-dot" style="background:#FFBD2E"></div>
+        <div class="d-dot" style="background:#28CA41"></div>
+        <div class="dash-url">insights.guecyber.com · Dashboard</div>
+      </div>
+      <div class="dash-body">
+        <div class="dash-header">
+          <div class="dash-title">Threat Intelligence Feed</div>
+          <div class="dash-live"><div class="pulse"></div> LIVE</div>
+        </div>
+
+        <div class="dash-score-row">
+          <div class="score-ring"><div class="score-val">78</div></div>
+          <div>
+            <div class="score-label">Security Score</div>
+            <div class="score-sub">3 ACTIVE ALERTS · UPDATED 1 MIN AGO</div>
+          </div>
+        </div>
+
+        <div class="alert-feed">
+          <div class="alert-item high">
+            <div class="alert-dot high"></div>
+            <div class="alert-name">Phishing campaign targeting your domain</div>
+            <div class="alert-badge badge-high">HIGH</div>
+            <div class="alert-time">2m</div>
+          </div>
+          <div class="alert-item high">
+            <div class="alert-dot high"></div>
+            <div class="alert-name">CVE-2025-4421 — Critical patch missing</div>
+            <div class="alert-badge badge-high">HIGH</div>
+            <div class="alert-time">14m</div>
+          </div>
+          <div class="alert-item med">
+            <div class="alert-dot med"></div>
+            <div class="alert-name">Suspicious login — unusual geography</div>
+            <div class="alert-badge badge-med">MED</div>
+            <div class="alert-time">32m</div>
+          </div>
+          <div class="alert-item med">
+            <div class="alert-dot med"></div>
+            <div class="alert-name">SSL certificate expiring in 7 days</div>
+            <div class="alert-badge badge-med">MED</div>
+            <div class="alert-time">1h</div>
+          </div>
+          <div class="alert-item low">
+            <div class="alert-dot low"></div>
+            <div class="alert-name">Firewall rules — all checks passed</div>
+            <div class="alert-badge badge-low">OK</div>
+            <div class="alert-time">2h</div>
+          </div>
+        </div>
+
+        <div class="dash-stats">
+          <div class="dash-stat">
+            <div class="dash-stat-val" style="color:var(--red)">3</div>
+            <div class="dash-stat-label">OPEN ALERTS</div>
+          </div>
+          <div class="dash-stat">
+            <div class="dash-stat-val" style="color:var(--green)">24</div>
+            <div class="dash-stat-label">RESOLVED 30D</div>
+          </div>
+          <div class="dash-stat">
+            <div class="dash-stat-val">99%</div>
+            <div class="dash-stat-label">UPTIME</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROBLEM STRIP -->
+<div class="problem-strip">
+  <div class="problem-inner">
+    <div class="problem-item">
+      <div class="prob-icon">😰</div>
+      <div class="prob-title">You don't know what's targeting you</div>
+      <p class="prob-desc">Threats evolve daily. Without continuous monitoring, you're always reacting after the damage is done.</p>
+      <div class="prob-arrow">→</div>
+    </div>
+    <div class="problem-item">
+      <div class="prob-icon">💸</div>
+      <div class="prob-title">Enterprise tools cost a fortune</div>
+      <p class="prob-desc">Most threat intelligence platforms are built for large enterprise budgets — leaving SMEs completely exposed.</p>
+      <div class="prob-arrow">→</div>
+    </div>
+    <div class="problem-item">
+      <div class="prob-icon">🧩</div>
+      <div class="prob-title">Too complex for non-SOC teams</div>
+      <p class="prob-desc">Most platforms require dedicated security analysts to interpret the data. Your team needs clarity, not complexity.</p>
+      <div class="prob-arrow">→</div>
+    </div>
+    <div class="problem-item" style="background:rgba(0,194,224,0.03)">
+      <div class="prob-icon">✅</div>
+      <div class="prob-title">GueInsight fixes all three</div>
+      <p class="prob-desc">Affordable. Actionable. Built for teams without a full SOC. Real-time intelligence you can actually use.</p>
+    </div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section id="features" class="features-bg">
+  <div class="mono">// What You Get</div>
+  <div class="sh">Everything Your Team Needs<br/>to Stay Ahead of Threats</div>
+  <p class="sp">GueInsight gives your organisation continuous visibility without the complexity or cost of enterprise security tooling.</p>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feat-icon">📡</div>
+      <div class="feat-title">Real-Time Threat Feed</div>
+      <p class="feat-desc">Live alerts on threats targeting your organisation, your sector, and the broader threat landscape — updated continuously.</p>
+      <span class="feat-tag">LIVE · CONTINUOUS</span>
+    </div>
+    <div class="feature-card">
+      <div class="feat-icon">🎯</div>
+      <div class="feat-title">Security Risk Scoring</div>
+      <p class="feat-desc">A live security score that reflects your current posture — so you always know where you stand at a glance.</p>
+      <span class="feat-tag">SCORE · POSTURE</span>
+    </div>
+    <div class="feature-card">
+      <div class="feat-icon">🔔</div>
+      <div class="feat-title">Prioritised Alerts</div>
+      <p class="feat-desc">Threats are classified HIGH / MEDIUM / LOW with clear context, so your team knows exactly what to act on first.</p>
+      <span class="feat-tag">TRIAGE · PRIORITY</span>
+    </div>
+    <div class="feature-card">
+      <div class="feat-icon">🐛</div>
+      <div class="feat-title">CVE & Vulnerability Tracking</div>
+      <p class="feat-desc">Stay on top of newly disclosed vulnerabilities relevant to your environment — with patch guidance included.</p>
+      <span class="feat-tag">CVE · PATCH · VULN</span>
+    </div>
+    <div class="feature-card">
+      <div class="feat-icon">👥</div>
+      <div class="feat-title">Multi-Account (Staff Access)</div>
+      <p class="feat-desc">Built for teams. Your company account includes seat-based access for staff — everyone sees the same intelligence in one place.</p>
+      <span class="feat-tag">TEAM · MULTI-SEAT</span>
+    </div>
+    <div class="feature-card">
+      <div class="feat-icon">📊</div>
+      <div class="feat-title">Reporting & Summaries</div>
+      <p class="feat-desc">Weekly and monthly security summaries you can share with management — no technical knowledge required to read them.</p>
+      <span class="feat-tag">REPORTS · EXPORT</span>
+    </div>
+    <div class="feature-card">
+      <div class="feat-icon">🌍</div>
+      <div class="feat-title">Belgium & EU Focus</div>
+      <p class="feat-desc">Threat intelligence tuned for the Belgian and European threat landscape — including NIS2-relevant monitoring.</p>
+      <span class="feat-tag">NIS2 · BELGIUM · EU</span>
+    </div>
+    <div class="feature-card">
+      <div class="feat-icon">🔗</div>
+      <div class="feat-title">Backed by Gue Cyber</div>
+      <p class="feat-desc">GueInsight is built and operated by Gue Cyber — a registered Belgian cybersecurity consultancy. Expert support is a message away.</p>
+      <span class="feat-tag">EXPERT BACKED</span>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <div class="mono">// Getting Started</div>
+  <div class="sh">Up and Running in Minutes</div>
+  <p class="sp">No complex setup. No hardware. No dedicated analyst required. Just sign up and your team gets immediate visibility.</p>
+  <div class="how-grid">
+    <div class="how-step">
+      <div class="step-icon">🏢</div>
+      <div class="step-title">Create Your Organisation Account</div>
+      <p class="step-desc">Sign up with your company details. Your account becomes the hub for your team's threat intelligence.</p>
+      <div class="step-connector"></div>
+    </div>
+    <div class="how-step">
+      <div class="step-icon">👥</div>
+      <div class="step-title">Invite Your Team</div>
+      <p class="step-desc">Add staff members to your account. Everyone on your team gets access to the same real-time intelligence.</p>
+      <div class="step-connector"></div>
+    </div>
+    <div class="how-step">
+      <div class="step-icon">⚙️</div>
+      <div class="step-title">Configure Your Profile</div>
+      <p class="step-desc">Tell us about your sector, technology stack, and key assets. GueInsight tailors alerts to what's relevant to you.</p>
+      <div class="step-connector"></div>
+    </div>
+    <div class="how-step">
+      <div class="step-icon">📡</div>
+      <div class="step-title">Start Receiving Intelligence</div>
+      <p class="step-desc">Real-time alerts, risk scores, and threat feeds start flowing immediately. Act on what matters, skip what doesn't.</p>
+    </div>
+  </div>
+</section>
+
+<!-- WHO IS IT FOR -->
+<section id="who" class="features-bg">
+  <div class="mono">// Target Users</div>
+  <div class="sh">Built for Teams Without<br/>a Full Security Department</div>
+  <p class="sp">GueInsight is designed for organisations that take security seriously but don't have a dedicated SOC.</p>
+  <div class="who-grid">
+    <div class="who-card">
+      <div class="who-icon">🏢</div>
+      <div class="who-title">SMEs & Mid-Market Companies</div>
+      <p class="who-desc">Belgian and European businesses that need professional-grade threat intelligence without the enterprise price tag or complexity.</p>
+    </div>
+    <div class="who-card">
+      <div class="who-icon">🛡️</div>
+      <div class="who-title">IT & Security Teams</div>
+      <p class="who-desc">In-house IT teams who manage security alongside other responsibilities and need a clear, fast intelligence source.</p>
+    </div>
+    <div class="who-card">
+      <div class="who-icon">📋</div>
+      <div class="who-title">NIS2-Obligated Organisations</div>
+      <p class="who-desc">Companies required to comply with NIS2 who need continuous monitoring as part of their compliance programme.</p>
+    </div>
+    <div class="who-card">
+      <div class="who-icon">🤝</div>
+      <div class="who-title">Gue Cyber Clients</div>
+      <p class="who-desc">Organisations working with Gue Cyber for vCISO or consulting services — GueInsight extends that coverage between engagements.</p>
+    </div>
+  </div>
+</section>
+
+<!-- BUILT BY -->
+<section style="padding:56px 6%;">
+  <div class="built-by">
+    <div class="built-avatar">GA</div>
+    <div class="built-text">
+      <div class="built-label">// BUILT & OPERATED BY</div>
+      <div class="built-title">Gabriel Aloho · Founder, Gue Cyber</div>
+      <p class="built-desc">GueInsight isn't a white-labelled tool — it was designed and built from scratch by Gabriel Aloho, a cybersecurity professional with 15+ years of experience. It's the platform Gue Cyber uses internally and offers to clients. When you subscribe, expert support is directly available from the team that built it.</p>
+    </div>
+    <div class="built-links">
+      <a href="https://www.guecyber.com" target="_blank" class="built-link">🛡️ guecyber.com →</a>
+      <a href="https://www.gabrielaloho.com" target="_blank" class="built-link">👤 gabrielaloho.com →</a>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing" class="pricing-bg">
+  <div class="mono">// Subscription Plans</div>
+  <div class="sh">Simple, Transparent Pricing</div>
+  <p class="sp">Start free. Upgrade when you're ready. No long-term contracts required.</p>
+  <div class="pricing-grid">
+
+    <div class="price-card">
+      <div class="price-tier">STARTER</div>
+      <div class="price-name">Essentials</div>
+      <div class="price-amount">
+        <span class="price-currency">€</span>
+        <span class="price-num">0</span>
+      </div>
+      <div class="price-period">Free forever · 1 user</div>
+      <div class="price-note">Get started with no commitment</div>
+      <div class="price-divider"></div>
+      <div class="price-features">
+        <div class="pf">Threat intelligence feed (limited)</div>
+        <div class="pf">Basic security score</div>
+        <div class="pf">Weekly summary digest</div>
+        <div class="pf">1 user account</div>
+        <div class="pf off">Priority alerts</div>
+        <div class="pf off">Team / staff accounts</div>
+        <div class="pf off">NIS2 monitoring</div>
+        <div class="pf off">Expert support</div>
+      </div>
+      <a href="#" class="price-btn price-btn-ghost">Get Started Free</a>
+    </div>
+
+    <div class="price-card featured">
+      <div class="featured-badge">⚡ MOST POPULAR</div>
+      <div class="price-tier">PROFESSIONAL</div>
+      <div class="price-name">Team</div>
+      <div class="price-amount">
+        <span class="price-currency">€</span>
+        <span class="price-num">49</span>
+      </div>
+      <div class="price-period">per month · up to 10 users</div>
+      <div class="price-note">Billed monthly · cancel anytime</div>
+      <div class="price-divider"></div>
+      <div class="price-features">
+        <div class="pf">Full real-time threat intelligence feed</div>
+        <div class="pf">Live security risk scoring</div>
+        <div class="pf">Priority alerts — HIGH / MED / LOW</div>
+        <div class="pf">CVE & vulnerability tracking</div>
+        <div class="pf">Up to 10 staff accounts</div>
+        <div class="pf">Weekly & monthly reports</div>
+        <div class="pf">NIS2-relevant monitoring</div>
+        <div class="pf off">Dedicated expert support</div>
+      </div>
+      <a href="#" class="price-btn price-btn-primary">Start 14-Day Free Trial</a>
+    </div>
+
+    <div class="price-card">
+      <div class="price-tier">ENTERPRISE</div>
+      <div class="price-name">Organisation</div>
+      <div class="price-amount">
+        <span class="price-num" style="font-size:2rem; margin-top:4px">Custom</span>
+      </div>
+      <div class="price-period">Tailored to your organisation</div>
+      <div class="price-note">Includes Gue Cyber consulting hours</div>
+      <div class="price-divider"></div>
+      <div class="price-features">
+        <div class="pf">Everything in Team</div>
+        <div class="pf">Unlimited staff accounts</div>
+        <div class="pf">Custom threat profiles</div>
+        <div class="pf">NIS2 compliance monitoring</div>
+        <div class="pf">Monthly vCISO review call</div>
+        <div class="pf">Dedicated expert support (Gabriel directly)</div>
+        <div class="pf">Incident response priority access</div>
+        <div class="pf">Custom reporting & SLA</div>
+      </div>
+      <a href="https://www.guecyber.com" target="_blank" class="price-btn price-btn-ghost">Contact Gue Cyber →</a>
+    </div>
+
+  </div>
+  <p style="text-align:center; margin-top:28px; font-size:0.78rem; color:var(--gray); font-family:var(--font-mono);">
+    * Pricing indicative — contact us to confirm current rates · VAT applicable for Belgian organisations
+  </p>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="mono" style="text-align:center">// Get Started Today</div>
+  <div class="sh">Stop Reacting.<br/>Start Anticipating.</div>
+  <p class="sp">Join organisations across Belgium using GueInsight to stay ahead of threats — before they become incidents.</p>
+  <div class="cta-actions">
+    <a href="#pricing" class="btn-primary">⚡ Start Free Trial</a>
+    <a href="https://www.guecyber.com" target="_blank" class="btn-ghost">Talk to Gue Cyber →</a>
+  </div>
+  <p class="cta-legal">No credit card required for free plan · GDPR compliant · Data hosted in EU</p>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-top">
+    <div>
+      <div class="footer-brand-name">Gue<span>Insight</span></div>
+      <div class="footer-brand-sub">SUBSCRIPTION-BASED THREAT INTELLIGENCE PLATFORM · BY GUE CYBER · BELGIUM</div>
+    </div>
+    <div class="footer-nav-group">
+      <h4>PRODUCT</h4>
+      <ul>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#how">How It Works</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+        <li><a href="#who">Who It's For</a></li>
+      </ul>
+    </div>
+    <div class="footer-nav-group">
+      <h4>GUE CYBER</h4>
+      <ul>
+        <li><a href="https://www.guecyber.com" target="_blank">guecyber.com</a></li>
+        <li><a href="https://www.guecyber.com/#services" target="_blank">vCISO Services</a></li>
+        <li><a href="https://www.guecyber.com/#nis2" target="_blank">NIS2 Compliance</a></li>
+        <li><a href="https://www.gabrielaloho.com" target="_blank">gabrielaloho.com</a></li>
+      </ul>
+    </div>
+    <div class="footer-nav-group">
+      <h4>LEGAL</h4>
+      <ul>
+        <li><a href="#">Privacy Policy</a></li>
+        <li><a href="#">Terms of Service</a></li>
+        <li><a href="#">GDPR</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 GueInsight · A Gue Cyber product · Avelgem, Belgium</span>
+    <span>
+      <a href="https://www.guecyber.com" target="_blank">guecyber.com</a> ·
+      <a href="https://www.gabrielaloho.com" target="_blank">gabrielaloho.com</a>
+    </span>
+  </div>
+</footer>
+
+</body>
+</html>

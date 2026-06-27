@@ -492,6 +492,43 @@ class NIS2IncidentReport(db.Model):
         }
 
 
+class VcisoUpdate(db.Model):
+    """Advisory updates posted by admin/vCISO staff for enterprise client dashboards."""
+    __tablename__ = 'vciso_update'
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('user.id'), nullable=True)  # Null means all eligible enterprise users
+    title = Column(String(255), nullable=False)
+    note = Column(String(3000), nullable=False)
+    action_items = Column(String(3000), nullable=True)
+    author_name = Column(String(120), nullable=False, default='Gabriel Aloho')
+    created_by_admin_id = Column(Integer, ForeignKey('user.id'), nullable=True)
+    created_at = Column(DateTime, default=_utc_now)
+    updated_at = Column(DateTime, default=_utc_now, onupdate=_utc_now)
+    is_active = Column(Boolean, nullable=False, default=True)
+
+    user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('vciso_updates', lazy=True))
+    created_by_admin = db.relationship('User', foreign_keys=[created_by_admin_id], post_update=True)
+
+    def to_dict(self):
+        action_items = []
+        if self.action_items:
+            action_items = [item.strip() for item in self.action_items.split('\n') if item.strip()]
+
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'title': self.title,
+            'note': self.note,
+            'action_items': action_items,
+            'author_name': self.author_name,
+            'created_by_admin_id': self.created_by_admin_id,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'is_active': bool(self.is_active),
+        }
+
+
 
 # ===== ENTERPRISE FEATURES =====
 

@@ -292,6 +292,18 @@
   font-size: 0.82rem;
 }
 
+.admin-shell__chip--ghost {
+  background: #eef4fb;
+  color: #2c4364;
+  border: 1px solid #cfdaea;
+}
+
+.admin-shell__chip--ghost.is-selected {
+  background: #2c4364;
+  color: #fff;
+  border-color: #2c4364;
+}
+
 .admin-shell__stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -582,6 +594,167 @@
   color: #c43b3b;
 }
 
+.admin-shell__feedback--success {
+  color: #127f67;
+}
+
+.admin-shell__vciso-form {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-shell__field {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-shell__field > span {
+  color: #4a5d78;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.admin-shell__field input,
+.admin-shell__field textarea,
+.admin-shell__field select {
+  width: 100%;
+  border: 1px solid #d6e0ea;
+  border-radius: 12px;
+  padding: 0.75rem 0.9rem;
+  background: #fff;
+  color: #243447;
+  font: inherit;
+}
+
+.admin-shell__field textarea {
+  resize: vertical;
+}
+
+.admin-shell__field input:focus,
+.admin-shell__field textarea:focus,
+.admin-shell__field select:focus {
+  outline: 2px solid #8aa2ff;
+  outline-offset: 1px;
+  border-color: #8aa2ff;
+}
+
+.admin-shell__vciso-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.admin-shell__vciso-history {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid #e4ebf5;
+}
+
+.admin-shell__vciso-toolbar {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.admin-shell__vciso-search {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.admin-shell__vciso-search input {
+  flex: 1;
+  border: 1px solid #d6e0ea;
+  border-radius: 999px;
+  padding: 0.68rem 1rem;
+  font: inherit;
+  background: #fff;
+  color: #243447;
+}
+
+.admin-shell__vciso-search input:focus {
+  outline: 2px solid #8aa2ff;
+  outline-offset: 1px;
+  border-color: #8aa2ff;
+}
+
+.admin-shell__vciso-filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-shell__vciso-list {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-shell__vciso-item {
+  border: 1px solid #dce6f2;
+  border-radius: 14px;
+  padding: 14px;
+  background: #fbfdff;
+}
+
+.admin-shell__vciso-item.is-inactive {
+  opacity: 0.72;
+}
+
+.admin-shell__vciso-item h3 {
+  margin: 0;
+  color: #223450;
+}
+
+.admin-shell__vciso-item p {
+  margin: 6px 0;
+  color: #4d627e;
+}
+
+.admin-shell__vciso-item ul {
+  margin: 8px 0;
+  padding-left: 18px;
+}
+
+.admin-shell__vciso-item-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.admin-shell__vciso-edit {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-shell__vciso-edit input,
+.admin-shell__vciso-edit textarea {
+  width: 100%;
+  border: 1px solid #d6e0ea;
+  border-radius: 10px;
+  padding: 0.7rem 0.8rem;
+  font: inherit;
+}
+
+.admin-shell__vciso-meta {
+  font-size: 0.86rem;
+  color: #6c7e98;
+}
+
+.admin-shell__vciso-pagination {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.admin-shell__vciso-pagination p {
+  margin: 0;
+  color: #4a5d78;
+  font-size: 0.9rem;
+}
+
 .admin-shell__timeline {
   display: grid;
   gap: 14px;
@@ -702,5 +875,22 @@
   .admin-shell__table th,
   .admin-shell__table td {
     white-space: normal;
+  }
+
+  .admin-shell__vciso-actions {
+    justify-content: stretch;
+  }
+
+  .admin-shell__vciso-actions .admin-shell__topbar-button {
+    width: 100%;
+  }
+
+  .admin-shell__vciso-pagination {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-shell__vciso-pagination .admin-shell__chip {
+    width: 100%;
   }
 }

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import PublicHeader from '../components/PublicHeader';
 import './AuthPricing.css';
 
 const ResetPassword = () => {
@@ -23,8 +24,10 @@ const ResetPassword = () => {
   };
 
   return (
-    <main className="auth-pricing-page auth-pricing-page--auth">
-      <section className="auth-pricing-card">
+    <>
+      {!isAdminFlow ? <PublicHeader featureTo="/#features" howTo="/docs#getting-started" whoTo="/#who" pricingTo="/#pricing" trialTo="/signup" /> : null}
+      <main className="auth-pricing-page auth-pricing-page--auth">
+        <section className="auth-pricing-card">
         <div className="auth-pricing-card__head">
           <p className="auth-pricing-card__eyebrow">{isAdminFlow ? 'Staff Access' : 'Credential Recovery'}</p>
           <h1>{isAdminFlow ? 'Change your password' : 'Reset your password'}</h1>
@@ -53,8 +56,9 @@ const ResetPassword = () => {
           {error ? <p className="auth-pricing-message auth-pricing-message--error">{error}</p> : null}
           {success ? <p className="auth-pricing-message auth-pricing-message--success">{success}</p> : null}
         </form>
-      </section>
-    </main>
+        </section>
+      </main>
+    </>
   );
 };
 

@@ -474,6 +474,72 @@ def test_dashboard_compliance_basic_for_compliance_plan(client):
     assert isinstance(payload.get('gdpr_checklist'), list)
 
 
+def test_compliance_intake_and_score_for_compliance_plan(client):
+    user = _create_user(email='intake-score@example.com')
+    _set_subscription(user.id, plan='compliance_pro')
+    _login(client, email='intake-score@example.com')
+
+    intake_response = client.post(
+        '/auth/compliance/intake',
+        json={
+            'organization': {'legal_name': 'Example NV', 'country': 'BE'},
+            'controls': [
+                {'control_id': 'gdpr_32', 'status': 'implemented', 'evidence_url': 's3://evidence/1'},
+                {'control_id': 'nis2_21a', 'status': 'partial'},
+            ],
+            'incidents': [
+                {'classification': 'nis2_reportable', 'severity': 'high', 'reported_24h': True, 'reported_72h': False},
+            ],
+            'identities': {'mfa_enabled_percent': 94},
+        },
+    )
+    assert intake_response.status_code == 201
+    intake_payload = intake_response.get_json()
+    assert intake_payload['summary']['controls_count'] == 2
+
+    score_response = client.get('/auth/compliance/score')
+    assert score_response.status_code == 200
+    score_payload = score_response.get_json()
+    assert 'overall_score' in score_payload
+    assert score_payload['details']['required_controls'] == 2
+
+
+def test_vciso_recommendations_require_enterprise_and_can_persist(client):
+    non_enterprise_user = _create_user(email='vciso-rec-basic@example.com')
+    _set_subscription(non_enterprise_user.id, plan='compliance_pro')
+    _login(client, email='vciso-rec-basic@example.com')
+
+    forbidden = client.post('/auth/vciso/recommendations', json={})
+    assert forbidden.status_code == 403
+
+    enterprise_user = _create_user(email='vciso-rec-enterprise@example.com')
+    _set_subscription(enterprise_user.id, plan='enterprise_elite')
+    _login(client, email='vciso-rec-enterprise@example.com')
+
+    intake_response = client.post(
+        '/auth/compliance/intake',
+        json={
+            'organization': {'legal_name': 'Enterprise Test Org', 'country': 'BE'},
+            'controls': [
+                {'control_id': 'gdpr_32', 'status': 'partial'},
+                {'control_id': 'nis2_21a', 'status': 'partial'},
+            ],
+            'incidents': [
+                {'classification': 'nis2_reportable', 'severity': 'critical', 'reported_24h': False, 'reported_72h': False},
+            ],
+            'identities': {'mfa_enabled_percent': 80},
+        },
+    )
+    assert intake_response.status_code == 201
+
+    rec_response = client.post('/auth/vciso/recommendations', json={'persist': True})
+    assert rec_response.status_code == 200
+    rec_payload = rec_response.get_json()
+    assert rec_payload['tier'] == 'enterprise'
+    assert len(rec_payload['recommendations']) >= 1
+    assert rec_payload['persisted'] >= 1
+
+
 def test_dashboard_vciso_locked_for_non_enterprise(client):
     user = _create_user(email='no-vciso@example.com')
     _set_subscription(user.id, plan='compliance_pro')

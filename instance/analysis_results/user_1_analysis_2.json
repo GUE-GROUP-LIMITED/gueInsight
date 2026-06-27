@@ -1,31 +1,78 @@
 {
-  "indicator": "http://example.com/login-verify",
+  "indicator": "example-login-verification.com",
   "file_type": "text/plain",
   "metadata": {
-    "size": 31,
+    "size": 30,
     "last_modified": null
   },
-  "indicators_of_compromise": [
-    {
-      "type": "url",
-      "value": "http://example.com/login-verify",
-      "severity": "Medium"
-    }
-  ],
+  "indicators_of_compromise": [],
   "suspicious_patterns": [
     {
       "name": "Suspicious Pattern Match",
       "description": "possible phishing lure keyword",
       "confidence": 0.8,
       "evidence": "possible phishing lure keyword"
+    },
+    {
+      "name": "Suspicious Pattern Match",
+      "description": "domain contains hyphen; possible typosquatting",
+      "confidence": 0.8,
+      "evidence": "domain contains hyphen; possible typosquatting"
     }
   ],
   "alerts_triggered": [],
   "enrichment": {
     "virustotal": {
-      "status": "error",
-      "message": "VirusTotal API key not configured"
+      "status": "success",
+      "url": "example-login-verification.com",
+      "detections": 0,
+      "vendors_reported": 37,
+      "analysis_id": "u-7eb29eca322bb4fd5ad3342bc894519d71e86174a911b47a66addf728ff61bcb-fe6a21ec"
     }
   },
-  "threat_level": "Low"
+  "threat_score": 51,
+  "threat_score_breakdown": {
+    "base_iocs": 0,
+    "base_patterns": 20,
+    "enrichment_virustotal": 0,
+    "enrichment_abuseipdb": 0,
+    "context_adjustment": 31,
+    "context_factors": [
+      {
+        "factor": "confidence",
+        "value": "high",
+        "adjustment": 8
+      },
+      {
+        "factor": "asset_criticality",
+        "value": "critical",
+        "adjustment": 12
+      },
+      {
+        "factor": "network_scope",
+        "value": "external",
+        "adjustment": 6
+      },
+      {
+        "factor": "source",
+        "value": "email_gateway",
+        "adjustment": 5
+      }
+    ],
+    "total": 51
+  },
+  "threat_level": "Medium",
+  "intake": {
+    "indicator": "example-login-verification.com",
+    "indicator_type": "domain",
+    "source": "email_gateway",
+    "confidence": "high",
+    "first_seen_at": null,
+    "asset_name": null,
+    "asset_criticality": "critical",
+    "account_ref": null,
+    "network_scope": "external",
+    "notes": null,
+    "related_artifacts": []
+  }
 }
