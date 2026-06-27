@@ -2,11 +2,9 @@ import { useContext, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { api } from '../services/api';
-import DashboardTabsNav from '../components/DashboardTabsNav';
-import { normalizePlan } from '../utils/planTier';
 import './ComplianceDashboard.css';
 
-const PLAN_ORDER = ['free', 'starter', 'compliance_pro', 'enterprise_professional', 'enterprise_risk', 'enterprise_elite'];
+const PLAN_ORDER = ['starter', 'compliance_pro', 'enterprise_risk', 'enterprise_elite'];
 
 const NIS2_CHECKLIST = [
   { id: 'nis2_1', article: 'Art. 21(2)(a)', title: 'Risk analysis & information system security policies', tier: 'enterprise_risk' },
@@ -95,22 +93,13 @@ function ChecklistItem({ item, checked, onChange, locked }) {
 
 export default function ComplianceDashboard() {
   const { user } = useContext(AuthContext);
-  const userPlan = normalizePlan(user?.current_plan || user?.plan || user?.subscription?.plan || 'free');
+  const userPlan = user?.plan || user?.subscription?.plan || 'starter';
 
   const [nis2Checks, setNis2Checks]   = useState({});
   const [gdprChecks, setGdprChecks]   = useState({});
   const [incidents, setIncidents]      = useState([]);
   const [loadingInc, setLoadingInc]   = useState(false);
   const [activeTab, setActiveTab]      = useState('nis2');
-  const [intakeForm, setIntakeForm] = useState({
-    legalName: user?.company || '',
-    country: 'BE',
-    mfaEnabledPercent: 90,
-  });
-  const [intakeStatus, setIntakeStatus] = useState('');
-  const [scoreData, setScoreData] = useState(null);
-  const [recommendations, setRecommendations] = useState([]);
-  const [engineLoading, setEngineLoading] = useState(false);
 
   // Load saved checks from localStorage (no backend needed for checklist state)
   useEffect(() => {
@@ -123,12 +112,6 @@ export default function ComplianceDashboard() {
       } catch {}
     }
   }, [user?.id]);
-
-  useEffect(() => {
-    if (user?.company) {
-      setIntakeForm((prev) => ({ ...prev, legalName: prev.legalName || user.company }));
-    }
-  }, [user?.company]);
 
   const saveChecks = (nis2, gdpr) => {
     localStorage.setItem(`gi_compliance_${user?.id}`, JSON.stringify({ nis2, gdpr }));
@@ -145,17 +128,11 @@ export default function ComplianceDashboard() {
     saveChecks(nis2Checks, next);
   };
 
-  // Load incidents only when the viewer has NIS2 access.
+  // Load incidents if plan allows
   useEffect(() => {
-    const hasNis2Access = planMeetsRequirement(userPlan, 'enterprise_risk');
-    if (!hasNis2Access) {
-      setIncidents([]);
-      setLoadingInc(false);
-      return;
-    }
-
+    if (!planMeetsRequirement(userPlan, 'enterprise_risk')) return;
     setLoadingInc(true);
-    api.get('/auth/security_events?limit=20')
+    api.get('/admin/security_events?limit=20')
       .then(r => setIncidents(Array.isArray(r.data?.security_events) ? r.data.security_events : []))
       .catch(() => setIncidents([]))
       .finally(() => setLoadingInc(false));
@@ -169,114 +146,8 @@ export default function ComplianceDashboard() {
   const canGdpr = planMeetsRequirement(userPlan, 'compliance_pro');
   const canNis2 = planMeetsRequirement(userPlan, 'enterprise_risk');
 
-  const buildIntakePayload = () => {
-    const controls = [
-      ...GDPR_CHECKLIST.map((item) => ({
-        control_id: item.id,
-        framework: 'GDPR',
-        status: gdprChecks[item.id] ? 'implemented' : 'partial',
-        evidence_url: gdprChecks[item.id] ? `local://gdpr/${item.id}` : null,
-      })),
-      ...NIS2_CHECKLIST.map((item) => ({
-        control_id: item.id,
-        framework: 'NIS2',
-        status: nis2Checks[item.id] ? 'implemented' : 'partial',
-        evidence_url: nis2Checks[item.id] ? `local://nis2/${item.id}` : null,
-      })),
-    ];
-
-    const normalizedIncidents = incidents.map((ev) => {
-      const severity = String(ev.severity || 'info').toLowerCase();
-      const reportable = severity === 'high' || severity === 'critical';
-      return {
-        classification: reportable ? 'nis2_reportable' : 'informational',
-        severity,
-        reported_24h: false,
-        reported_72h: false,
-        event_type: ev.event_type || 'security_event',
-      };
-    });
-
-    return {
-      organization: {
-        legal_name: intakeForm.legalName || user?.company || `${user?.first_name || 'User'} Org`,
-        country: intakeForm.country || 'BE',
-      },
-      identities: {
-        mfa_enabled_percent: Number(intakeForm.mfaEnabledPercent) || 0,
-      },
-      controls,
-      incidents: normalizedIncidents,
-    };
-  };
-
-  const submitIntake = async () => {
-    setEngineLoading(true);
-    setIntakeStatus('');
-    try {
-      const payload = buildIntakePayload();
-      const response = await api.post('/auth/compliance/intake', payload);
-      setIntakeStatus(`Intake saved (${response.data?.summary?.controls_count || 0} controls).`);
-    } catch (error) {
-      setIntakeStatus(error?.response?.data?.error || 'Failed to save intake.');
-    } finally {
-      setEngineLoading(false);
-    }
-  };
-
-  const computeScore = async () => {
-    setEngineLoading(true);
-    setIntakeStatus('');
-    try {
-      const response = await api.get('/auth/compliance/score');
-      setScoreData(response.data || null);
-      setIntakeStatus('Compliance score updated.');
-    } catch (error) {
-      setIntakeStatus(error?.response?.data?.error || 'Failed to compute score.');
-    } finally {
-      setEngineLoading(false);
-    }
-  };
-
-  const generateRecommendations = async () => {
-    setEngineLoading(true);
-    setIntakeStatus('');
-    try {
-      const response = await api.post('/auth/vciso/recommendations', { persist: false });
-      setRecommendations(Array.isArray(response.data?.recommendations) ? response.data.recommendations : []);
-      setIntakeStatus('vCISO recommendations generated.');
-    } catch (error) {
-      setIntakeStatus(error?.response?.data?.error || 'Failed to generate recommendations.');
-    } finally {
-      setEngineLoading(false);
-    }
-  };
-
-  const runFullAssessment = async () => {
-    setEngineLoading(true);
-    setIntakeStatus('Running full assessment...');
-    try {
-      const payload = buildIntakePayload();
-      await api.post('/auth/compliance/intake', payload);
-
-      const scoreResponse = await api.get('/auth/compliance/score');
-      setScoreData(scoreResponse.data || null);
-
-      const recResponse = await api.post('/auth/vciso/recommendations', { persist: true });
-      setRecommendations(Array.isArray(recResponse.data?.recommendations) ? recResponse.data.recommendations : []);
-
-      setIntakeStatus('Full assessment complete. Recommendations saved to vCISO portal.');
-    } catch (error) {
-      setIntakeStatus(error?.response?.data?.error || 'Full assessment failed.');
-    } finally {
-      setEngineLoading(false);
-    }
-  };
-
   return (
     <div className="cd">
-      <DashboardTabsNav />
-
       {/* Header */}
       <div className="cd__header">
         <div>
@@ -290,64 +161,6 @@ export default function ComplianceDashboard() {
           <ComplianceScore checked={gdprDone}  total={GDPR_CHECKLIST.length} label="GDPR Score" />
         </div>
       </div>
-
-      <section className="cd__engine" aria-label="Compliance intake and recommendations">
-        <div className="cd__engine-grid">
-          <label>
-            <span>Organisation legal name</span>
-            <input
-              value={intakeForm.legalName}
-              onChange={(e) => setIntakeForm((prev) => ({ ...prev, legalName: e.target.value }))}
-              placeholder="Example NV"
-            />
-          </label>
-          <label>
-            <span>Country</span>
-            <input
-              value={intakeForm.country}
-              onChange={(e) => setIntakeForm((prev) => ({ ...prev, country: e.target.value.toUpperCase() }))}
-              placeholder="BE"
-              maxLength={2}
-            />
-          </label>
-          <label>
-            <span>MFA coverage (%)</span>
-            <input
-              type="number"
-              min="0"
-              max="100"
-              value={intakeForm.mfaEnabledPercent}
-              onChange={(e) => setIntakeForm((prev) => ({ ...prev, mfaEnabledPercent: e.target.value }))}
-            />
-          </label>
-        </div>
-
-        <div className="cd__engine-actions">
-          <button type="button" className="cd__action-btn" onClick={runFullAssessment} disabled={engineLoading}>Run Full Assessment</button>
-          <button type="button" className="cd__action-btn" onClick={submitIntake} disabled={engineLoading}>Save Intake</button>
-          <button type="button" className="cd__action-btn cd__action-btn--secondary" onClick={computeScore} disabled={engineLoading}>Compute Score</button>
-          <button type="button" className="cd__action-btn cd__action-btn--secondary" onClick={generateRecommendations} disabled={engineLoading}>Generate vCISO Recs</button>
-        </div>
-
-        {intakeStatus ? <p className="cd__engine-status">{intakeStatus}</p> : null}
-
-        {scoreData ? (
-          <div className="cd__engine-score">
-            <strong>Score:</strong> Overall {scoreData.overall_score}% | Coverage {scoreData.coverage_score}% | Evidence {scoreData.evidence_score}% | Incident SLA {scoreData.incident_response_score}%
-          </div>
-        ) : null}
-
-        {recommendations.length > 0 ? (
-          <div className="cd__engine-recs">
-            {recommendations.map((rec, idx) => (
-              <div key={`${rec.title}-${idx}`} className="cd__engine-rec">
-                <p><strong>{rec.title}</strong> ({String(rec.priority || 'info').toUpperCase()})</p>
-                <p>{rec.body}</p>
-              </div>
-            ))}
-          </div>
-        ) : null}
-      </section>
 
       {/* Tabs */}
       <div className="cd__tabs">

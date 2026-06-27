@@ -2,6 +2,7 @@ import { useContext, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { AuthContext } from '../context/AuthContext';
+import PublicHeader from '../components/PublicHeader';
 import './AuthPricing.css';
 import { useTranslation } from '../i18n/index';
 
@@ -78,8 +79,10 @@ const Signup = () => {
 	};
 
 	return (
-		<main className="auth-pricing-page auth-pricing-page--auth">
-			<section className="auth-pricing-card auth-pricing-card--signup">
+		<>
+			<PublicHeader featureTo="/#features" howTo="/docs#getting-started" whoTo="/#who" pricingTo="/#pricing" trialTo="/signup" />
+			<main className="auth-pricing-page auth-pricing-page--auth">
+				<section className="auth-pricing-card auth-pricing-card--signup">
 				<div className="auth-pricing-card__head">
 					<p className="auth-pricing-card__eyebrow">{t('signup.eyebrow')}</p>
 					<h1>{t('signup.heading')}</h1>
@@ -237,8 +240,9 @@ const Signup = () => {
 					{success && <p className="auth-pricing-message auth-pricing-message--success">{success}</p>}
 				</form>
 
-			</section>
-		</main>
+				</section>
+			</main>
+		</>
 	);
 };
 

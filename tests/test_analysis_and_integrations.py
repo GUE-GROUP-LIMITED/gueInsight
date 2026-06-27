@@ -6,6 +6,7 @@ import pytest
 from flask_login import LoginManager
 from werkzeug.security import generate_password_hash
 import json
+import io
 from datetime import datetime, timedelta
 
 from app import create_app, db
@@ -94,6 +95,174 @@ def test_upload_with_url_submission_requires_login(client):
     """Test that URL submission requires login."""
     response = client.post('/upload', data={'url': 'https://example.com'})
     assert response.status_code in {301, 302, 401, 403}
+
+
+def test_threat_intel_intake_requires_login(client):
+    """Test that threat-intel intake API requires authentication."""
+    response = client.post('/api/threat-intel/intake', json={'indicator': '8.8.8.8'})
+    assert response.status_code in {301, 302, 401, 403}
+
+
+def test_threat_intel_intake_accepts_indicator_with_context(client):
+    """Test that authenticated users can submit IOC context intake payloads."""
+    _create_user(email='intake@example.com')
+    _login(client, email='intake@example.com')
+
+    response = client.post('/api/threat-intel/intake', json={
+        'indicator': 'http://suspicious-example-login.com/verify',
+        'source': 'email_gateway',
+        'confidence': 'high',
+        'asset_name': 'finance-laptop-12',
+        'asset_criticality': 'high',
+        'account_ref': 'analyst@example.com',
+        'network_scope': 'external',
+        'related_artifacts': ['header.eml', 'trace.log'],
+        'notes': 'User reported credential reset lure',
+    })
+
+    assert response.status_code == 201
+    body = response.get_json()
+    assert body['status'] == 'success'
+    assert body['analysisId']
+    assert isinstance(body['threat_score'], int)
+    assert isinstance(body.get('threat_score_breakdown'), dict)
+    assert body['threat_score_breakdown']['total'] == body['threat_score']
+    assert isinstance(body['threat_score_breakdown'].get('context_factors'), list)
+    factor_names = {factor.get('factor') for factor in body['threat_score_breakdown']['context_factors']}
+    assert {'confidence', 'asset_criticality', 'network_scope', 'source'}.issubset(factor_names)
+    assert body['intake']['source'] == 'email_gateway'
+    assert body['intake']['confidence'] == 'high'
+
+
+def test_threat_intel_intake_requires_source_and_confidence(client):
+    """Threat-intel intake should reject payloads missing required context fields."""
+    _create_user(email='intake-required@example.com')
+    _login(client, email='intake-required@example.com')
+
+    response = client.post('/api/threat-intel/intake', json={
+        'indicator': '8.8.8.8',
+        'confidence': 'high',
+    })
+
+    assert response.status_code == 400
+    body = response.get_json()
+    assert body['error'] == 'source is required'
+
+
+def test_threat_intel_intake_rejects_invalid_source_value(client):
+    """Threat-intel intake should reject unknown source enum values."""
+    _create_user(email='intake-invalid-source@example.com')
+    _login(client, email='intake-invalid-source@example.com')
+
+    response = client.post('/api/threat-intel/intake', json={
+        'indicator': '8.8.8.8',
+        'source': 'random_feed',
+        'confidence': 'high',
+    })
+
+    assert response.status_code == 400
+    body = response.get_json()
+    assert body['error'] == 'source must be one of: manual, email_gateway, edr, siem, firewall'
+
+
+def test_threat_intel_intake_rejects_invalid_confidence_value(client):
+    """Threat-intel intake should reject unknown confidence enum values."""
+    _create_user(email='intake-invalid-confidence@example.com')
+    _login(client, email='intake-invalid-confidence@example.com')
+
+    response = client.post('/api/threat-intel/intake', json={
+        'indicator': '8.8.8.8',
+        'source': 'siem',
+        'confidence': 'certain',
+    })
+
+    assert response.status_code == 400
+    body = response.get_json()
+    assert body['error'] == 'confidence must be one of: low, medium, high'
+
+
+def test_threat_intel_intake_context_increases_score(client):
+    """Higher-confidence and higher-criticality context should increase score for same indicator."""
+    _create_user(email='intake-score@example.com')
+    _login(client, email='intake-score@example.com')
+
+    low_context = client.post('/api/threat-intel/intake', json={
+        'indicator': 'example-login-verification.com',
+        'source': 'manual',
+        'confidence': 'low',
+        'asset_criticality': 'low',
+        'network_scope': 'internal',
+    })
+    high_context = client.post('/api/threat-intel/intake', json={
+        'indicator': 'example-login-verification.com',
+        'source': 'email_gateway',
+        'confidence': 'high',
+        'asset_criticality': 'critical',
+        'network_scope': 'external',
+    })
+
+    assert low_context.status_code == 201
+    assert high_context.status_code == 201
+
+    low_body = low_context.get_json()
+    high_body = high_context.get_json()
+    assert high_body['threat_score'] >= low_body['threat_score']
+
+    low_factors = {
+        factor.get('factor'): int(factor.get('adjustment', 0))
+        for factor in low_body['threat_score_breakdown'].get('context_factors', [])
+    }
+    high_factors = {
+        factor.get('factor'): int(factor.get('adjustment', 0))
+        for factor in high_body['threat_score_breakdown'].get('context_factors', [])
+    }
+
+    assert low_factors.get('confidence') == -5
+    assert high_factors.get('confidence') == 8
+    assert low_factors.get('source') == 0
+    assert high_factors.get('source') == 5
+    assert low_factors.get('asset_criticality') == 0
+    assert high_factors.get('asset_criticality') == 12
+    assert low_factors.get('network_scope') == 0
+    assert high_factors.get('network_scope') == 6
+
+
+def test_file_upload_requires_source_and_confidence_context(client):
+    """File uploads should enforce source and confidence intake fields."""
+    _create_user(email='upload-context-required@example.com')
+    _login(client, email='upload-context-required@example.com')
+
+    response = client.post(
+        '/upload',
+        data={
+            'file': (io.BytesIO(b'test payload'), 'sample.txt'),
+        },
+        content_type='multipart/form-data',
+    )
+
+    assert response.status_code == 400
+    body = response.get_json()
+    assert body['error'] == 'source is required'
+
+
+def test_file_upload_rejects_invalid_confidence_context(client):
+    """File uploads should reject unsupported confidence values."""
+    _create_user(email='upload-context-invalid@example.com')
+    _login(client, email='upload-context-invalid@example.com')
+
+    response = client.post(
+        '/upload',
+        data={
+            'file': (io.BytesIO(b'test payload'), 'sample.txt'),
+            'source': 'manual',
+            'confidence': 'certain',
+        },
+        content_type='multipart/form-data',
+    )
+
+    assert response.status_code == 400
+    body = response.get_json()
+    assert body['error'] == 'confidence must be one of: low, medium, high'
 
 
 # ============ ADMIN ENDPOINT TESTS ============

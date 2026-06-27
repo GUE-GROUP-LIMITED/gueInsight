@@ -21,6 +21,7 @@
 .app-navbar__brand-group {
   display: grid;
   gap: 2px;
+  min-width: 0;
 }
 
 .app-navbar__logo{
@@ -58,6 +59,9 @@
   display: flex;
   align-items: center;
   gap: 14px;
+  flex: 1;
+  min-width: 0;
+  justify-content: flex-end;
 }
 
 .app-navbar__meta {
@@ -108,6 +112,7 @@
   gap: 10px;
   /* Prevent wrapping so badge and account controls stay aligned across locales */
   flex-wrap: nowrap;
+  min-width: 0;
 }
 
 /* Prevent individual header controls from shrinking unexpectedly */
@@ -294,6 +299,35 @@
   color: #082032;
   font-weight: 700;
   cursor: pointer;
+}
+
+@media (max-width: 1320px) {
+  .app-navbar__subtitle,
+  .app-navbar__role-badge {
+    display: none;
+  }
+
+  .app-navbar__container,
+  .app-navbar__menu {
+    gap: 10px;
+  }
+
+  .app-navbar__links {
+    gap: 8px;
+  }
+
+  .app-navbar__link {
+    padding: 0.42rem 0.68rem;
+    font-size: 0.9rem;
+  }
+
+  .app-navbar__actions {
+    gap: 8px;
+  }
+
+  .app-navbar__account-trigger {
+    padding: 0.48rem 0.8rem;
+  }
 }
 
 .app-navbar__account-menu {

@@ -2,6 +2,7 @@ import { useContext, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { AuthContext, normalizeRole } from '../context/AuthContext';
+import PublicHeader from '../components/PublicHeader';
 import './AuthPricing.css';
 import { useTranslation } from '../i18n/index';
 
@@ -35,8 +36,10 @@ const Login = () => {
 	};
 
 	return (
-		<main className="auth-pricing-page auth-pricing-page--auth">
-			<section className="auth-pricing-card">
+		<>
+			<PublicHeader featureTo="/#features" howTo="/docs#getting-started" whoTo="/#who" pricingTo="/#pricing" trialTo="/signup" />
+			<main className="auth-pricing-page auth-pricing-page--auth">
+				<section className="auth-pricing-card">
 				<div className="auth-pricing-card__head">
 					<p className="auth-pricing-card__eyebrow">{t('login.eyebrow')}</p>
 					<h1>{t('login.heading')}</h1>
@@ -76,8 +79,9 @@ const Login = () => {
 					</div>
 				</form>
 
-			</section>
-		</main>
+				</section>
+			</main>
+		</>
 	);
 };
 

@@ -12,6 +12,11 @@ export default function AnalysisResults() {
   const [shareMethod, setShareMethod] = useState(null);
   const [emailInput, setEmailInput] = useState('');
 
+  const formatAdjustment = (value) => {
+    const amount = Number(value || 0);
+    return amount > 0 ? `+${amount}` : String(amount);
+  };
+
   useEffect(() => {
     fetchAnalysisResults();
   }, [analysisId]);
@@ -160,6 +165,10 @@ export default function AnalysisResults() {
 
       {/* Summary Stats */}
       <section className="results-summary">
+        <div className="summary-card summary-card--score">
+          <div className="summary-value">{results.threat_score ?? 0}</div>
+          <div className="summary-label">Threat Score (0-100)</div>
+        </div>
         <div className="summary-card">
           <div className="summary-value">{results.indicators_of_compromise?.length || 0}</div>
           <div className="summary-label">Indicators Found</div>
@@ -177,6 +186,35 @@ export default function AnalysisResults() {
           <div className="summary-label">File Size</div>
         </div>
       </section>
+
+      {/* Threat Score Breakdown */}
+      {results.threat_score_breakdown && (
+        <section className="results-section">
+          <h2>Threat Score Breakdown</h2>
+          <div className="score-breakdown-grid">
+            <div className="score-breakdown-item"><span>IOC signal</span><strong>{results.threat_score_breakdown.base_iocs || 0}</strong></div>
+            <div className="score-breakdown-item"><span>Pattern signal</span><strong>{results.threat_score_breakdown.base_patterns || 0}</strong></div>
+            <div className="score-breakdown-item"><span>VirusTotal signal</span><strong>{results.threat_score_breakdown.enrichment_virustotal || 0}</strong></div>
+            <div className="score-breakdown-item"><span>AbuseIPDB signal</span><strong>{results.threat_score_breakdown.enrichment_abuseipdb || 0}</strong></div>
+            <div className="score-breakdown-item"><span>Context adjustment</span><strong>{formatAdjustment(results.threat_score_breakdown.context_adjustment)}</strong></div>
+            <div className="score-breakdown-item score-breakdown-item--total"><span>Total score</span><strong>{results.threat_score_breakdown.total || 0}</strong></div>
+          </div>
+
+          {Array.isArray(results.threat_score_breakdown.context_factors) && results.threat_score_breakdown.context_factors.length > 0 && (
+            <div className="score-factors">
+              <h3>Context factor details</h3>
+              <ul>
+                {results.threat_score_breakdown.context_factors.map((factor, idx) => (
+                  <li key={`${factor.factor}-${idx}`}>
+                    <span>{factor.factor.replaceAll('_', ' ')}: {factor.value}</span>
+                    <strong>{formatAdjustment(factor.adjustment)}</strong>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* File Metadata */}
       {results.metadata && (
@@ -324,8 +362,8 @@ export default function AnalysisResults() {
         <button onClick={() => navigate('/dashboard')} className="btn btn-secondary">
           ← Back to Dashboard
         </button>
-        <button onClick={() => navigate('/upload')} className="btn btn-primary">
-          Analyze Another File
+        <button onClick={() => navigate('/dashboard?mode=file')} className="btn btn-primary">
+          Analyze Another Submission
         </button>
       </section>
     </div>

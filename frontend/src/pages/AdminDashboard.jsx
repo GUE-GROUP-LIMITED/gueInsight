@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { Link } from 'react-router-dom';
 import AdminTopbarControls from '../components/AdminTopbarControls';
@@ -9,6 +9,7 @@ import './AdminDashboard.css';
 const sidebarItems = [
   { label: 'nav.home', href: '#dashboard', active: true, icon: 'home' },
   { label: 'admin_dashboard.compliance', href: '/admin/compliance', icon: 'shield' },
+  { label: 'vCISO Publisher', href: '#vciso-publisher', icon: 'shield' },
   { label: 'admin_dashboard.widgets', href: '#widgets', icon: 'widgets' },
   { label: 'admin_dashboard.tables', href: '#tables', icon: 'table' },
   { label: 'admin_dashboard.charts', href: '#charts', icon: 'chart' },
@@ -110,12 +111,66 @@ const percent = (count, total) => {
   return Math.round((count / total) * 100);
 };
 
+const formatDateTime = (isoLike) => {
+  if (!isoLike) return 'N/A';
+  const parsed = new Date(isoLike);
+  if (Number.isNaN(parsed.getTime())) return 'N/A';
+  return parsed.toLocaleString();
+};
+
+const normalizePlan = (planLike) => {
+  const raw = String(planLike || 'free').trim().toLowerCase();
+  const legacyMap = {
+    premium_individual: 'compliance_pro',
+    premium_small_business: 'enterprise_risk',
+    premium_large_business: 'enterprise_elite',
+    premium: 'compliance_pro',
+    freemium: 'free',
+  };
+  return legacyMap[raw] || raw;
+};
+
+const isEnterprisePlan = (planLike) => {
+  const normalized = normalizePlan(planLike);
+  return ['enterprise_professional', 'enterprise_risk', 'enterprise_elite'].includes(normalized);
+};
+
+const VCISO_PAGE_SIZE = 8;
+
 const AdminDashboard = () => {
   const { t } = useTranslation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [dashboardData, setDashboardData] = useState({ users: [], file_uploads: [], critical_alert: false });
+  const [vcisoForm, setVcisoForm] = useState({
+    target_user_id: 'all',
+    title: '',
+    note: '',
+    action_items: '',
+    author_name: 'Gabriel Aloho',
+  });
+  const [vcisoSaving, setVcisoSaving] = useState(false);
+  const [vcisoError, setVcisoError] = useState('');
+  const [vcisoMessage, setVcisoMessage] = useState('');
+  const [vcisoUpdates, setVcisoUpdates] = useState([]);
+  const [vcisoLoading, setVcisoLoading] = useState(false);
+  const [vcisoTotal, setVcisoTotal] = useState(0);
+  const [vcisoPage, setVcisoPage] = useState(1);
+  const [vcisoFilters, setVcisoFilters] = useState({
+    status: 'all',
+    scope: 'all',
+  });
+  const [vcisoSearch, setVcisoSearch] = useState('');
+  const [vcisoSearchInput, setVcisoSearchInput] = useState('');
+  const searchDebounceRef = useRef(null);
+  const [editingUpdateId, setEditingUpdateId] = useState(null);
+  const [vcisoEditForm, setVcisoEditForm] = useState({
+    title: '',
+    note: '',
+    action_items: '',
+    author_name: 'Gabriel Aloho',
+  });
 
   useEffect(() => {
     let active = true;
@@ -179,6 +234,38 @@ const AdminDashboard = () => {
     });
   }, [dashboardData.users, t]);
 
+  const enterpriseUsers = useMemo(() => {
+    return users.filter((user) => user.role === 'user' && isEnterprisePlan(user.plan));
+  }, [users]);
+
+  const vcisoTotalPages = useMemo(() => {
+    return Math.max(1, Math.ceil(vcisoTotal / VCISO_PAGE_SIZE));
+  }, [vcisoTotal]);
+
+  const loadVcisoHistory = useCallback(async () => {
+    try {
+      setVcisoLoading(true);
+      const params = new URLSearchParams({
+        limit: String(VCISO_PAGE_SIZE),
+        offset: String((vcisoPage - 1) * VCISO_PAGE_SIZE),
+        status: vcisoFilters.status,
+        scope: vcisoFilters.scope,
+      });
+      if (vcisoSearch.trim()) {
+        params.set('q', vcisoSearch.trim());
+      }
+      const response = await api.get(`/api/admin/vciso?${params.toString()}`);
+      const updates = Array.isArray(response?.data?.updates) ? response.data.updates : [];
+      setVcisoUpdates(updates);
+      setVcisoTotal(Number(response?.data?.total || 0));
+    } catch {
+      setVcisoUpdates([]);
+      setVcisoTotal(0);
+    } finally {
+      setVcisoLoading(false);
+    }
+  }, [vcisoPage, vcisoFilters.status, vcisoFilters.scope, vcisoSearch]);
+
   const totalUsers = users.length;
   const activeUsers = users.filter((user) => user.status === 'Active').length;
   const adminUsers = users.filter((user) => user.role === 'admin').length;
@@ -216,6 +303,174 @@ const AdminDashboard = () => {
       { title: t('admin_dashboard.file_ingestion'), time: 'Now', detail: `${uploadsCount} upload event${uploadsCount === 1 ? '' : 's'} recorded` },
     ];
   }, [activeUsers, adminUsers, t, totalUsers, uploadsCount]);
+
+  const handleVcisoInput = (event) => {
+    const { name, value } = event.target;
+    setVcisoForm((current) => ({
+      ...current,
+      [name]: value,
+    }));
+  };
+
+  const handleVcisoSubmit = async (event) => {
+    event.preventDefault();
+    setVcisoError('');
+    setVcisoMessage('');
+
+    if (!vcisoForm.title.trim() || !vcisoForm.note.trim()) {
+      setVcisoError('Title and recommendation note are required.');
+      return;
+    }
+
+    const actionItems = vcisoForm.action_items
+      .split('\n')
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    const payload = {
+      title: vcisoForm.title.trim(),
+      note: vcisoForm.note.trim(),
+      action_items: actionItems,
+      author_name: vcisoForm.author_name.trim() || 'Gabriel Aloho',
+    };
+
+    if (vcisoForm.target_user_id === 'all') {
+      payload.publish_to_all_enterprise = true;
+    } else {
+      payload.target_user_id = Number(vcisoForm.target_user_id);
+    }
+
+    try {
+      setVcisoSaving(true);
+      const response = await api.post('/api/admin/vciso', payload);
+      const scope = response?.data?.scope || 'enterprise target';
+      setVcisoMessage(`vCISO update published to ${scope}.`);
+      setVcisoForm((current) => ({
+        ...current,
+        title: '',
+        note: '',
+        action_items: '',
+      }));
+      if (vcisoPage !== 1) {
+        setVcisoPage(1);
+      }
+      await loadVcisoHistory();
+    } catch (requestError) {
+      setVcisoError(requestError?.response?.data?.error || 'Failed to publish vCISO update.');
+    } finally {
+      setVcisoSaving(false);
+    }
+  };
+
+  const startEditingUpdate = (update) => {
+    setEditingUpdateId(update.id);
+    setVcisoEditForm({
+      title: update.title || '',
+      note: update.note || '',
+      action_items: Array.isArray(update.action_items) ? update.action_items.join('\n') : '',
+      author_name: update.author_name || 'Gabriel Aloho',
+    });
+    setVcisoError('');
+    setVcisoMessage('');
+  };
+
+  const cancelEditingUpdate = () => {
+    setEditingUpdateId(null);
+    setVcisoEditForm({ title: '', note: '', action_items: '', author_name: 'Gabriel Aloho' });
+  };
+
+  const handleVcisoEditInput = (event) => {
+    const { name, value } = event.target;
+    setVcisoEditForm((current) => ({
+      ...current,
+      [name]: value,
+    }));
+  };
+
+  const saveUpdateChanges = async (updateId) => {
+    setVcisoError('');
+    setVcisoMessage('');
+
+    const actionItems = vcisoEditForm.action_items
+      .split('\n')
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    try {
+      setVcisoSaving(true);
+      await api.patch(`/api/admin/vciso/${updateId}`, {
+        title: vcisoEditForm.title.trim(),
+        note: vcisoEditForm.note.trim(),
+        action_items: actionItems,
+        author_name: vcisoEditForm.author_name.trim() || 'Gabriel Aloho',
+      });
+      setVcisoMessage('vCISO update saved.');
+      setEditingUpdateId(null);
+      await loadVcisoHistory();
+    } catch (requestError) {
+      setVcisoError(requestError?.response?.data?.error || 'Failed to save vCISO update changes.');
+    } finally {
+      setVcisoSaving(false);
+    }
+  };
+
+  const toggleUpdateActive = async (update) => {
+    setVcisoError('');
+    setVcisoMessage('');
+    try {
+      setVcisoSaving(true);
+      await api.patch(`/api/admin/vciso/${update.id}`, {
+        is_active: !update.is_active,
+      });
+      setVcisoMessage(update.is_active ? 'vCISO update deactivated.' : 'vCISO update reactivated.');
+      await loadVcisoHistory();
+    } catch (requestError) {
+      setVcisoError(requestError?.response?.data?.error || 'Failed to change update status.');
+    } finally {
+      setVcisoSaving(false);
+    }
+  };
+
+  const handleVcisoFilterChange = (name, value) => {
+    setVcisoFilters((current) => ({
+      ...current,
+      [name]: value,
+    }));
+    setVcisoPage(1);
+  };
+
+  const handleVcisoSearchChange = (event) => {
+    const value = event.target.value;
+    setVcisoSearchInput(value);
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+    searchDebounceRef.current = setTimeout(() => {
+      setVcisoSearch(value);
+      setVcisoPage(1);
+    }, 380);
+  };
+
+  const clearVcisoSearch = () => {
+    setVcisoSearchInput('');
+    setVcisoSearch('');
+    setVcisoPage(1);
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+  };
+
+  const handleVcisoPrevPage = () => {
+    setVcisoPage((current) => Math.max(1, current - 1));
+  };
+
+  const handleVcisoNextPage = () => {
+    setVcisoPage((current) => Math.min(vcisoTotalPages, current + 1));
+  };
+
+  useEffect(() => {
+    loadVcisoHistory();
+  }, [loadVcisoHistory]);
 
   return (
     <div className={`admin-shell ${sidebarCollapsed ? 'admin-shell--collapsed' : ''}`} id="dashboard">
@@ -412,6 +667,304 @@ const AdminDashboard = () => {
               ))}
             </div>
           </article>
+        </section>
+
+        <section className="admin-shell__panel" id="vciso-publisher">
+          <div className="admin-shell__panel-header">
+            <div>
+              <p className="admin-shell__section-label">vCISO Portal</p>
+              <h2>Publish advisory update</h2>
+            </div>
+            <span className="admin-shell__chip">Enterprise only</span>
+          </div>
+
+          <form className="admin-shell__vciso-form" onSubmit={handleVcisoSubmit}>
+            <label className="admin-shell__field">
+              <span>Target audience</span>
+              <select
+                name="target_user_id"
+                value={vcisoForm.target_user_id}
+                onChange={handleVcisoInput}
+                disabled={vcisoSaving}
+              >
+                <option value="all">All enterprise clients</option>
+                {enterpriseUsers.map((enterpriseUser) => (
+                  <option key={enterpriseUser.id} value={String(enterpriseUser.id)}>
+                    {enterpriseUser.name} ({enterpriseUser.email})
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="admin-shell__field">
+              <span>Title</span>
+              <input
+                name="title"
+                value={vcisoForm.title}
+                onChange={handleVcisoInput}
+                placeholder="Priority recommendation: tighten identity controls"
+                disabled={vcisoSaving}
+              />
+            </label>
+
+            <label className="admin-shell__field">
+              <span>Recommendation note</span>
+              <textarea
+                name="note"
+                value={vcisoForm.note}
+                onChange={handleVcisoInput}
+                rows={4}
+                placeholder="Describe the risk context, expected impact, and recommended direction."
+                disabled={vcisoSaving}
+              />
+            </label>
+
+            <label className="admin-shell__field">
+              <span>Action items (one per line)</span>
+              <textarea
+                name="action_items"
+                value={vcisoForm.action_items}
+                onChange={handleVcisoInput}
+                rows={4}
+                placeholder={'Enable conditional access for privileged users\nAudit MFA coverage by business unit'}
+                disabled={vcisoSaving}
+              />
+            </label>
+
+            <label className="admin-shell__field">
+              <span>Author</span>
+              <input
+                name="author_name"
+                value={vcisoForm.author_name}
+                onChange={handleVcisoInput}
+                disabled={vcisoSaving}
+              />
+            </label>
+
+            {vcisoError ? <p className="admin-shell__feedback admin-shell__feedback--error">{vcisoError}</p> : null}
+            {vcisoMessage ? <p className="admin-shell__feedback admin-shell__feedback--success">{vcisoMessage}</p> : null}
+
+            <div className="admin-shell__vciso-actions">
+              <button type="submit" className="admin-shell__topbar-button" disabled={vcisoSaving}>
+                {vcisoSaving ? 'Publishing...' : 'Publish to vCISO portal'}
+              </button>
+            </div>
+          </form>
+
+          <div className="admin-shell__vciso-history">
+            <div className="admin-shell__panel-header">
+              <div>
+                <p className="admin-shell__section-label">vCISO history</p>
+                <h2>Published updates</h2>
+              </div>
+            </div>
+
+            <div className="admin-shell__vciso-toolbar">
+              <div className="admin-shell__vciso-search">
+                <input
+                  type="search"
+                  value={vcisoSearchInput}
+                  onChange={handleVcisoSearchChange}
+                  placeholder="Search by title, note, author, or client email…"
+                  disabled={vcisoLoading || vcisoSaving}
+                />
+                {vcisoSearchInput ? (
+                  <button
+                    type="button"
+                    className="admin-shell__chip admin-shell__chip--ghost"
+                    onClick={clearVcisoSearch}
+                    disabled={vcisoLoading || vcisoSaving}
+                  >
+                    Clear
+                  </button>
+                ) : null}
+              </div>
+              <div className="admin-shell__vciso-filter-group" role="group" aria-label="Filter updates by status">
+                <button
+                  type="button"
+                  className={`admin-shell__chip admin-shell__chip--ghost ${vcisoFilters.status === 'all' ? 'is-selected' : ''}`}
+                  onClick={() => handleVcisoFilterChange('status', 'all')}
+                  disabled={vcisoSaving || vcisoLoading}
+                >
+                  All
+                </button>
+                <button
+                  type="button"
+                  className={`admin-shell__chip admin-shell__chip--ghost ${vcisoFilters.status === 'active' ? 'is-selected' : ''}`}
+                  onClick={() => handleVcisoFilterChange('status', 'active')}
+                  disabled={vcisoSaving || vcisoLoading}
+                >
+                  Active
+                </button>
+                <button
+                  type="button"
+                  className={`admin-shell__chip admin-shell__chip--ghost ${vcisoFilters.status === 'inactive' ? 'is-selected' : ''}`}
+                  onClick={() => handleVcisoFilterChange('status', 'inactive')}
+                  disabled={vcisoSaving || vcisoLoading}
+                >
+                  Inactive
+                </button>
+              </div>
+
+              <div className="admin-shell__vciso-filter-group" role="group" aria-label="Filter updates by scope">
+                <button
+                  type="button"
+                  className={`admin-shell__chip admin-shell__chip--ghost ${vcisoFilters.scope === 'all' ? 'is-selected' : ''}`}
+                  onClick={() => handleVcisoFilterChange('scope', 'all')}
+                  disabled={vcisoSaving || vcisoLoading}
+                >
+                  Any scope
+                </button>
+                <button
+                  type="button"
+                  className={`admin-shell__chip admin-shell__chip--ghost ${vcisoFilters.scope === 'all_enterprise' ? 'is-selected' : ''}`}
+                  onClick={() => handleVcisoFilterChange('scope', 'all_enterprise')}
+                  disabled={vcisoSaving || vcisoLoading}
+                >
+                  All enterprise
+                </button>
+                <button
+                  type="button"
+                  className={`admin-shell__chip admin-shell__chip--ghost ${vcisoFilters.scope === 'single_client' ? 'is-selected' : ''}`}
+                  onClick={() => handleVcisoFilterChange('scope', 'single_client')}
+                  disabled={vcisoSaving || vcisoLoading}
+                >
+                  Single client
+                </button>
+              </div>
+            </div>
+
+            {vcisoLoading ? <p className="admin-shell__feedback">Loading vCISO updates...</p> : null}
+
+            {!vcisoLoading && vcisoUpdates.length === 0 ? (
+              <p className="admin-shell__feedback">No vCISO updates published yet.</p>
+            ) : null}
+
+            {!vcisoLoading && vcisoUpdates.length > 0 ? (
+              <div className="admin-shell__vciso-list">
+                {vcisoUpdates.map((update) => {
+                  const isEditing = editingUpdateId === update.id;
+                  return (
+                    <article key={update.id} className={`admin-shell__vciso-item ${update.is_active ? '' : 'is-inactive'}`}>
+                      {isEditing ? (
+                        <div className="admin-shell__vciso-edit">
+                          <input
+                            name="title"
+                            value={vcisoEditForm.title}
+                            onChange={handleVcisoEditInput}
+                            disabled={vcisoSaving}
+                          />
+                          <textarea
+                            name="note"
+                            value={vcisoEditForm.note}
+                            onChange={handleVcisoEditInput}
+                            rows={3}
+                            disabled={vcisoSaving}
+                          />
+                          <textarea
+                            name="action_items"
+                            value={vcisoEditForm.action_items}
+                            onChange={handleVcisoEditInput}
+                            rows={3}
+                            disabled={vcisoSaving}
+                          />
+                          <input
+                            name="author_name"
+                            value={vcisoEditForm.author_name}
+                            onChange={handleVcisoEditInput}
+                            disabled={vcisoSaving}
+                          />
+                          <div className="admin-shell__vciso-actions">
+                            <button
+                              type="button"
+                              className="admin-shell__chip"
+                              onClick={() => saveUpdateChanges(update.id)}
+                              disabled={vcisoSaving}
+                            >
+                              Save
+                            </button>
+                            <button
+                              type="button"
+                              className="admin-shell__chip admin-shell__chip--ghost"
+                              onClick={cancelEditingUpdate}
+                              disabled={vcisoSaving}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="admin-shell__vciso-item-head">
+                            <div>
+                              <h3>{update.title}</h3>
+                              <p>
+                                {update.scope === 'all_enterprise' ? 'All enterprise clients' : (update.target_user_email || 'Specific enterprise client')} • {formatDateTime(update.created_at)}
+                              </p>
+                            </div>
+                            <span className={`admin-shell__status-pill admin-shell__status-pill--${update.is_active ? 'active' : 'inactive'}`}>
+                              {update.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                          </div>
+                          <p>{update.note}</p>
+                          {Array.isArray(update.action_items) && update.action_items.length > 0 ? (
+                            <ul>
+                              {update.action_items.map((item) => (
+                                <li key={item}>{item}</li>
+                              ))}
+                            </ul>
+                          ) : null}
+                          <p className="admin-shell__vciso-meta">Author: {update.author_name || 'Gabriel Aloho'}</p>
+                          <div className="admin-shell__vciso-actions">
+                            <button
+                              type="button"
+                              className="admin-shell__chip admin-shell__chip--ghost"
+                              onClick={() => startEditingUpdate(update)}
+                              disabled={vcisoSaving}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              className="admin-shell__chip admin-shell__chip--ghost"
+                              onClick={() => toggleUpdateActive(update)}
+                              disabled={vcisoSaving}
+                            >
+                              {update.is_active ? 'Deactivate' : 'Reactivate'}
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            ) : null}
+
+            {vcisoUpdates.length > 0 ? (
+              <div className="admin-shell__vciso-pagination">
+                <button
+                  type="button"
+                  className="admin-shell__chip admin-shell__chip--ghost"
+                  onClick={handleVcisoPrevPage}
+                  disabled={vcisoPage <= 1 || vcisoLoading || vcisoSaving}
+                >
+                  Previous
+                </button>
+                <p>
+                  Page {vcisoPage} of {vcisoTotalPages} ({vcisoTotal} total)
+                </p>
+                <button
+                  type="button"
+                  className="admin-shell__chip admin-shell__chip--ghost"
+                  onClick={handleVcisoNextPage}
+                  disabled={vcisoPage >= vcisoTotalPages || vcisoLoading || vcisoSaving}
+                >
+                  Next
+                </button>
+              </div>
+            ) : null}
+          </div>
         </section>
       </main>
     </div>

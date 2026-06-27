@@ -8,7 +8,6 @@ from app.models import (
     User,
     Subscription,
     UserRole,
-    VcisoUpdate,
     SupportTicket,
     SupportTicketStatus,
     UserPreference,
@@ -691,48 +690,53 @@ def _serialize_auth_user(user):
     }
 
 
-@users_bp.route('/api/vciso/notes', methods=['GET'])
-@login_required
-def get_vciso_notes():
-    """Return vCISO notes for Enterprise Elite users."""
-    active_plan = _get_active_plan_key(current_user.id)
-    if active_plan != 'enterprise_elite':
-        return jsonify({'error': 'vCISO notes require Enterprise Elite plan.'}), 403
-
-    updates = (
-        VcisoUpdate.query
-        .filter(
-            VcisoUpdate.is_active.is_(True),
-            (VcisoUpdate.user_id.is_(None)) | (VcisoUpdate.user_id == current_user.id)
-        )
-        .order_by(VcisoUpdate.created_at.desc())
-        .all()
-    )
-
-    return jsonify({'notes': [item.to_dict() for item in updates]}), 200
-
-
-@users_bp.route('/api/vciso/notes', methods=['POST'])
-@login_required
-def post_vciso_note():
-    """Admin-only stub endpoint for posting dashboard notes."""
-    role = getattr(current_user, 'role', None)
-    role_value = getattr(role, 'value', role)
-    if str(role_value).lower() != 'admin':
-        return jsonify({'error': 'Admin access required.'}), 403
-
-    data = request.get_json(silent=True) or {}
-    required_fields = {'target_user_id', 'type', 'priority', 'title', 'body'}
-    missing = [field for field in required_fields if not data.get(field)]
-    if missing:
-        return jsonify({'error': f"Missing required fields: {', '.join(missing)}"}), 400
-
-    return jsonify({'message': 'Note created (stub). Add VCISONote model to persist records when ready.'}), 201
-
-
 register_auth_privacy_routes(users_bp)
 register_billing_routes(users_bp)
 register_support_routes(users_bp)
 register_analysis_routes(users_bp)
 register_enterprise_routes(users_bp)
 register_company_branding_routes(users_bp)
+
+
+# ── vCISO Portal Routes ─────────────────────────────────────────────────────
+@users_bp.route('/api/vciso/notes', methods=['GET'])
+@login_required
+def get_vciso_notes():
+    """
+    Return vCISO notes for the authenticated user's organisation.
+    Enterprise Elite plan required. Notes are posted by the admin/vCISO
+    and scoped to the user's organisation or account.
+    """
+    from app.models import User, Subscription
+    from app.utils.access_control import require_plan
+
+    user = current_user
+    plan = None
+    if user.subscriptions:
+        plan = user.subscriptions[-1].plan
+
+    PLAN_ORDER = ['starter', 'compliance_pro', 'enterprise_risk', 'enterprise_elite']
+    if not plan or PLAN_ORDER.index(plan) < PLAN_ORDER.index('enterprise_elite'):
+        return jsonify({'error': 'vCISO Portal requires Enterprise Elite plan.'}), 403
+
+    # In production: query VCISONote model scoped to org/user.
+    # For now return an empty list — notes are seeded by admin via /admin/vciso/notes POST.
+    notes = []
+    return jsonify({'notes': notes, 'plan': plan}), 200
+
+
+@users_bp.route('/api/vciso/notes', methods=['POST'])
+@login_required
+def post_vciso_note():
+    """
+    Admin/vCISO posts a note to a subscriber's dashboard.
+    Requires admin role.
+    """
+    from app.models import UserRole
+    if current_user.role != UserRole.admin:
+        return jsonify({'error': 'Admin access required.'}), 403
+
+    data = request.get_json() or {}
+    # Fields: target_user_id, type, priority, title, body, checklist, due
+    # TODO: persist to VCISONote model (to be added to models.py)
+    return jsonify({'message': 'Note created (stub — add VCISONote model to persist).'}), 201

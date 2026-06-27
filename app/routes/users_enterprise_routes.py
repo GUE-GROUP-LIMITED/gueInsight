@@ -63,6 +63,64 @@ def register_enterprise_routes(users_bp):
         if plan_key == 'compliance_pro':
             return 'compliance'
         return 'free'
+
+    def _safe_json_load(value, fallback=None):
+        if not value:
+            return {} if fallback is None else fallback
+        try:
+            return json.loads(value)
+        except Exception:
+            return {} if fallback is None else fallback
+
+    def _latest_compliance_intake(user_id):
+        return (
+            SecurityEvent.query
+            .filter_by(user_id=user_id, event_type='compliance.intake.submitted')
+            .order_by(SecurityEvent.created_at.desc())
+            .first()
+        )
+
+    def _compute_compliance_score(payload):
+        controls = payload.get('controls') or []
+        incidents = payload.get('incidents') or []
+
+        required_controls = max(1, len(controls))
+        implemented = sum(1 for c in controls if str((c or {}).get('status', '')).lower() in {'implemented', 'done', 'effective'})
+        evidenced = sum(
+            1
+            for c in controls
+            if str((c or {}).get('status', '')).lower() in {'implemented', 'done', 'effective'} and (c or {}).get('evidence_url')
+        )
+
+        coverage_score = round((implemented / required_controls) * 100)
+        evidence_score = round((evidenced / max(1, implemented)) * 100)
+
+        reportable = [
+            inc for inc in incidents
+            if str((inc or {}).get('classification', '')).lower() == 'nis2_reportable'
+            or str((inc or {}).get('severity', '')).lower() in {'critical', 'high'}
+        ]
+        sla_ok = [
+            inc for inc in reportable
+            if bool((inc or {}).get('reported_24h')) and bool((inc or {}).get('reported_72h'))
+        ]
+        incident_response_score = round((len(sla_ok) / max(1, len(reportable))) * 100)
+
+        overall = round((0.5 * coverage_score) + (0.3 * evidence_score) + (0.2 * incident_response_score))
+
+        return {
+            'coverage_score': coverage_score,
+            'evidence_score': evidence_score,
+            'incident_response_score': incident_response_score,
+            'overall_score': overall,
+            'details': {
+                'required_controls': required_controls,
+                'implemented_controls': implemented,
+                'controls_with_evidence': evidenced,
+                'reportable_incidents': len(reportable),
+                'incidents_with_sla_met': len(sla_ok),
+            },
+        }
     
     # ===== SUB-USER MANAGEMENT (Enterprise Plans) =====
     
@@ -400,6 +458,192 @@ def register_enterprise_routes(users_bp):
 
 
     # ===== DASHBOARD COMPLIANCE & VCISO PORTAL =====
+
+    @users_bp.route('/auth/compliance/intake', methods=['POST'])
+    @login_required
+    def submit_compliance_intake():
+        """Store compliance intake payload for scoring and recommendation generation."""
+        plan_key = _get_user_plan(current_user.id)
+        tier = _plan_access(plan_key)
+        if tier == 'free':
+            return jsonify({'error': 'Compliance plan required'}), 403
+
+        payload = request.get_json(silent=True) or {}
+        organization = payload.get('organization') or {}
+        controls = payload.get('controls') or []
+
+        if not organization.get('legal_name'):
+            return jsonify({'error': 'organization.legal_name is required'}), 400
+        if not isinstance(controls, list) or len(controls) == 0:
+            return jsonify({'error': 'controls must be a non-empty list'}), 400
+
+        evidence = SecurityEvent(
+            user_id=current_user.id,
+            event_type='compliance.intake.submitted',
+            severity='info',
+            details=json.dumps({
+                'schema_version': '1.0',
+                'submitted_at': datetime.utcnow().isoformat(),
+                'payload': payload,
+            }),
+        )
+        db.session.add(evidence)
+        db.session.commit()
+
+        return jsonify({
+            'message': 'Compliance intake stored',
+            'intake_id': evidence.id,
+            'summary': {
+                'controls_count': len(controls),
+                'incidents_count': len(payload.get('incidents') or []),
+                'assets_count': len(payload.get('assets') or []),
+            },
+        }), 201
+
+    @users_bp.route('/auth/compliance/score', methods=['GET'])
+    @login_required
+    def get_compliance_score():
+        """Compute compliance score from latest intake payload."""
+        plan_key = _get_user_plan(current_user.id)
+        tier = _plan_access(plan_key)
+        if tier == 'free':
+            return jsonify({'error': 'Compliance plan required'}), 403
+
+        intake = _latest_compliance_intake(current_user.id)
+        if not intake:
+            return jsonify({'error': 'No compliance intake found. Submit /auth/compliance/intake first.'}), 404
+
+        details = _safe_json_load(intake.details)
+        payload = details.get('payload') or {}
+        score = _compute_compliance_score(payload)
+
+        return jsonify({
+            'plan_key': plan_key,
+            'tier': tier,
+            'intake_id': intake.id,
+            'scored_at': datetime.utcnow().isoformat(),
+            **score,
+        }), 200
+
+    @users_bp.route('/auth/vciso/recommendations', methods=['POST'])
+    @login_required
+    def generate_vciso_recommendations():
+        """Generate actionable vCISO recommendations using intake + recent security signals."""
+        plan_key = _get_user_plan(current_user.id)
+        tier = _plan_access(plan_key)
+        if tier != 'enterprise':
+            return jsonify({'error': 'Enterprise plan required'}), 403
+
+        body = request.get_json(silent=True) or {}
+        persist = bool(body.get('persist', False))
+
+        intake = _latest_compliance_intake(current_user.id)
+        intake_payload = {}
+        if intake:
+            intake_payload = (_safe_json_load(intake.details).get('payload') or {})
+
+        score = _compute_compliance_score(intake_payload) if intake_payload else {
+            'overall_score': 0,
+            'coverage_score': 0,
+            'evidence_score': 0,
+            'incident_response_score': 0,
+            'details': {
+                'required_controls': 0,
+                'implemented_controls': 0,
+                'controls_with_evidence': 0,
+                'reportable_incidents': 0,
+                'incidents_with_sla_met': 0,
+            },
+        }
+
+        org = intake_payload.get('organization') or {}
+        identities = intake_payload.get('identities') or {}
+        mfa_pct = int(identities.get('mfa_enabled_percent') or 0)
+
+        recommendations = []
+
+        if score['overall_score'] < 70:
+            recommendations.append({
+                'title': 'Raise baseline control coverage',
+                'priority': 'high',
+                'type': 'action',
+                'body': 'Compliance score is below target. Prioritize implementation of missing NIS2/GDPR controls and assign owners with due dates.',
+                'action_items': [
+                    'Map all missing controls to owners',
+                    'Set remediation deadlines for next 30 days',
+                    'Run weekly control closure review',
+                ],
+            })
+
+        if mfa_pct and mfa_pct < 100:
+            recommendations.append({
+                'title': 'Close MFA coverage gap',
+                'priority': 'high' if mfa_pct < 95 else 'medium',
+                'type': 'recommendation',
+                'body': f'MFA coverage is {mfa_pct}%. Raise to 100% for privileged and remote-access accounts.',
+                'action_items': [
+                    'Identify non-MFA users and owners',
+                    'Enforce conditional access policy',
+                    'Re-audit admin accounts after rollout',
+                ],
+            })
+
+        if score['details']['reportable_incidents'] > score['details']['incidents_with_sla_met']:
+            recommendations.append({
+                'title': 'Improve incident reporting SLA compliance',
+                'priority': 'critical',
+                'type': 'action',
+                'body': 'Some reportable incidents did not meet full 24h/72h reporting obligations.',
+                'action_items': [
+                    'Run incident timeline postmortem',
+                    'Define escalation matrix for reportable incidents',
+                    'Automate 24h and 72h notification reminders',
+                ],
+            })
+
+        if not recommendations:
+            recommendations.append({
+                'title': 'Maintain monthly compliance operating cadence',
+                'priority': 'low',
+                'type': 'advisory',
+                'body': 'Current posture is stable. Continue monthly control reviews and quarterly tabletop exercises.',
+                'action_items': [
+                    'Schedule monthly control review',
+                    'Run quarterly incident tabletop drill',
+                    'Refresh evidence bundle for audit readiness',
+                ],
+            })
+
+        persisted = 0
+        if persist:
+            for rec in recommendations:
+                update = VcisoUpdate(
+                    user_id=current_user.id,
+                    title=rec['title'],
+                    note=rec['body'],
+                    action_items='\n'.join(rec['action_items']),
+                    author_name='GueInsight vCISO Engine',
+                    created_by_admin_id=None,
+                    is_active=True,
+                )
+                db.session.add(update)
+                persisted += 1
+            db.session.commit()
+
+        return jsonify({
+            'organization': org.get('legal_name') or current_user.company or current_user.email,
+            'plan_key': plan_key,
+            'tier': tier,
+            'intake_found': bool(intake),
+            'score': {
+                'overall_score': score['overall_score'],
+                'coverage_score': score['coverage_score'],
+                'evidence_score': score['evidence_score'],
+                'incident_response_score': score['incident_response_score'],
+            },
+            'recommendations': recommendations,
+            'persisted': persisted,
+        }), 200
 
     @users_bp.route('/auth/security_events', methods=['GET'])
     @login_required

@@ -14,6 +14,7 @@ def register_auth_privacy_routes(users_bp):
 
     @users_bp.route('/auth/login', methods=['POST'])
     def auth_login():
+        ur._sync_user_profile_columns()
         payload = request.get_json(silent=True) or request.form
         email = (payload.get('email') or '').strip().lower()
         password = payload.get('password') or ''

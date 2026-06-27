@@ -1,14 +1,78 @@
 {
-  "file_path": "C:\\Users\\User\\AppData\\Local\\Temp\\pytest-of-User\\pytest-14\\test_upload_file_success_retur0\\user_1_sample.txt",
+  "indicator": "example-login-verification.com",
   "file_type": "text/plain",
   "metadata": {
-    "size": 12,
+    "size": 30,
     "last_modified": null
   },
   "indicators_of_compromise": [],
-  "suspicious_patterns": [],
+  "suspicious_patterns": [
+    {
+      "name": "Suspicious Pattern Match",
+      "description": "possible phishing lure keyword",
+      "confidence": 0.8,
+      "evidence": "possible phishing lure keyword"
+    },
+    {
+      "name": "Suspicious Pattern Match",
+      "description": "domain contains hyphen; possible typosquatting",
+      "confidence": 0.8,
+      "evidence": "domain contains hyphen; possible typosquatting"
+    }
+  ],
   "alerts_triggered": [],
-  "enrichment": {},
+  "enrichment": {
+    "virustotal": {
+      "status": "success",
+      "url": "example-login-verification.com",
+      "detections": 0,
+      "vendors_reported": 37,
+      "analysis_id": "u-7eb29eca322bb4fd5ad3342bc894519d71e86174a911b47a66addf728ff61bcb-fe6a21ec"
+    }
+  },
+  "threat_score": 15,
+  "threat_score_breakdown": {
+    "base_iocs": 0,
+    "base_patterns": 20,
+    "enrichment_virustotal": 0,
+    "enrichment_abuseipdb": 0,
+    "context_adjustment": -5,
+    "context_factors": [
+      {
+        "factor": "confidence",
+        "value": "low",
+        "adjustment": -5
+      },
+      {
+        "factor": "asset_criticality",
+        "value": "low",
+        "adjustment": 0
+      },
+      {
+        "factor": "network_scope",
+        "value": "internal",
+        "adjustment": 0
+      },
+      {
+        "factor": "source",
+        "value": "manual",
+        "adjustment": 0
+      }
+    ],
+    "total": 15
+  },
   "threat_level": "Low",
-  "report_link": "C:\\Users\\User\\AppData\\Local\\Temp\\pytest-of-User\\pytest-14\\test_upload_file_success_retur0\\report.pdf"
+  "intake": {
+    "indicator": "example-login-verification.com",
+    "indicator_type": "domain",
+    "source": "manual",
+    "confidence": "low",
+    "first_seen_at": null,
+    "asset_name": null,
+    "asset_criticality": "low",
+    "account_ref": null,
+    "network_scope": "internal",
+    "notes": null,
+    "related_artifacts": []
+  }
 }

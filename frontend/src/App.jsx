@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -8,8 +8,7 @@ import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import ResetPassword from './pages/ResetPassword';
-import Dashboard from './pages/Dashboard';
-import FileUpload from './pages/FileUpload';
+import DashboardShell from './pages/DashboardShell';
 import AnalysisResults from './pages/AnalysisResults';
 import Profile from './pages/Profile';
 import Subscription from './pages/Subscription';
@@ -26,7 +25,9 @@ import NotFound from './pages/NotFound';
 
 const AppShell = () => {
   const location = useLocation();
-  const showNavbar = !location.pathname.startsWith('/admin');
+  const publicHeaderRoutes = ['/', '/login', '/signup', '/reset-password', '/docs', '/subscription'];
+  const showNavbar = !publicHeaderRoutes.includes(location.pathname) && !location.pathname.startsWith('/admin');
+  const showFooter = !location.pathname.startsWith('/admin');
 
   return (
     <>
@@ -36,9 +37,14 @@ const AppShell = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/dashboard" element={<ProtectedRoute userOnly={true}><Dashboard /></ProtectedRoute>} />
-        <Route path="/upload" element={<ProtectedRoute userOnly={true}><FileUpload /></ProtectedRoute>} />
-        <Route path="/dashboard/upload" element={<ProtectedRoute userOnly={true}><FileUpload /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute userOnly={true}><DashboardShell /></ProtectedRoute>} />
+        <Route path="/dashboard/workspace" element={<ProtectedRoute userOnly={true}><Navigate to="/threatintel" replace /></ProtectedRoute>} />
+        <Route path="/threatintel" element={<ProtectedRoute userOnly={true}><DashboardShell /></ProtectedRoute>} />
+        <Route path="/threatintel/workspace" element={<ProtectedRoute userOnly={true}><Navigate to="/threatintel" replace /></ProtectedRoute>} />
+        <Route path="/dashboard/compliance" element={<ProtectedRoute userOnly={true}><DashboardShell defaultTab="compliance" /></ProtectedRoute>} />
+        <Route path="/dashboard/vciso" element={<ProtectedRoute userOnly={true}><DashboardShell defaultTab="vciso" /></ProtectedRoute>} />
+        <Route path="/upload" element={<ProtectedRoute userOnly={true}><Navigate to="/threatintel?mode=file" replace /></ProtectedRoute>} />
+        <Route path="/dashboard/upload" element={<ProtectedRoute userOnly={true}><Navigate to="/threatintel?mode=file" replace /></ProtectedRoute>} />
         <Route path="/analysis/:analysisId" element={<ProtectedRoute userOnly={true}><AnalysisResults /></ProtectedRoute>} />
         <Route path="/support" element={<ProtectedRoute userOnly={true}><Support /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
@@ -55,7 +61,7 @@ const AppShell = () => {
         <Route path="/admin/users" element={<ProtectedRoute adminOnly={true}><UserManagement /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
-      {showNavbar && <Footer />}
+      {showFooter && <Footer />}
     </>
   );
 };

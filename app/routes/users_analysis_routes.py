@@ -229,24 +229,183 @@ def _enrich_with_external_tools(indicator, iocs):
     return enrichment
 
 
-def _assess_threat_level(iocs, patterns, enrichment):
-    score = 0
-    score += min(30, len(iocs) * 5)
-    score += min(30, len(patterns) * 10)
-
-    vt = enrichment.get('virustotal') or {}
-    if isinstance(vt, dict):
-        score += min(30, int(vt.get('detections', 0)) * 3)
-
-    aidb = enrichment.get('abuseipdb') or {}
-    if isinstance(aidb, dict):
-        score += min(30, int(aidb.get('abuse_score', 0)) // 3)
-
+def _threat_level_from_score(score):
     if score >= 60:
         return 'High'
     if score >= 30:
         return 'Medium'
     return 'Low'
+
+
+def _contextual_risk_adjustment(intake):
+    if not isinstance(intake, dict):
+        return 0
+
+    confidence_weight = {
+        'low': -5,
+        'medium': 0,
+        'high': 8,
+    }
+    criticality_weight = {
+        'low': 0,
+        'medium': 4,
+        'high': 8,
+        'critical': 12,
+    }
+    network_scope_weight = {
+        'internal': 0,
+        'external': 6,
+        'vpn': 3,
+        'cloud': 4,
+    }
+    source_weight = {
+        'manual': 0,
+        'email_gateway': 5,
+        'edr': 4,
+        'siem': 3,
+        'firewall': 2,
+    }
+
+    adjustment = 0
+    adjustment += confidence_weight.get(str(intake.get('confidence') or '').lower(), 0)
+    adjustment += criticality_weight.get(str(intake.get('asset_criticality') or '').lower(), 0)
+    adjustment += network_scope_weight.get(str(intake.get('network_scope') or '').lower(), 0)
+    adjustment += source_weight.get(str(intake.get('source') or '').lower(), 0)
+
+    return max(-10, min(35, adjustment))
+
+
+def _contextual_risk_factors(intake):
+    if not isinstance(intake, dict):
+        return []
+
+    factors = []
+    confidence = str(intake.get('confidence') or '').lower()
+    if confidence == 'high':
+        factors.append({'factor': 'confidence', 'value': 'high', 'adjustment': 8})
+    elif confidence == 'medium':
+        factors.append({'factor': 'confidence', 'value': 'medium', 'adjustment': 0})
+    elif confidence == 'low':
+        factors.append({'factor': 'confidence', 'value': 'low', 'adjustment': -5})
+
+    criticality = str(intake.get('asset_criticality') or '').lower()
+    criticality_map = {'low': 0, 'medium': 4, 'high': 8, 'critical': 12}
+    if criticality in criticality_map:
+        factors.append({'factor': 'asset_criticality', 'value': criticality, 'adjustment': criticality_map[criticality]})
+
+    network_scope = str(intake.get('network_scope') or '').lower()
+    network_scope_map = {'internal': 0, 'external': 6, 'vpn': 3, 'cloud': 4}
+    if network_scope in network_scope_map:
+        factors.append({'factor': 'network_scope', 'value': network_scope, 'adjustment': network_scope_map[network_scope]})
+
+    source = str(intake.get('source') or '').lower()
+    source_map = {'manual': 0, 'email_gateway': 5, 'edr': 4, 'siem': 3, 'firewall': 2}
+    if source in source_map:
+        factors.append({'factor': 'source', 'value': source, 'adjustment': source_map[source]})
+
+    return factors
+
+
+def _calculate_threat_score_components(iocs, patterns, enrichment, intake=None):
+    base_iocs = min(30, len(iocs) * 5)
+    base_patterns = min(30, len(patterns) * 10)
+    vt_score = 0
+    abuse_score = 0
+
+    vt = enrichment.get('virustotal') or {}
+    if isinstance(vt, dict):
+        vt_score = min(30, int(vt.get('detections', 0)) * 3)
+
+    aidb = enrichment.get('abuseipdb') or {}
+    if isinstance(aidb, dict):
+        abuse_score = min(30, int(aidb.get('abuse_score', 0)) // 3)
+
+    context_adjustment = _contextual_risk_adjustment(intake)
+    raw_total = base_iocs + base_patterns + vt_score + abuse_score + context_adjustment
+    total = max(0, min(100, raw_total))
+
+    return {
+        'base_iocs': int(base_iocs),
+        'base_patterns': int(base_patterns),
+        'enrichment_virustotal': int(vt_score),
+        'enrichment_abuseipdb': int(abuse_score),
+        'context_adjustment': int(context_adjustment),
+        'context_factors': _contextual_risk_factors(intake),
+        'total': int(total),
+    }
+
+
+def _calculate_threat_score(iocs, patterns, enrichment, intake=None):
+    components = _calculate_threat_score_components(iocs, patterns, enrichment, intake)
+    return int(components.get('total', 0))
+
+
+def _assess_threat_level(iocs, patterns, enrichment, intake=None):
+    score = _calculate_threat_score(iocs, patterns, enrichment, intake)
+    return _threat_level_from_score(score)
+
+
+def _detect_indicator_type(value):
+    indicator = (value or '').strip()
+    if _looks_like_ip(indicator):
+        return 'ip'
+    if _looks_like_url(indicator):
+        return 'url'
+    if _looks_like_hash(indicator):
+        return 'hash'
+    if _looks_like_domain(indicator):
+        return 'domain'
+    if '@' in indicator:
+        return 'email'
+    return 'indicator'
+
+
+def _normalize_threat_intake_payload(payload):
+    data = payload if isinstance(payload, dict) else {}
+    indicator = str(data.get('indicator') or '').strip()
+    if not indicator:
+        return None, 'indicator is required'
+
+    source = str(data.get('source') or '').strip().lower()
+    allowed_sources = {'manual', 'email_gateway', 'edr', 'siem', 'firewall'}
+    if not source:
+        return None, 'source is required'
+    if source not in allowed_sources:
+        return None, 'source must be one of: manual, email_gateway, edr, siem, firewall'
+
+    confidence = str(data.get('confidence') or '').strip().lower()
+    if not confidence:
+        return None, 'confidence is required'
+    if confidence not in {'low', 'medium', 'high'}:
+        return None, 'confidence must be one of: low, medium, high'
+
+    indicator_type = str(data.get('indicator_type') or '').strip().lower() or _detect_indicator_type(indicator)
+    first_seen_at = str(data.get('first_seen_at') or '').strip() or None
+    asset_name = str(data.get('asset_name') or '').strip() or None
+    asset_criticality = str(data.get('asset_criticality') or '').strip().lower() or None
+    account_ref = str(data.get('account_ref') or '').strip() or None
+    network_scope = str(data.get('network_scope') or '').strip().lower() or None
+    notes = str(data.get('notes') or '').strip() or None
+
+    related_artifacts = data.get('related_artifacts') or []
+    if isinstance(related_artifacts, str):
+        related_artifacts = [part.strip() for part in related_artifacts.split(',') if part.strip()]
+    if not isinstance(related_artifacts, list):
+        related_artifacts = []
+
+    return {
+        'indicator': indicator,
+        'indicator_type': indicator_type,
+        'source': source,
+        'confidence': confidence,
+        'first_seen_at': first_seen_at,
+        'asset_name': asset_name,
+        'asset_criticality': asset_criticality,
+        'account_ref': account_ref,
+        'network_scope': network_scope,
+        'notes': notes,
+        'related_artifacts': [str(item).strip() for item in related_artifacts if str(item).strip()][:25],
+    }, None
 
 
 def _analysis_share_serializer():
@@ -347,7 +506,13 @@ def _build_analysis_response(tx, payload, include_user=True, include_insights=Tr
     iocs = payload.get('indicators_of_compromise') or []
     patterns = payload.get('suspicious_patterns') or []
     enrichment = payload.get('enrichment') or {}
-    threat_level = payload.get('threat_level') or _assess_threat_level(iocs, patterns, enrichment)
+    intake = payload.get('intake') or {}
+    score_breakdown = payload.get('threat_score_breakdown')
+    if not isinstance(score_breakdown, dict):
+        score_breakdown = _calculate_threat_score_components(iocs, patterns, enrichment, intake)
+
+    threat_score = int(payload.get('threat_score') or score_breakdown.get('total') or _calculate_threat_score(iocs, patterns, enrichment, intake))
+    threat_level = payload.get('threat_level') or _threat_level_from_score(threat_score)
 
     response = {
         'analysis_id': tx.id,
@@ -356,6 +521,8 @@ def _build_analysis_response(tx, payload, include_user=True, include_insights=Tr
         'file_type': payload.get('file_type') or tx.source_type,
         'analysis_date': (tx.completed_at or tx.created_at).isoformat() if (tx.completed_at or tx.created_at) else None,
         'status': tx.status.value if hasattr(tx.status, 'value') else str(tx.status),
+        'threat_score': threat_score,
+        'threat_score_breakdown': score_breakdown,
         'threat_level': threat_level,
         'metadata': payload.get('metadata') or {
             'size': tx.input_size_bytes or 0,
@@ -365,6 +532,7 @@ def _build_analysis_response(tx, payload, include_user=True, include_insights=Tr
         'suspicious_patterns': patterns,
         'alerts_triggered': payload.get('alerts_triggered') or [],
         'enrichment': enrichment,
+        'intake': intake,
     }
 
     if include_user:
@@ -490,6 +658,32 @@ def register_analysis_routes(users_bp):
         if uploaded_file:
             file_analysis_started_at = ur._utc_now()
 
+            source = str(request.form.get('source') or '').strip().lower()
+            allowed_sources = {'manual', 'email_gateway', 'edr', 'siem', 'firewall'}
+            if not source:
+                return _error('source is required', 400)
+            if source not in allowed_sources:
+                return _error('source must be one of: manual, email_gateway, edr, siem, firewall', 400)
+
+            confidence = str(request.form.get('confidence') or '').strip().lower()
+            if not confidence:
+                return _error('confidence is required', 400)
+            if confidence not in {'low', 'medium', 'high'}:
+                return _error('confidence must be one of: low, medium, high', 400)
+
+            related_artifacts_raw = str(request.form.get('related_artifacts') or '').strip()
+            intake_context = {
+                'source': source,
+                'confidence': confidence,
+                'first_seen_at': str(request.form.get('first_seen_at') or '').strip() or None,
+                'asset_name': str(request.form.get('asset_name') or '').strip() or None,
+                'asset_criticality': str(request.form.get('asset_criticality') or '').strip().lower() or None,
+                'account_ref': str(request.form.get('account_ref') or '').strip() or None,
+                'network_scope': str(request.form.get('network_scope') or '').strip().lower() or None,
+                'notes': str(request.form.get('notes') or '').strip() or None,
+                'related_artifacts': [part.strip() for part in related_artifacts_raw.split(',') if part.strip()][:25],
+            }
+
             # Check the file type
             allowed_extensions = Config.ALLOWED_EXTENSIONS  # Get allowed file types from config
             file_extension = secure_filename(uploaded_file.filename).split('.')[-1].lower()
@@ -574,6 +768,13 @@ def register_analysis_routes(users_bp):
                 )
                 db.session.commit()
 
+                iocs = _normalize_iocs(analysis_results.get('indicators_of_compromise') or analysis_results.get('iocs') or [])
+                patterns = _normalize_patterns(analysis_results.get('suspicious_patterns') or [])
+                enrichment = analysis_results.get('enrichment') or {}
+                threat_score_breakdown = _calculate_threat_score_components(iocs, patterns, enrichment, intake_context)
+                threat_score = int(threat_score_breakdown.get('total', 0))
+                threat_level = analysis_results.get('threat_level') or _threat_level_from_score(threat_score)
+
                 analysis_payload = {
                     'file_path': file_path,
                     'file_type': analysis_results.get('file_type') or file_extension,
@@ -581,11 +782,14 @@ def register_analysis_routes(users_bp):
                         'size': file_size_bytes,
                         'last_modified': None,
                     },
-                    'indicators_of_compromise': analysis_results.get('indicators_of_compromise') or [],
-                    'suspicious_patterns': analysis_results.get('suspicious_patterns') or [],
+                    'indicators_of_compromise': iocs,
+                    'suspicious_patterns': patterns,
                     'alerts_triggered': analysis_results.get('alerts_triggered') or [],
-                    'enrichment': analysis_results.get('enrichment') or {},
-                    'threat_level': analysis_results.get('threat_level') or 'Low',
+                    'enrichment': enrichment,
+                    'threat_score': threat_score,
+                    'threat_score_breakdown': threat_score_breakdown,
+                    'threat_level': threat_level,
+                    'intake': intake_context,
                     'report_link': report_file,
                 }
                 _persist_analysis_payload(current_user.id, file_tx.id, analysis_payload)
@@ -841,7 +1045,9 @@ def register_analysis_routes(users_bp):
         iocs = _normalize_iocs(lightweight.get('iocs'))
         patterns = _normalize_patterns(lightweight.get('suspicious_patterns'))
         enrichment = _enrich_with_external_tools(indicator, iocs)
-        threat_level = _assess_threat_level(iocs, patterns, enrichment)
+        threat_score_breakdown = _calculate_threat_score_components(iocs, patterns, enrichment)
+        threat_score = int(threat_score_breakdown.get('total', 0))
+        threat_level = _threat_level_from_score(threat_score)
 
         analysis_payload = {
             'indicator': indicator,
@@ -854,12 +1060,15 @@ def register_analysis_routes(users_bp):
             'suspicious_patterns': patterns,
             'alerts_triggered': [],
             'enrichment': enrichment,
+            'threat_score': threat_score,
+            'threat_score_breakdown': threat_score_breakdown,
             'threat_level': threat_level,
         }
 
         tx.processing_ms = max(1, int((ur._utc_now() - started_at).total_seconds() * 1000))
         tx.result_summary = json.dumps({
             'threat_level': threat_level,
+            'threat_score': threat_score,
             'ioc_count': len(iocs),
             'pattern_count': len(patterns),
         })[:1900]
@@ -879,10 +1088,114 @@ def register_analysis_routes(users_bp):
         return {
             'status': 'success',
             'analysisId': tx.id,
+            'threat_score': threat_score,
+            'threat_score_breakdown': threat_score_breakdown,
             'threat_level': threat_level,
             'ioc_count': len(iocs),
             'pattern_count': len(patterns),
             'redirect_url': f'/analysis/{tx.id}',
+        }, 201
+
+    @users_bp.route('/api/threat-intel/intake', methods=['POST'])
+    @login_required
+    def api_threat_intel_intake():
+        payload = request.get_json(silent=True) or {}
+        normalized, error = _normalize_threat_intake_payload(payload)
+        if error:
+            return {'error': error}, 400
+
+        indicator = normalized['indicator']
+        plan_key = ur._get_active_plan_key(current_user.id)
+        limits = ur._get_analysis_limits_for_plan(plan_key)
+        item_count = ur._count_analysis_items(indicator)
+
+        if len(indicator) > limits['max_text_chars']:
+            return {'error': f"Input exceeds plan limit of {limits['max_text_chars']} characters."}, 400
+        if item_count > limits['max_items_per_analysis']:
+            return {'error': f"Input has {item_count} items; plan max is {limits['max_items_per_analysis']}."}, 400
+
+        started_at = ur._utc_now()
+        tx = AnalysisTransaction(
+            user_id=current_user.id,
+            source_type='text',
+            input_ref=indicator[:500],
+            status=AnalysisStatus.SUCCESS,
+            plan_at_time=plan_key,
+            items_count=item_count,
+            input_size_bytes=len(indicator.encode('utf-8')),
+            created_at=started_at,
+            completed_at=ur._utc_now(),
+        )
+        db.session.add(tx)
+        db.session.flush()
+
+        lightweight = _lightweight_indicator_analysis(indicator)
+        iocs = _normalize_iocs(lightweight.get('iocs'))
+        patterns = _normalize_patterns(lightweight.get('suspicious_patterns'))
+        enrichment = _enrich_with_external_tools(indicator, iocs)
+        threat_score_breakdown = _calculate_threat_score_components(iocs, patterns, enrichment, normalized)
+        threat_score = int(threat_score_breakdown.get('total', 0))
+        threat_level = _threat_level_from_score(threat_score)
+
+        analysis_payload = {
+            'indicator': indicator,
+            'file_type': 'text/plain',
+            'metadata': {
+                'size': len(indicator.encode('utf-8')),
+                'last_modified': None,
+            },
+            'indicators_of_compromise': iocs,
+            'suspicious_patterns': patterns,
+            'alerts_triggered': [],
+            'enrichment': enrichment,
+            'threat_score': threat_score,
+            'threat_score_breakdown': threat_score_breakdown,
+            'threat_level': threat_level,
+            'intake': normalized,
+        }
+
+        tx.processing_ms = max(1, int((ur._utc_now() - started_at).total_seconds() * 1000))
+        tx.result_summary = json.dumps({
+            'threat_level': threat_level,
+            'threat_score': threat_score,
+            'ioc_count': len(iocs),
+            'pattern_count': len(patterns),
+            'indicator_type': normalized.get('indicator_type'),
+            'confidence': normalized.get('confidence'),
+            'source': normalized.get('source'),
+        })[:1900]
+        db.session.commit()
+
+        _persist_analysis_payload(current_user.id, tx.id, analysis_payload)
+        ur._log_user_activity(
+            current_user.id,
+            event_type='analysis.threat_intel.intake.success',
+            description='Completed threat-intel intake analysis via API.',
+            entity_type='analysis_transaction',
+            entity_id=tx.id,
+            metadata={
+                'source_type': 'text',
+                'status': 'success',
+                'indicator_type': normalized.get('indicator_type'),
+                'source': normalized.get('source'),
+            },
+        )
+        db.session.commit()
+
+        return {
+            'status': 'success',
+            'analysisId': tx.id,
+            'threat_score': threat_score,
+            'threat_score_breakdown': threat_score_breakdown,
+            'threat_level': threat_level,
+            'ioc_count': len(iocs),
+            'pattern_count': len(patterns),
+            'redirect_url': f'/analysis/{tx.id}',
+            'intake': {
+                'indicator_type': normalized.get('indicator_type'),
+                'source': normalized.get('source'),
+                'confidence': normalized.get('confidence'),
+            },
         }, 201
 
     @users_bp.route('/api/analysis/<int:analysis_id>', methods=['GET'])

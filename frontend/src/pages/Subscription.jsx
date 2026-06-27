@@ -2,6 +2,7 @@ import { useContext, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import PlanSelector from '../components/PlanSelector';
+import PublicHeader from '../components/PublicHeader';
 import { api } from '../services/api';
 import './AuthPricing.css';
 import { useTranslation } from '../i18n/index';
@@ -163,7 +164,9 @@ const Subscription = () => {
 	};
 
 	return (
-		<main className="auth-pricing-page auth-pricing-page--pricing">
+		<>
+			<PublicHeader featureTo="/#features" howTo="/docs#getting-started" whoTo="/#who" pricingTo="/subscription" />
+			<main className="auth-pricing-page auth-pricing-page--pricing">
 			<section className="pricing-hero">
 				<p className="auth-pricing-card__eyebrow">{t('pricing.title')}</p>
 				<h1>{t('pricing.hero_subtitle')}</h1>
@@ -277,6 +280,7 @@ const Subscription = () => {
 				/>
 			)}
 		</main>
+		</>
 	);
 };
 

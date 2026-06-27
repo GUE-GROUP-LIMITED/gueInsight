@@ -6,7 +6,7 @@ from flask_login import login_required, current_user, login_user, logout_user
 from werkzeug.security import generate_password_hash
 from sqlalchemy import true
 from app import db
-from app.models import User, Logs, FileUpload, UserRole, Alert, AlertRule, Subscription, SupportTicket, SupportTicketStatus, DataDeletionRequest, SecurityEvent, NIS2IncidentReport
+from app.models import User, Logs, FileUpload, UserRole, Alert, AlertRule, Subscription, SupportTicket, SupportTicketStatus, DataDeletionRequest, SecurityEvent, NIS2IncidentReport, VcisoUpdate
 from app.forms import AdminLoginForm, AdminSignupForm, AlertRuleForm
 from app.utils.utils import check_admin_role  
 from app.admin_services import some_condition_for_critical_alert
@@ -159,6 +159,42 @@ def _normalize_user_role(role_like):
     if role_text in {'admin', 'user'}:
         return UserRole(role_text)
     return None
+
+
+def _normalize_plan(plan_like):
+    value = str(plan_like or 'free').strip().lower()
+    legacy_map = {
+        'premium_individual': 'compliance_pro',
+        'premium_small_business': 'enterprise_risk',
+        'premium_large_business': 'enterprise_elite',
+        'premium': 'compliance_pro',
+        'freemium': 'free',
+    }
+    return legacy_map.get(value, value)
+
+
+def _is_enterprise_plan(plan_like):
+    plan = _normalize_plan(plan_like)
+    return plan in {'enterprise_professional', 'enterprise_risk', 'enterprise_elite'}
+
+
+def _serialize_vciso_update(update):
+    target_user = update.user
+    latest_subscription = None
+    if target_user:
+        latest_subscription = (
+            Subscription.query
+            .filter_by(user_id=target_user.id)
+            .order_by(Subscription.end_date.desc())
+            .first()
+        )
+
+    payload = update.to_dict()
+    payload['target_user_email'] = target_user.email if target_user else None
+    payload['target_user_name'] = f"{target_user.first_name} {target_user.last_name}".strip() if target_user else None
+    payload['target_plan'] = getattr(latest_subscription, 'plan', None) if latest_subscription else None
+    payload['scope'] = 'all_enterprise' if update.user_id is None else 'single_client'
+    return payload
 
 
 register_admin_alerts_routes(admin_bp)
@@ -557,6 +593,244 @@ def admin_support_ticket_detail(ticket_id):
     db.session.commit()
     Logs.log_action(current_user, f"Updated support ticket #{ticket.id} for user #{ticket.user_id}")
     return {'message': 'Ticket updated.', 'ticket': _serialize_support_ticket(ticket)}
+
+
+@admin_bp.route('/api/admin/vciso', methods=['POST'])
+@login_required
+def admin_post_vciso_update():
+    """Post a vCISO update to a specific client or to all enterprise clients."""
+    check_admin_role(current_user)
+
+    payload = request.get_json(silent=True) or {}
+    title = (payload.get('title') or '').strip()
+    note = (payload.get('note') or '').strip()
+    action_items = payload.get('action_items')
+    target_user_id = payload.get('target_user_id')
+    publish_to_all_enterprise = bool(payload.get('publish_to_all_enterprise', False))
+
+    if not title or not note:
+        return {'error': 'title and note are required.'}, 400
+
+    action_items_text = None
+    if isinstance(action_items, list):
+        cleaned = [str(item).strip() for item in action_items if str(item).strip()]
+        action_items_text = '\n'.join(cleaned) if cleaned else None
+    elif isinstance(action_items, str):
+        action_items_text = action_items.strip() or None
+
+    target_user = None
+    if target_user_id is not None:
+        try:
+            target_user_id = int(target_user_id)
+        except (TypeError, ValueError):
+            return {'error': 'target_user_id must be numeric.'}, 400
+        target_user = User.query.get(target_user_id)
+        if not target_user:
+            return {'error': 'Target user not found.'}, 404
+
+        latest_subscription = (
+            Subscription.query
+            .filter_by(user_id=target_user.id)
+            .order_by(Subscription.end_date.desc())
+            .first()
+        )
+        if not latest_subscription or not _is_enterprise_plan(latest_subscription.plan):
+            return {'error': 'Target user does not have an enterprise subscription.'}, 400
+
+    if publish_to_all_enterprise and target_user:
+        return {'error': 'Provide either target_user_id or publish_to_all_enterprise, not both.'}, 400
+
+    if not publish_to_all_enterprise and not target_user:
+        return {'error': 'Provide target_user_id or set publish_to_all_enterprise to true.'}, 400
+
+    update = VcisoUpdate(
+        user_id=None if publish_to_all_enterprise else target_user.id,
+        title=title,
+        note=note,
+        action_items=action_items_text,
+        author_name=(payload.get('author_name') or 'Gabriel Aloho').strip() or 'Gabriel Aloho',
+        created_by_admin_id=current_user.id,
+        is_active=True,
+    )
+
+    db.session.add(update)
+    db.session.commit()
+
+    scope = 'all enterprise clients' if publish_to_all_enterprise else f'user #{target_user.id}'
+    Logs.log_action(current_user, f"Posted vCISO update #{update.id} to {scope}")
+
+    return {
+        'message': 'vCISO update posted.',
+        'update': _serialize_vciso_update(update),
+        'scope': scope,
+    }, 201
+
+
+@admin_bp.route('/api/admin/vciso', methods=['GET'])
+@login_required
+def admin_list_vciso_updates():
+    """List vCISO updates for admin history management."""
+    check_admin_role(current_user)
+
+    limit = request.args.get('limit', 50, type=int)
+    offset = request.args.get('offset', 0, type=int)
+    include_inactive = str(request.args.get('include_inactive', 'false')).strip().lower() in {'1', 'true', 'yes'}
+    status_filter = str(request.args.get('status', '')).strip().lower()
+    scope_filter = str(request.args.get('scope', 'all')).strip().lower()
+    search_query = str(request.args.get('q', '')).strip()
+
+    if not status_filter:
+        status_filter = 'all' if include_inactive else 'active'
+
+    if status_filter not in {'all', 'active', 'inactive'}:
+        return {'error': "status must be one of: all, active, inactive."}, 400
+
+    if scope_filter not in {'all', 'all_enterprise', 'single_client'}:
+        return {'error': "scope must be one of: all, all_enterprise, single_client."}, 400
+
+    query = VcisoUpdate.query
+
+    if status_filter == 'active':
+        query = query.filter(VcisoUpdate.is_active == True)
+    elif status_filter == 'inactive':
+        query = query.filter(VcisoUpdate.is_active == False)
+
+    if scope_filter == 'all_enterprise':
+        query = query.filter(VcisoUpdate.user_id == None)
+    elif scope_filter == 'single_client':
+        query = query.filter(VcisoUpdate.user_id != None)
+
+    if search_query:
+        # Limit keyword length to prevent excessive query work
+        keyword = f'%{search_query[:120]}%'
+        matching_user_ids = (
+            db.session.query(User.id)
+            .filter(
+                (User.email.ilike(keyword)) |
+                (User.first_name.ilike(keyword)) |
+                (User.last_name.ilike(keyword))
+            )
+            .subquery()
+        )
+        query = query.filter(
+            (VcisoUpdate.title.ilike(keyword)) |
+            (VcisoUpdate.author_name.ilike(keyword)) |
+            (VcisoUpdate.note.ilike(keyword)) |
+            (VcisoUpdate.user_id.in_(matching_user_ids))
+        )
+
+    total = query.count()
+
+    safe_limit = max(1, min(limit, 200))
+    safe_offset = max(0, offset)
+
+    updates = (
+        query
+        .order_by(VcisoUpdate.created_at.desc())
+        .offset(safe_offset)
+        .limit(safe_limit)
+        .all()
+    )
+
+    return {
+        'updates': [_serialize_vciso_update(item) for item in updates],
+        'total': total,
+        'limit': safe_limit,
+        'offset': safe_offset,
+        'status': status_filter,
+        'scope': scope_filter,
+        'q': search_query,
+    }, 200
+
+
+@admin_bp.route('/api/admin/vciso/<int:update_id>', methods=['PATCH'])
+@login_required
+def admin_update_vciso_update(update_id):
+    """Edit or deactivate a published vCISO update."""
+    check_admin_role(current_user)
+
+    update = VcisoUpdate.query.get_or_404(update_id)
+    payload = request.get_json(silent=True) or {}
+    updates_made = False
+
+    if 'title' in payload:
+        new_title = str(payload.get('title') or '').strip()
+        if not new_title:
+            return {'error': 'title cannot be empty.'}, 400
+        update.title = new_title
+        updates_made = True
+
+    if 'note' in payload:
+        new_note = str(payload.get('note') or '').strip()
+        if not new_note:
+            return {'error': 'note cannot be empty.'}, 400
+        update.note = new_note
+        updates_made = True
+
+    if 'author_name' in payload:
+        update.author_name = str(payload.get('author_name') or '').strip() or 'Gabriel Aloho'
+        updates_made = True
+
+    if 'action_items' in payload:
+        action_items = payload.get('action_items')
+        action_items_text = None
+        if isinstance(action_items, list):
+            cleaned = [str(item).strip() for item in action_items if str(item).strip()]
+            action_items_text = '\n'.join(cleaned) if cleaned else None
+        elif isinstance(action_items, str):
+            action_items_text = action_items.strip() or None
+        update.action_items = action_items_text
+        updates_made = True
+
+    target_user_id = payload.get('target_user_id', '__not_provided__')
+    publish_to_all_enterprise = payload.get('publish_to_all_enterprise', '__not_provided__')
+
+    if target_user_id != '__not_provided__' or publish_to_all_enterprise != '__not_provided__':
+        if publish_to_all_enterprise is True and target_user_id not in ('__not_provided__', None):
+            return {'error': 'Provide either target_user_id or publish_to_all_enterprise, not both.'}, 400
+
+        if publish_to_all_enterprise is True:
+            update.user_id = None
+            updates_made = True
+        elif target_user_id is not None and target_user_id != '__not_provided__':
+            try:
+                target_user_id = int(target_user_id)
+            except (TypeError, ValueError):
+                return {'error': 'target_user_id must be numeric.'}, 400
+
+            target_user = User.query.get(target_user_id)
+            if not target_user:
+                return {'error': 'Target user not found.'}, 404
+
+            latest_subscription = (
+                Subscription.query
+                .filter_by(user_id=target_user.id)
+                .order_by(Subscription.end_date.desc())
+                .first()
+            )
+            if not latest_subscription or not _is_enterprise_plan(latest_subscription.plan):
+                return {'error': 'Target user does not have an enterprise subscription.'}, 400
+
+            update.user_id = target_user.id
+            updates_made = True
+        elif target_user_id is None:
+            update.user_id = None
+            updates_made = True
+
+    if 'is_active' in payload:
+        update.is_active = bool(payload.get('is_active'))
+        updates_made = True
+
+    if not updates_made:
+        return {'error': 'No updates provided.'}, 400
+
+    db.session.commit()
+    Logs.log_action(current_user, f"Updated vCISO update #{update.id}")
+
+    return {
+        'message': 'vCISO update updated.',
+        'update': _serialize_vciso_update(update),
+    }, 200
 
 
 # Logout
