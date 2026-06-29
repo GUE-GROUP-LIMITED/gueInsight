@@ -106,10 +106,6 @@ const Subscription = () => {
 		},
 	]), [t]);
 
-	if (role === 'admin') {
-		return <Navigate to="/admin" replace />;
-	}
-
 	const currentPlan = normalizePlan(user?.current_plan);
 	const showCurrentPlan = Boolean(user);
 	const [subDetails, setSubDetails] = useState(null);
@@ -122,6 +118,10 @@ const Subscription = () => {
 		if (!user) return;
 		api.get('/auth/subscription').then(res => setSubDetails(res.data)).catch(() => {});
 	}, [user]);
+
+	if (role === 'admin') {
+		return <Navigate to="/admin" replace />;
+	}
 
 	const formatDate = (iso) => {
 		if (!iso) return null;
