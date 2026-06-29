@@ -8,7 +8,8 @@ import io
 import csv
 import os
 import re
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify
+import time
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify, Response, stream_with_context
 from flask_login import login_required, current_user
 import datetime
 from flask_mail import Message
@@ -18,6 +19,7 @@ from app.models import (
     Subscription,
     AnalysisTransaction,
     AnalysisStatus,
+    VcisoUpdate,
     UserActivityEvent,
     db,
 )
@@ -557,6 +559,129 @@ def _build_analysis_response(tx, payload, include_user=True, include_insights=Tr
         )
 
     return response
+
+
+def _parse_result_summary(summary_text):
+    if not summary_text:
+        return {}
+    try:
+        parsed = json.loads(summary_text)
+        if isinstance(parsed, dict):
+            return parsed
+    except (TypeError, ValueError):
+        return {}
+    return {}
+
+
+def _derive_alert_title(source_type, level):
+    level_name = str(level or '').lower()
+    source = str(source_type or '').lower()
+    if source == 'file':
+        return 'High-risk file indicator detected' if level_name == 'high' else 'File indicator requires review'
+    if source == 'url':
+        return 'Suspicious URL flagged during analysis' if level_name == 'high' else 'URL indicator needs triage'
+    if source == 'text':
+        return 'Threat intel indicator requires review' if level_name != 'low' else 'Low-risk intel event processed'
+    return 'Security event requires review' if level_name != 'low' else 'Security check completed successfully'
+
+
+def _to_level_from_score(score):
+    if score >= 60:
+        return 'High'
+    if score >= 30:
+        return 'Medium'
+    return 'Low'
+
+
+def _build_public_landing_snapshot_payload():
+    now = ur._utc_now()
+    recent_transactions = (
+        AnalysisTransaction.query
+        .filter(AnalysisTransaction.status == AnalysisStatus.SUCCESS)
+        .order_by(AnalysisTransaction.created_at.desc())
+        .limit(60)
+        .all()
+    )
+
+    scored_events = []
+    for tx in recent_transactions:
+        summary = _parse_result_summary(tx.result_summary)
+        score = summary.get('threat_score')
+        if score is None:
+            score = 35
+        try:
+            score = max(0, min(100, int(score)))
+        except (TypeError, ValueError):
+            score = 35
+
+        level = str(summary.get('threat_level') or _to_level_from_score(score)).strip().title()
+        scored_events.append({
+            'id': tx.id,
+            'source_type': tx.source_type,
+            'score': score,
+            'level': level,
+            'created_at': tx.created_at,
+        })
+
+    latest_update = (
+        VcisoUpdate.query
+        .filter(VcisoUpdate.is_active.is_(True))
+        .order_by(VcisoUpdate.created_at.desc())
+        .first()
+    )
+
+    # Keep public data anonymized: expose aggregate risk and generic alert titles only.
+    alert_candidates = [event for event in scored_events if event['level'] in {'High', 'Medium'}]
+    alert_candidates = sorted(alert_candidates, key=lambda event: (event['score'], event['created_at']), reverse=True)
+    alerts = [
+        {
+            'id': f"tx-{event['id']}",
+            'title': _derive_alert_title(event['source_type'], event['level']),
+            'severity': 'HIGH' if event['level'] == 'High' else 'MED',
+        }
+        for event in alert_candidates[:4]
+    ]
+
+    if not alerts:
+        alerts = [
+            {
+                'id': 'seed-ok-1',
+                'title': 'No active high-risk events in the recent analysis window',
+                'severity': 'OK',
+            }
+        ]
+
+    recent_scores = [event['score'] for event in scored_events[:20]]
+    if recent_scores:
+        avg_threat = sum(recent_scores) / len(recent_scores)
+        security_score = int(round(max(10, min(99, 100 - avg_threat))))
+    else:
+        security_score = 78
+
+    one_day_ago = now - datetime.timedelta(hours=24)
+    active_alerts = sum(
+        1 for event in scored_events
+        if event['level'] in {'High', 'Medium'} and event['created_at'] and event['created_at'] >= one_day_ago
+    )
+
+    last_updated = scored_events[0]['created_at'] if scored_events else now
+
+    return {
+        'security_score': security_score,
+        'active_alerts': int(active_alerts),
+        'updated_at': last_updated.isoformat() if last_updated else now.isoformat(),
+        'alerts': alerts,
+        'vciso_note': {
+            'author_name': latest_update.author_name if latest_update else 'Gue Cyber vCISO Team',
+            'title': latest_update.title if latest_update else 'Weekly risk posture update',
+            'note': latest_update.note if latest_update else 'Monitor high-confidence indicators and keep remediation actions current in the Compliance workspace.',
+        },
+    }
+
+
+def _sse_snapshot_event(payload):
+    body = json.dumps(payload, ensure_ascii=True)
+    return f"event: snapshot\ndata: {body}\n\n"
 
 
 def register_analysis_routes(users_bp):
@@ -1197,6 +1322,32 @@ def register_analysis_routes(users_bp):
                 'confidence': normalized.get('confidence'),
             },
         }, 201
+
+    @users_bp.route('/api/public/landing-snapshot', methods=['GET'])
+    def api_public_landing_snapshot():
+        return jsonify(_build_public_landing_snapshot_payload()), 200
+
+    @users_bp.route('/api/public/landing-snapshot/stream', methods=['GET'])
+    def api_public_landing_snapshot_stream():
+        raw_interval = request.args.get('interval', '10')
+        try:
+            interval_seconds = int(raw_interval)
+        except (TypeError, ValueError):
+            interval_seconds = 10
+        interval_seconds = max(5, min(60, interval_seconds))
+
+        @stream_with_context
+        def stream():
+            while True:
+                payload = _build_public_landing_snapshot_payload()
+                yield _sse_snapshot_event(payload)
+                time.sleep(interval_seconds)
+
+        response = Response(stream(), mimetype='text/event-stream')
+        response.headers['Cache-Control'] = 'no-cache'
+        response.headers['X-Accel-Buffering'] = 'no'
+        response.headers['Connection'] = 'keep-alive'
+        return response
 
     @users_bp.route('/api/analysis/<int:analysis_id>', methods=['GET'])
     @login_required

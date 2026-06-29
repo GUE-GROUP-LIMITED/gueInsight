@@ -19,6 +19,7 @@ from app.models import (
     AnalysisStatus,
     UserNotification,
     NotificationSeverity,
+    VcisoUpdate,
 )
 
 
@@ -101,6 +102,79 @@ def test_threat_intel_intake_requires_login(client):
     """Test that threat-intel intake API requires authentication."""
     response = client.post('/api/threat-intel/intake', json={'indicator': '8.8.8.8'})
     assert response.status_code in {301, 302, 401, 403}
+
+
+def test_public_landing_snapshot_returns_defaults_without_data(client):
+    """Public landing snapshot should return defaults when no analysis data exists."""
+    response = client.get('/api/public/landing-snapshot')
+
+    assert response.status_code == 200
+    body = response.get_json()
+    assert isinstance(body.get('security_score'), int)
+    assert isinstance(body.get('active_alerts'), int)
+    assert isinstance(body.get('alerts'), list)
+    assert len(body.get('alerts', [])) >= 1
+    assert body.get('vciso_note', {}).get('author_name')
+
+
+def test_public_landing_snapshot_uses_recent_activity_and_vciso(app, client):
+    """Public snapshot should reflect recent successful analyses and latest active vCISO note."""
+    with app.app_context():
+        user = _create_user(email='public-snapshot@example.com')
+        now = datetime.utcnow()
+
+        high_tx = AnalysisTransaction(
+            user_id=user.id,
+            source_type='url',
+            input_ref='https://example.test/phish',
+            status=AnalysisStatus.SUCCESS,
+            result_summary=json.dumps({'threat_level': 'High', 'threat_score': 82}),
+            created_at=now - timedelta(minutes=2),
+            completed_at=now - timedelta(minutes=2),
+        )
+        med_tx = AnalysisTransaction(
+            user_id=user.id,
+            source_type='text',
+            input_ref='indicator-value',
+            status=AnalysisStatus.SUCCESS,
+            result_summary=json.dumps({'threat_level': 'Medium', 'threat_score': 48}),
+            created_at=now - timedelta(minutes=5),
+            completed_at=now - timedelta(minutes=5),
+        )
+        db.session.add(high_tx)
+        db.session.add(med_tx)
+
+        update = VcisoUpdate(
+            title='Patch cycle update',
+            note='Apply urgent patches this week for exposed workloads.',
+            author_name='Security Team',
+            is_active=True,
+        )
+        db.session.add(update)
+        db.session.commit()
+
+    response = client.get('/api/public/landing-snapshot')
+    assert response.status_code == 200
+
+    body = response.get_json()
+    assert body['security_score'] < 78
+    assert body['active_alerts'] >= 2
+    assert len(body['alerts']) >= 1
+    assert any(item['severity'] in {'HIGH', 'MED'} for item in body['alerts'])
+    assert body['vciso_note']['author_name'] == 'Security Team'
+    assert body['vciso_note']['note'] == 'Apply urgent patches this week for exposed workloads.'
+
+
+def test_public_landing_snapshot_stream_emits_snapshot_event(client):
+    """SSE stream should emit snapshot events for real-time landing updates."""
+    response = client.get('/api/public/landing-snapshot/stream?interval=5', buffered=False)
+
+    assert response.status_code == 200
+    assert response.mimetype == 'text/event-stream'
+
+    first_chunk = next(response.response).decode('utf-8')
+    assert 'event: snapshot' in first_chunk
+    assert 'data:' in first_chunk
 
 
 def test_threat_intel_intake_accepts_indicator_with_context(client):

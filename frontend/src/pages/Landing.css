@@ -120,7 +120,7 @@
 }
 .lp__mock-ring {
   width: 52px; height: 52px; border-radius: 50%; flex-shrink: 0;
-  background: conic-gradient(var(--cyan) 0% 78%, rgba(0,194,224,0.1) 78% 100%);
+  background: conic-gradient(var(--cyan) 0% calc(var(--ring-fill, 78) * 1%), rgba(0,194,224,0.1) calc(var(--ring-fill, 78) * 1%) 100%);
   display: flex; align-items: center; justify-content: center;
   position: relative;
 }

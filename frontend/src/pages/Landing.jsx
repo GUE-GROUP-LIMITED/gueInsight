@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import TrialModal from '../components/TrialModal';
 import PlanSelector from '../components/PlanSelector';
 import PublicHeader from '../components/PublicHeader';
 import './Landing.css';
 import { useTranslation } from '../i18n/index';
+import { api } from '../services/api';
 
 const FEATURES = [
   { icon: '🛡️', title: 'vCISO Portal', desc: 'Your assigned virtual CISO posts recommendations, action items and security notes directly to your dashboard — included in Enterprise plans.' },
@@ -64,11 +65,173 @@ const FAQS = [
   { q: 'Is GueInsight NIS2 compliant?', a: 'Enterprise Risk and Elite tiers include NIS2 incident reporting, gap analysis, evidence packs and audit logging designed to support NIS2 compliance workflows for Belgian and EU organisations.' },
 ];
 
+const LIVE_ALERT_CLASS_MAP = {
+  HIGH: 'lp__mock-alert--high',
+  MED: 'lp__mock-alert--med',
+  OK: 'lp__mock-alert--ok',
+};
+
+const LIVE_DOT_CLASS_MAP = {
+  HIGH: 'lp__mock-adot',
+  MED: 'lp__mock-adot lp__mock-adot--med',
+  OK: 'lp__mock-adot lp__mock-adot--ok',
+};
+
+const LIVE_BADGE_CLASS_MAP = {
+  HIGH: 'lp__mock-badge lp__mock-badge--high',
+  MED: 'lp__mock-badge lp__mock-badge--med',
+  OK: 'lp__mock-badge lp__mock-badge--ok',
+};
+
+const FALLBACK_HERO_STATE = {
+  securityScore: 78,
+  activeAlerts: 3,
+  updatedAt: new Date().toISOString(),
+  alerts: [
+    { id: 'fallback-1', title: 'Phishing campaign targeting your domain', severity: 'HIGH' },
+    { id: 'fallback-2', title: 'CVE-2025-4421 - critical patch missing', severity: 'HIGH' },
+    { id: 'fallback-3', title: 'Suspicious login - unusual geography', severity: 'MED' },
+    { id: 'fallback-4', title: 'Firewall rules - all checks passed', severity: 'OK' },
+  ],
+  vcisoNote: {
+    authorName: 'Gabriel Aloho',
+    note: "Patch CVE-2025-4421 this week. I've added a full remediation checklist under the Compliance tab.",
+  },
+};
+
+function getRelativeUpdateLabel(isoDate) {
+  if (!isoDate) {
+    return 'Updated now';
+  }
+  const date = new Date(isoDate);
+  if (Number.isNaN(date.getTime())) {
+    return 'Updated now';
+  }
+
+  const elapsedMs = Date.now() - date.getTime();
+  if (elapsedMs < 60_000) {
+    return 'Updated just now';
+  }
+  const minutes = Math.floor(elapsedMs / 60_000);
+  if (minutes < 60) {
+    return `Updated ${minutes}m ago`;
+  }
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) {
+    return `Updated ${hours}h ago`;
+  }
+  const days = Math.floor(hours / 24);
+  return `Updated ${days}d ago`;
+}
+
 export default function Landing() {
   const [showPlanSelector, setShowPlanSelector] = useState(false);
   const [showTrialModal, setShowTrialModal] = useState(false);
   const [openFaq, setOpenFaq] = useState(null);
+  const [heroSnapshot, setHeroSnapshot] = useState(FALLBACK_HERO_STATE);
   const { t } = useTranslation();
+
+  useEffect(() => {
+    let isMounted = true;
+    let pollIntervalId = null;
+    let eventSource = null;
+    let fallbackPollingStarted = false;
+
+    const applySnapshot = (data) => {
+      const normalizedAlerts = Array.isArray(data.alerts)
+        ? data.alerts.slice(0, 4).map((alert, index) => {
+            const severity = String(alert?.severity || 'OK').toUpperCase();
+            return {
+              id: alert?.id || `live-${index}`,
+              title: String(alert?.title || 'Platform security event processed'),
+              severity: ['HIGH', 'MED', 'OK'].includes(severity) ? severity : 'OK',
+            };
+          })
+        : FALLBACK_HERO_STATE.alerts;
+
+      return {
+        securityScore: Number.isFinite(Number(data.security_score))
+          ? Math.max(0, Math.min(99, Number(data.security_score)))
+          : FALLBACK_HERO_STATE.securityScore,
+        activeAlerts: Number.isFinite(Number(data.active_alerts)) ? Number(data.active_alerts) : 0,
+        updatedAt: data.updated_at || new Date().toISOString(),
+        alerts: normalizedAlerts,
+        vcisoNote: {
+          authorName: data?.vciso_note?.author_name || 'Gue Cyber vCISO Team',
+          note: data?.vciso_note?.note || FALLBACK_HERO_STATE.vcisoNote.note,
+        },
+      };
+    };
+
+    const loadLandingSnapshot = async () => {
+      try {
+        const response = await api.get('/api/public/landing-snapshot');
+        if (isMounted) {
+          setHeroSnapshot(applySnapshot(response?.data || {}));
+        }
+      } catch {
+        if (isMounted) {
+          setHeroSnapshot((prev) => prev || FALLBACK_HERO_STATE);
+        }
+      }
+    };
+
+    const startFallbackPolling = () => {
+      if (fallbackPollingStarted) {
+        return;
+      }
+      fallbackPollingStarted = true;
+      loadLandingSnapshot();
+      pollIntervalId = setInterval(loadLandingSnapshot, 30_000);
+    };
+
+    const sseBase = (api?.defaults?.baseURL || '').replace(/\/$/, '');
+    const sseUrl = sseBase
+      ? `${sseBase}/api/public/landing-snapshot/stream`
+      : '/api/public/landing-snapshot/stream';
+
+    try {
+      eventSource = new EventSource(sseUrl, { withCredentials: true });
+      eventSource.addEventListener('snapshot', (event) => {
+        if (!isMounted) {
+          return;
+        }
+        try {
+          const payload = JSON.parse(event.data);
+          setHeroSnapshot(applySnapshot(payload));
+        } catch {
+          // Ignore malformed stream events and keep the latest valid snapshot.
+        }
+      });
+      eventSource.onerror = () => {
+        if (eventSource) {
+          eventSource.close();
+          eventSource = null;
+        }
+        startFallbackPolling();
+      };
+    } catch {
+      startFallbackPolling();
+    }
+
+    // Keep a quick baseline value in case stream connection is delayed.
+    loadLandingSnapshot();
+
+    return () => {
+      isMounted = false;
+      if (eventSource) {
+        eventSource.close();
+      }
+      if (pollIntervalId) {
+        clearInterval(pollIntervalId);
+      }
+    };
+  }, []);
+
+  const scoreUpdateLabel = useMemo(
+    () => getRelativeUpdateLabel(heroSnapshot.updatedAt),
+    [heroSnapshot.updatedAt]
+  );
 
   return (
     <div className="lp">
@@ -126,39 +289,29 @@ export default function Landing() {
               <span className="lp__mock-tab">vCISO</span>
             </div>
             <div className="lp__mock-score-row">
-              <div className="lp__mock-ring">
-                <span>78</span>
+              <div className="lp__mock-ring" style={{ '--ring-fill': heroSnapshot.securityScore }}>
+                <span>{heroSnapshot.securityScore}</span>
               </div>
               <div>
                 <p className="lp__mock-score-label">Security Score</p>
-                <p className="lp__mock-score-sub">3 active alerts · Updated 2m ago</p>
+                <p className="lp__mock-score-sub">{heroSnapshot.activeAlerts} active alerts · {scoreUpdateLabel}</p>
               </div>
             </div>
             <div className="lp__mock-alerts">
-              <div className="lp__mock-alert lp__mock-alert--high">
-                <span className="lp__mock-adot"/>
-                <span>Phishing campaign targeting your domain</span>
-                <span className="lp__mock-badge lp__mock-badge--high">HIGH</span>
-              </div>
-              <div className="lp__mock-alert lp__mock-alert--high">
-                <span className="lp__mock-adot"/>
-                <span>CVE-2025-4421 — critical patch missing</span>
-                <span className="lp__mock-badge lp__mock-badge--high">HIGH</span>
-              </div>
-              <div className="lp__mock-alert lp__mock-alert--med">
-                <span className="lp__mock-adot lp__mock-adot--med"/>
-                <span>Suspicious login — unusual geography</span>
-                <span className="lp__mock-badge lp__mock-badge--med">MED</span>
-              </div>
-              <div className="lp__mock-alert lp__mock-alert--ok">
-                <span className="lp__mock-adot lp__mock-adot--ok"/>
-                <span>Firewall rules — all checks passed</span>
-                <span className="lp__mock-badge lp__mock-badge--ok">OK</span>
-              </div>
+              {heroSnapshot.alerts.map((alert) => (
+                <div
+                  className={`lp__mock-alert ${LIVE_ALERT_CLASS_MAP[alert.severity] || LIVE_ALERT_CLASS_MAP.OK}`}
+                  key={alert.id}
+                >
+                  <span className={LIVE_DOT_CLASS_MAP[alert.severity] || LIVE_DOT_CLASS_MAP.OK} />
+                  <span>{alert.title}</span>
+                  <span className={LIVE_BADGE_CLASS_MAP[alert.severity] || LIVE_BADGE_CLASS_MAP.OK}>{alert.severity}</span>
+                </div>
+              ))}
             </div>
             <div className="lp__mock-vciso">
-              <p className="lp__mock-vciso-label">💬 vCISO Note — Gabriel Aloho</p>
-              <p className="lp__mock-vciso-text">"Patch CVE-2025-4421 this week. I've added a full remediation checklist under the Compliance tab."</p>
+              <p className="lp__mock-vciso-label">💬 vCISO Note — {heroSnapshot.vcisoNote.authorName}</p>
+              <p className="lp__mock-vciso-text">"{heroSnapshot.vcisoNote.note}"</p>
             </div>
           </div>
         </div>
