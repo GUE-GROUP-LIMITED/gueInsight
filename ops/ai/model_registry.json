@@ -1,0 +1,35 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2026-06-29",
+  "owners": {
+    "product_owner": "Head of Product",
+    "model_owner": "Security Detection Lead",
+    "risk_owner": "Compliance Lead"
+  },
+  "models": [
+    {
+      "name": "ioc_extraction_pipeline",
+      "type": "hybrid_rules_nlp",
+      "current_version": "2026.06.1",
+      "status": "active",
+      "criticality": "high",
+      "rollback_version": "2026.05.3"
+    },
+    {
+      "name": "threat_scoring_engine",
+      "type": "hybrid_rules_enrichment_context",
+      "current_version": "2026.06.2",
+      "status": "active",
+      "criticality": "high",
+      "rollback_version": "2026.05.9"
+    },
+    {
+      "name": "pattern_classifier",
+      "type": "ml_assisted_classifier",
+      "current_version": "2026.06.1",
+      "status": "active",
+      "criticality": "medium",
+      "rollback_version": "2026.05.4"
+    }
+  ]
+}

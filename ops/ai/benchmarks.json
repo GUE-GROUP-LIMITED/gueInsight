@@ -1,0 +1,22 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2026-06-29",
+  "evaluation_windows": {
+    "weekly": 7,
+    "monthly": 30
+  },
+  "metrics": {
+    "ioc_precision_min": 0.92,
+    "ioc_recall_min": 0.9,
+    "threat_scoring_auc_min": 0.86,
+    "false_positive_rate_max": 0.08,
+    "critical_false_negative_rate_max": 0.03,
+    "p95_analysis_latency_ms_max": 2500
+  },
+  "release_gates": {
+    "all_thresholds_must_pass": true,
+    "security_signoff_required": true,
+    "compliance_signoff_required": true,
+    "rollback_plan_required": true
+  }
+}

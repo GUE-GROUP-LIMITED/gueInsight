@@ -1,0 +1,32 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2026-06-29",
+  "baselines": {
+    "source_distribution": {
+      "manual": 0.35,
+      "email_gateway": 0.25,
+      "edr": 0.2,
+      "siem": 0.12,
+      "firewall": 0.08
+    },
+    "ioc_type_distribution": {
+      "ip": 0.32,
+      "url": 0.28,
+      "domain": 0.16,
+      "hash": 0.14,
+      "email": 0.1
+    },
+    "alert_severity_distribution": {
+      "low": 0.42,
+      "medium": 0.38,
+      "high": 0.16,
+      "critical": 0.04
+    }
+  },
+  "drift_thresholds": {
+    "psi_warning": 0.1,
+    "psi_critical": 0.25,
+    "distribution_delta_warning": 0.12,
+    "distribution_delta_critical": 0.2
+  }
+}
