@@ -90,6 +90,12 @@
   gap: 16px;
 }
 
+.admin-compliance-page__feature-area {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
 .admin-compliance-card {
   border-radius: 16px;
   background: #fff;
@@ -99,6 +105,105 @@
 
 .admin-compliance-card h2 {
   margin: 0 0 12px;
+}
+
+.admin-compliance-card__muted {
+  margin: 0 0 12px;
+  color: #5a6b8d;
+}
+
+.admin-compliance-filters {
+  display: grid;
+  grid-template-columns: 2fr repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.admin-compliance-bulk-row {
+  display: grid;
+  grid-template-columns: 2fr minmax(0, 1fr) auto;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.admin-compliance-bulk-row button,
+.admin-compliance-pagination button {
+  border: 1px solid #c9d6ee;
+  border-radius: 8px;
+  background: #f8fbff;
+  color: #2f4f9d;
+  font-weight: 700;
+  padding: 0.42rem 0.65rem;
+  cursor: pointer;
+}
+
+.admin-compliance-bulk-row button:disabled,
+.admin-compliance-pagination button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.admin-compliance-filters input,
+.admin-compliance-filters select,
+.admin-compliance-control-input {
+  border: 1px solid #c9d6ee;
+  border-radius: 8px;
+  padding: 0.42rem 0.58rem;
+  font: inherit;
+  color: #344767;
+  background: #fff;
+}
+
+.admin-compliance-control-input {
+  min-width: 220px;
+  width: 100%;
+}
+
+.admin-compliance-pagination {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.admin-compliance-pagination span {
+  color: #5a6b8d;
+  font-size: 0.9rem;
+}
+
+.admin-compliance-soc2-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.admin-compliance-soc2-stats div {
+  border: 1px solid #e4ebf8;
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 10px;
+}
+
+.admin-compliance-soc2-stats span {
+  display: block;
+  font-size: 0.78rem;
+  color: #66789f;
+}
+
+.admin-compliance-soc2-stats strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 1.05rem;
+}
+
+.admin-compliance-success {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #e7f8ef;
+  color: #166534;
 }
 
 .admin-compliance-table-wrap {
@@ -142,9 +247,25 @@
   color: #1e4f9a;
 }
 
+.admin-compliance-pill--implemented {
+  background: #e7f8ef;
+  color: #166534;
+}
+
+.admin-compliance-pill--partial {
+  background: #fff3dd;
+  color: #8f6400;
+}
+
+.admin-compliance-pill--not_started {
+  background: #edf1f8;
+  color: #5a6b8d;
+}
+
 .admin-compliance-actions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .admin-compliance-actions button {
@@ -167,7 +288,24 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .admin-compliance-page__feature-area {
+    grid-template-columns: 1fr;
+  }
+
   .admin-compliance-page {
     padding: 14px;
+  }
+
+  .admin-compliance-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-compliance-bulk-row {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-compliance-pagination {
+    flex-direction: column;
+    align-items: stretch;
   }
 }

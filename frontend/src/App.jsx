@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/Navbar';
@@ -23,6 +23,16 @@ import Support from './pages/Support';
 import AdminSupport from './pages/AdminSupport';
 import NotFound from './pages/NotFound';
 
+const ScrollToTop = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [location.pathname]);
+
+  return null;
+};
+
 const AppShell = () => {
   const location = useLocation();
   const publicHeaderRoutes = ['/', '/login', '/signup', '/reset-password', '/docs', '/subscription'];
@@ -31,6 +41,7 @@ const AppShell = () => {
 
   return (
     <>
+      <ScrollToTop />
       {showNavbar && <Navbar />}
       <Routes>
         <Route path="/" element={<Landing />} />

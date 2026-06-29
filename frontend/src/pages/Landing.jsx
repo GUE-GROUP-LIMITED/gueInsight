@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import TrialModal from '../components/TrialModal';
 import PlanSelector from '../components/PlanSelector';
+import PublicHeader from '../components/PublicHeader';
 import './Landing.css';
 import { useTranslation } from '../i18n/index';
 
@@ -78,6 +79,15 @@ export default function Landing() {
         <span>🇧🇪 A <a href="https://www.guecyber.com" target="_blank" rel="noreferrer">Gue Cyber</a> product · Registered Belgian Enterprise</span>
         <Link to="/support">Need urgent support?</Link>
       </div>
+
+      <PublicHeader
+        featureTo="#features"
+        howTo="#how"
+        whoTo="#who"
+        pricingTo="#pricing"
+        loginTo="/login"
+        trialTo="/signup"
+      />
 
       {/* HERO */}
       <section className="lp__hero">
@@ -164,7 +174,7 @@ export default function Landing() {
       </div>
 
       {/* FEATURES GRID */}
-      <section className="lp__section">
+      <section className="lp__section" id="features">
         <div className="lp__section-head">
           <p className="lp__eyebrow">// What you get</p>
           <h2>Everything Your Organisation Needs<br />In One Dashboard</h2>
@@ -182,7 +192,7 @@ export default function Landing() {
       </section>
 
       {/* HOW IT WORKS */}
-      <section className="lp__section lp__section--alt">
+      <section className="lp__section lp__section--alt" id="how">
         <div className="lp__section-head">
           <p className="lp__eyebrow">// Getting started</p>
           <h2>Up and Running in Minutes</h2>
@@ -309,7 +319,7 @@ export default function Landing() {
       </section>
 
       {/* WHO IT'S FOR */}
-      <section className="lp__section">
+      <section className="lp__section" id="who">
         <div className="lp__section-head">
           <p className="lp__eyebrow">// Who should use GueInsight</p>
           <h2>Built for Teams Without a Full SOC</h2>

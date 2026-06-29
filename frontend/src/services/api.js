@@ -7,8 +7,8 @@ const getDefaultApiBase = () => {
   }
 
   if (import.meta.env.PROD) {
-    // Production: use company domain with api subdomain
-    return 'https://api.insights.guecyber.com';
+    // Production: prefer explicit VITE_API_URL; fallback to the live Render backend.
+    return 'https://kuber.guecyber.com';
   }
 
   // Development: match the active frontend host to avoid cross-site cookie issues.
