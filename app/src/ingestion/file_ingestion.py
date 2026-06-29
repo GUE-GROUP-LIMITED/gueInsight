@@ -2,12 +2,14 @@ import os
 import re
 import math
 import hashlib
+import subprocess
 import requests
 from werkzeug.utils import secure_filename
 
 # Environment variables for API keys
-os.environ["ALIENVAULT_API_KEY"] = "c1ac00400efe47efea3d42fc7175fa12a445590d9e6ff1d6a8023a6f7e6f2e57"
+ALIENVAULT_API_KEY = os.getenv("ALIENVAULT_API_KEY")
 VIRUSTOTAL_API_KEY = os.getenv("VIRUSTOTAL_API_KEY")
+REQUEST_TIMEOUT_SECONDS = 10
 
 # File validation constants
 ALLOWED_EXTENSIONS = {
@@ -38,7 +40,7 @@ def make_api_request(url, headers, retries=3):
     """Makes a GET request to the given URL and retries if it fails."""
     for _ in range(retries):
         try:
-            response = requests.get(url, headers=headers)
+            response = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT_SECONDS)
             if response.status_code == 200:
                 return response.json()
             else:
@@ -51,8 +53,14 @@ def make_api_request(url, headers, retries=3):
 # Antivirus Integration
 def scan_with_clamav(file_path):
     """Scans a file using ClamAV for malware."""
-    result = os.system(f"clamscan {file_path}")
-    if result == 0:
+    result = subprocess.run(
+        ["clamscan", file_path],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        check=False,
+    )
+    if result.returncode == 0:
         return "Clean"
     else:
         return "Malicious"

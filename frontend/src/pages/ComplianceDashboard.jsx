@@ -120,7 +120,9 @@ export default function ComplianceDashboard() {
         const parsed = JSON.parse(saved);
         setNis2Checks(parsed.nis2 || {});
         setGdprChecks(parsed.gdpr || {});
-      } catch {}
+      } catch (parseError) {
+        console.warn('Failed to parse saved compliance checklist state:', parseError);
+      }
     }
   }, [user?.id]);
 

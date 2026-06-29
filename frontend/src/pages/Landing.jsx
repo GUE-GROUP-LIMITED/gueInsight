@@ -4,7 +4,6 @@ import TrialModal from '../components/TrialModal';
 import PlanSelector from '../components/PlanSelector';
 import PublicHeader from '../components/PublicHeader';
 import './Landing.css';
-import { useTranslation } from '../i18n/index';
 import { api } from '../services/api';
 
 const FEATURES = [
@@ -129,7 +128,6 @@ export default function Landing() {
   const [showTrialModal, setShowTrialModal] = useState(false);
   const [openFaq, setOpenFaq] = useState(null);
   const [heroSnapshot, setHeroSnapshot] = useState(FALLBACK_HERO_STATE);
-  const { t } = useTranslation();
 
   useEffect(() => {
     let isMounted = true;

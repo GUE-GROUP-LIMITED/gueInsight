@@ -231,7 +231,7 @@ const AdminCompliance = () => {
     try {
       const response = await api.get(`/api/evidence/artifacts/${artifactId}/download`, { responseType: 'blob' });
       const contentDisposition = response.headers?.['content-disposition'] || '';
-      const match = /filename=\"?([^\";]+)\"?/i.exec(contentDisposition);
+      const match = /filename="?([^";]+)"?/i.exec(contentDisposition);
       const fileName = match?.[1] || `artifact_${artifactId}.txt`;
       const blob = new Blob([response.data]);
       const url = window.URL.createObjectURL(blob);
@@ -336,7 +336,7 @@ const AdminCompliance = () => {
     try {
       const response = await api.get('/api/compliance/soc2/audit-packet', { responseType: 'blob' });
       const contentDisposition = response.headers?.['content-disposition'] || '';
-      const match = /filename=\"?([^\";]+)\"?/i.exec(contentDisposition);
+      const match = /filename="?([^";]+)"?/i.exec(contentDisposition);
       const fileName = match?.[1] || 'soc2_audit_packet.zip';
       const blob = new Blob([response.data], { type: 'application/zip' });
       const url = window.URL.createObjectURL(blob);

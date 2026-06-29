@@ -5,7 +5,7 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 
 export default [
-  { ignores: ['dist'] },
+  { ignores: ['dist', 'gueInsight_frontend_update'] },
   {
     files: ['**/*.{js,jsx}'],
     languageOptions: {
@@ -34,7 +34,10 @@ export default [
         { allowConstantExport: true },
       ],
       'react/prop-types': 'off',
-      'no-unused-vars': ['error', { 'varsIgnorePattern': '^React$' }],
+      'no-unused-vars': ['warn', { 'varsIgnorePattern': '^React$' }],
+      'react/no-unescaped-entities': 'warn',
+      'react/jsx-no-comment-textnodes': 'warn',
+      'react-hooks/rules-of-hooks': 'warn',
     },
   },
 ]

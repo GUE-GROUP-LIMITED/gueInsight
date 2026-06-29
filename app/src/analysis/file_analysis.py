@@ -319,10 +319,12 @@ if __name__ == "__main__":
 
 import requests
 
+REQUEST_TIMEOUT_SECONDS = 10
+
 # Analyze URL for threats or anomalies
 def analyze_url(url):
     try:
-        response = requests.get(f"https://api.threatintel.com/analyze?url={url}")
+        response = requests.get(f"https://api.threatintel.com/analyze?url={url}", timeout=REQUEST_TIMEOUT_SECONDS)
         if response.status_code == 200:
             return response.json()  # Process the response
         else:
@@ -333,7 +335,7 @@ def analyze_url(url):
 # Analyze hash against known threat databases
 def analyze_hash(hash_value):
     try:
-        response = requests.get(f"https://api.threatintel.com/hashlookup?hash={hash_value}")
+        response = requests.get(f"https://api.threatintel.com/hashlookup?hash={hash_value}", timeout=REQUEST_TIMEOUT_SECONDS)
         if response.status_code == 200:
             return response.json()  # Process the response
         else:
@@ -398,7 +400,7 @@ def check_iocs_alienvault(hash_value):
     Replace the URL and logic with your actual threat intelligence provider.
     """
     try:
-        response = requests.get(f"https://otx.alienvault.com/api/v1/indicators/file/{hash_value}")
+        response = requests.get(f"https://otx.alienvault.com/api/v1/indicators/file/{hash_value}", timeout=REQUEST_TIMEOUT_SECONDS)
         if response.status_code == 200:
             data = response.json()
             return data.get("threat_status", "Unknown")

@@ -76,7 +76,7 @@ def handle_server_error(error):
     return serve_frontend_index(500)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=(os.getenv('FLASK_DEBUG', '').strip() == '1'))
 
 
 # --- Real-Time Event Ingestion API ---

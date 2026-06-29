@@ -1,6 +1,8 @@
 import requests
 import os
 
+REQUEST_TIMEOUT_SECONDS = 10
+
 # --- Slack Notification ---
 def send_slack_alert(message, webhook_url=None):
     """
@@ -10,7 +12,7 @@ def send_slack_alert(message, webhook_url=None):
     if not webhook_url:
         return {'error': 'No Slack webhook URL configured.'}
     payload = {"text": message}
-    resp = requests.post(webhook_url, json=payload)
+    resp = requests.post(webhook_url, json=payload, timeout=REQUEST_TIMEOUT_SECONDS)
     return {'status_code': resp.status_code, 'response': resp.text}
 
 # --- Microsoft Teams Notification ---
@@ -22,7 +24,7 @@ def send_teams_alert(message, webhook_url=None):
     if not webhook_url:
         return {'error': 'No Teams webhook URL configured.'}
     payload = {"text": message}
-    resp = requests.post(webhook_url, json=payload)
+    resp = requests.post(webhook_url, json=payload, timeout=REQUEST_TIMEOUT_SECONDS)
     return {'status_code': resp.status_code, 'response': resp.text}
 
 # --- SMS Notification (Twilio Example) ---
@@ -37,5 +39,5 @@ def send_sms_alert(message, to_number, from_number=None, account_sid=None, auth_
         return {'error': 'Twilio credentials not configured.'}
     url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json"
     data = {"To": to_number, "From": from_number, "Body": message}
-    resp = requests.post(url, data=data, auth=(account_sid, auth_token))
+    resp = requests.post(url, data=data, auth=(account_sid, auth_token), timeout=REQUEST_TIMEOUT_SECONDS)
     return {'status_code': resp.status_code, 'response': resp.text}
