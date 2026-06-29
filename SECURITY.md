@@ -42,6 +42,30 @@ GueInsight is designed with security and compliance as core principles:
 - Production deployments require `SECRET_KEY` and `SECURITY_PASSWORD_SALT` to be set
 - Startup validation fails if critical secrets are missing
 
+### Exposed Secret Incident Runbook
+- Immediately rotate the exposed credential at the provider (Stripe, cloud, etc.)
+- Invalidate/revoke the exposed key before replacing application config
+- Replace all deployment environment variables with new values
+- Remove the secret from the repository history and force-push rewritten history
+- Re-run secret scans and verify no occurrences remain
+- Review provider logs for suspicious activity during exposure window
+- Document incident timeline and remediation in internal security notes
+
+#### Git History Scrub (maintainers)
+Use this process when a credential has already been committed:
+
+```bash
+# 1) Ensure working tree is clean
+git status
+
+# 2) Rewrite history, replacing leaked key text
+git filter-branch --force --tree-filter 'grep -RIl "LEAKED_KEY_TEXT" . | xargs -r sed -i "s/LEAKED_KEY_TEXT/[REDACTED]/g"' -- --all
+
+# 3) Force-push rewritten refs (coordinate with collaborators first)
+git push origin --force --all
+git push origin --force --tags
+```
+
 ### Dependency Security
 - Dependencies are regularly updated for security patches
 - Critical dependencies are pinned to known-good versions in `requirements.txt`
