@@ -1,18 +1,28 @@
 import os
 import stripe
 
+
+def _require_env_vars(var_names):
+    """Return requested env values or raise with a clear, actionable error."""
+    missing = [name for name in var_names if not os.getenv(name)]
+    if missing:
+        missing_csv = ', '.join(missing)
+        raise ValueError(
+            'CRITICAL: Missing required environment variable(s): '
+            f'{missing_csv}. Set these in your deployment environment '
+            '(for Render: Service -> Environment).'
+        )
+    return tuple(os.getenv(name) for name in var_names)
+
 class Config:
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-    
-    # Validate critical secrets at startup
-    _SECRET_KEY = os.getenv('SECRET_KEY')
-    _SECURITY_SALT = os.getenv('SECURITY_PASSWORD_SALT')
-    
-    if not _SECRET_KEY:
-        raise ValueError('CRITICAL: SECRET_KEY environment variable is required for production')
-    if not _SECURITY_SALT:
-        raise ValueError('CRITICAL: SECURITY_PASSWORD_SALT environment variable is required for production')
-    
+
+    # Validate critical secrets at startup.
+    _SECRET_KEY, _SECURITY_SALT = _require_env_vars([
+        'SECRET_KEY',
+        'SECURITY_PASSWORD_SALT',
+    ])
+
     SECRET_KEY = _SECRET_KEY
     SECURITY_PASSWORD_SALT = _SECURITY_SALT
     

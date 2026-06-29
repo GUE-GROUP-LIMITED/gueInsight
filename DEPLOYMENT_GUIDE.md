@@ -142,6 +142,42 @@ curl http://staging-server:8000/api/health
 
 ## Production Deployment
 
+### Render Backend + Vercel Frontend (Current Topology)
+
+Use these settings when backend is on Render and frontend is on Vercel.
+
+#### Render web service
+
+- Start command:
+
+```bash
+gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers ${WEB_CONCURRENCY:-1}
+```
+
+- Required environment variables:
+
+```bash
+SECRET_KEY=<strong-random-secret>
+SECURITY_PASSWORD_SALT=<different-strong-random-secret>
+SQLALCHEMY_DATABASE_URI=<managed-postgres-uri>
+FRONTEND_URL=https://insights.guecyber.com
+FRONTEND_ORIGINS=https://insights.guecyber.com,https://gue-insight-git-main-gabalohos-projects.vercel.app,https://gue-insight-q9pcgtp7h-gabalohos-projects.vercel.app
+SESSION_COOKIE_SECURE=true
+SESSION_COOKIE_SAMESITE=None
+```
+
+If `SECRET_KEY` or `SECURITY_PASSWORD_SALT` is missing, app boot fails before Gunicorn can bind a port.
+
+#### Vercel frontend
+
+- Set:
+
+```bash
+VITE_API_URL=https://kuber.guecyber.com
+```
+
+This ensures browser API calls target the live backend domain.
+
 ### 1. Final Pre-Production Checks
 
 ```bash

@@ -14,21 +14,77 @@ const AdminCompliance = () => {
   const [error, setError] = useState('');
   const [securityEvents, setSecurityEvents] = useState([]);
   const [deletionRequests, setDeletionRequests] = useState([]);
+  const [complianceReadiness, setComplianceReadiness] = useState(null);
   const [updatingId, setUpdatingId] = useState(null);
   const [incidentSubmitting, setIncidentSubmitting] = useState(false);
   const [incidentMessage, setIncidentMessage] = useState('');
+  const [soc2ActionLoading, setSoc2ActionLoading] = useState(false);
+  const [soc2Message, setSoc2Message] = useState('');
+  const [soc2Controls, setSoc2Controls] = useState([]);
+  const [soc2ControlSummary, setSoc2ControlSummary] = useState(null);
+  const [soc2Artifacts, setSoc2Artifacts] = useState([]);
+  const [soc2AvailableSources, setSoc2AvailableSources] = useState([]);
+  const [soc2AvailableTypes, setSoc2AvailableTypes] = useState([]);
+  const [soc2ArtifactFilters, setSoc2ArtifactFilters] = useState({
+    search: '',
+    source: 'all',
+    type: 'all',
+    control: 'all',
+  });
+  const [soc2ArtifactPage, setSoc2ArtifactPage] = useState(1);
+  const [soc2ArtifactPagination, setSoc2ArtifactPagination] = useState({
+    total: 0,
+    total_pages: 1,
+    limit: 25,
+    page: 1,
+  });
+  const [soc2SelectedArtifactIds, setSoc2SelectedArtifactIds] = useState([]);
+  const [soc2BulkControls, setSoc2BulkControls] = useState('');
+  const [soc2BulkMode, setSoc2BulkMode] = useState('replace');
+  const [soc2BulkSaving, setSoc2BulkSaving] = useState(false);
+  const [soc2MappingDrafts, setSoc2MappingDrafts] = useState({});
+  const [soc2MappingSavingId, setSoc2MappingSavingId] = useState(null);
+
+  const loadSoc2Artifacts = async (targetPage = soc2ArtifactPage) => {
+    const params = new URLSearchParams();
+    params.set('page', String(targetPage));
+    params.set('limit', String(soc2ArtifactPagination.limit || 25));
+    if (soc2ArtifactFilters.source !== 'all') params.set('source', soc2ArtifactFilters.source);
+    if (soc2ArtifactFilters.type !== 'all') params.set('type', soc2ArtifactFilters.type);
+    if (soc2ArtifactFilters.control !== 'all') params.set('control', soc2ArtifactFilters.control);
+    if (soc2ArtifactFilters.search.trim()) params.set('search', soc2ArtifactFilters.search.trim());
+
+    const response = await api.get(`/api/evidence/artifacts?${params.toString()}`);
+    setSoc2Artifacts(Array.isArray(response.data?.artifacts) ? response.data.artifacts : []);
+    setSoc2AvailableSources(Array.isArray(response.data?.available_sources) ? response.data.available_sources : []);
+    setSoc2AvailableTypes(Array.isArray(response.data?.available_types) ? response.data.available_types : []);
+    setSoc2ArtifactPagination({
+      total: Number(response.data?.total || 0),
+      total_pages: Number(response.data?.total_pages || 1),
+      limit: Number(response.data?.limit || 25),
+      page: Number(response.data?.page || targetPage || 1),
+    });
+    setSoc2ArtifactPage(Number(response.data?.page || targetPage || 1));
+    setSoc2SelectedArtifactIds([]);
+  };
 
   const loadComplianceData = async () => {
     setLoading(true);
     setError('');
     try {
-      const [eventsResponse, requestsResponse] = await Promise.all([
+      const [eventsResponse, requestsResponse, readinessResponse, soc2MapResponse] = await Promise.all([
         api.get('/admin/security_events?limit=100'),
         api.get('/admin/deletion_requests'),
+        api.get('/api/compliance/readiness'),
+        api.get('/api/compliance/soc2/control-map'),
       ]);
 
       setSecurityEvents(Array.isArray(eventsResponse.data?.security_events) ? eventsResponse.data.security_events : []);
       setDeletionRequests(Array.isArray(requestsResponse.data?.deletion_requests) ? requestsResponse.data.deletion_requests : []);
+      setComplianceReadiness(readinessResponse.data || null);
+      setSoc2Controls(Array.isArray(soc2MapResponse.data?.controls) ? soc2MapResponse.data.controls : []);
+      setSoc2ControlSummary(soc2MapResponse.data?.summary || null);
+      await loadSoc2Artifacts(1);
     } catch (requestError) {
       setError(requestError?.response?.data?.error || t('admin_compliance.load_failed'));
     } finally {
@@ -91,6 +147,12 @@ const AdminCompliance = () => {
     loadComplianceData();
   }, []);
 
+  useEffect(() => {
+    if (!loading) {
+      loadSoc2Artifacts(1);
+    }
+  }, [soc2ArtifactFilters.search, soc2ArtifactFilters.source, soc2ArtifactFilters.type, soc2ArtifactFilters.control]);
+
   const severityBreakdown = useMemo(() => {
     const counts = { info: 0, warning: 0, critical: 0 };
     securityEvents.forEach((event) => {
@@ -113,6 +175,11 @@ const AdminCompliance = () => {
     });
   }, [securityEvents]);
 
+  const allVisibleArtifactsSelected = useMemo(() => {
+    if (!soc2Artifacts.length) return false;
+    return soc2Artifacts.every((artifact) => soc2SelectedArtifactIds.includes(artifact.id));
+  }, [soc2Artifacts, soc2SelectedArtifactIds]);
+
   const updateDeletionStatus = async (requestId, status) => {
     setUpdatingId(requestId);
     setError('');
@@ -125,6 +192,171 @@ const AdminCompliance = () => {
       setUpdatingId(null);
     }
   };
+
+  const runSoc2EvidenceGather = async () => {
+    setSoc2ActionLoading(true);
+    setSoc2Message('');
+    setError('');
+    try {
+      const res = await api.post('/admin/evidence/gather', {});
+      const m365Artifacts = res?.data?.summary?.m365?.artifacts || 0;
+      const gwsArtifacts = res?.data?.summary?.gws?.artifacts || 0;
+      setSoc2Message(`SOC2 evidence collected successfully (${m365Artifacts + gwsArtifacts} artifacts).`);
+      await loadComplianceData();
+    } catch (requestError) {
+      setError(requestError?.response?.data?.error || 'Failed to gather SOC2 evidence.');
+    } finally {
+      setSoc2ActionLoading(false);
+    }
+  };
+
+  const runSoc2AccessMatrix = async () => {
+    setSoc2ActionLoading(true);
+    setSoc2Message('');
+    setError('');
+    try {
+      const res = await api.post('/admin/evidence/generate-access-matrix', {});
+      const rows = res?.data?.result?.rows || 0;
+      setSoc2Message(`SOC2 access matrix generated (${rows} rows).`);
+      await loadComplianceData();
+    } catch (requestError) {
+      setError(requestError?.response?.data?.error || 'Failed to generate SOC2 access matrix.');
+    } finally {
+      setSoc2ActionLoading(false);
+    }
+  };
+
+  const downloadSoc2Artifact = async (artifactId) => {
+    setError('');
+    try {
+      const response = await api.get(`/api/evidence/artifacts/${artifactId}/download`, { responseType: 'blob' });
+      const contentDisposition = response.headers?.['content-disposition'] || '';
+      const match = /filename=\"?([^\";]+)\"?/i.exec(contentDisposition);
+      const fileName = match?.[1] || `artifact_${artifactId}.txt`;
+      const blob = new Blob([response.data]);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+    } catch (requestError) {
+      setError(requestError?.response?.data?.error || 'Failed to download evidence artifact.');
+    }
+  };
+
+  const saveSoc2ArtifactControls = async (artifactId) => {
+    setSoc2MappingSavingId(artifactId);
+    setError('');
+    setSoc2Message('');
+    try {
+      const draft = String(soc2MappingDrafts[artifactId] || '');
+      const controls = draft
+        .split(',')
+        .map((item) => item.trim().toUpperCase())
+        .filter(Boolean);
+
+      await api.patch(`/api/evidence/artifacts/${artifactId}/controls`, { controls });
+      setSoc2Message(`Updated SOC2 control mappings for artifact #${artifactId}.`);
+      await Promise.all([
+        loadSoc2Artifacts(soc2ArtifactPage),
+        api.get('/api/compliance/soc2/control-map').then((res) => {
+          setSoc2Controls(Array.isArray(res.data?.controls) ? res.data.controls : []);
+          setSoc2ControlSummary(res.data?.summary || null);
+        }),
+      ]);
+    } catch (requestError) {
+      setError(requestError?.response?.data?.error || 'Failed to update SOC2 control mappings.');
+    } finally {
+      setSoc2MappingSavingId(null);
+    }
+  };
+
+  const applyBulkSoc2Controls = async () => {
+    if (!soc2SelectedArtifactIds.length) {
+      setError('Select at least one artifact to apply bulk control mapping.');
+      return;
+    }
+
+    setSoc2BulkSaving(true);
+    setError('');
+    setSoc2Message('');
+    try {
+      const controls = soc2BulkControls
+        .split(',')
+        .map((item) => item.trim().toUpperCase())
+        .filter(Boolean);
+
+      await api.patch('/api/evidence/artifacts/controls/bulk', {
+        artifact_ids: soc2SelectedArtifactIds,
+        controls,
+        mode: soc2BulkMode,
+      });
+
+      setSoc2Message(`Applied SOC2 control mapping to ${soc2SelectedArtifactIds.length} artifact(s).`);
+      await Promise.all([
+        loadSoc2Artifacts(soc2ArtifactPage),
+        api.get('/api/compliance/soc2/control-map').then((res) => {
+          setSoc2Controls(Array.isArray(res.data?.controls) ? res.data.controls : []);
+          setSoc2ControlSummary(res.data?.summary || null);
+        }),
+      ]);
+      setSoc2SelectedArtifactIds([]);
+    } catch (requestError) {
+      setError(requestError?.response?.data?.error || 'Failed bulk SOC2 control mapping update.');
+    } finally {
+      setSoc2BulkSaving(false);
+    }
+  };
+
+  const toggleArtifactSelection = (artifactId) => {
+    setSoc2SelectedArtifactIds((current) => {
+      if (current.includes(artifactId)) {
+        return current.filter((item) => item !== artifactId);
+      }
+      return [...current, artifactId];
+    });
+  };
+
+  const toggleSelectAllVisibleArtifacts = () => {
+    if (allVisibleArtifactsSelected) {
+      setSoc2SelectedArtifactIds([]);
+      return;
+    }
+    setSoc2SelectedArtifactIds(soc2Artifacts.map((artifact) => artifact.id));
+  };
+
+  const exportSoc2AuditPacket = async () => {
+    setSoc2ActionLoading(true);
+    setSoc2Message('');
+    setError('');
+    try {
+      const response = await api.get('/api/compliance/soc2/audit-packet', { responseType: 'blob' });
+      const contentDisposition = response.headers?.['content-disposition'] || '';
+      const match = /filename=\"?([^\";]+)\"?/i.exec(contentDisposition);
+      const fileName = match?.[1] || 'soc2_audit_packet.zip';
+      const blob = new Blob([response.data], { type: 'application/zip' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+      setSoc2Message('SOC2 audit packet exported successfully.');
+    } catch (requestError) {
+      setError(requestError?.response?.data?.error || 'Failed to export SOC2 audit packet.');
+    } finally {
+      setSoc2ActionLoading(false);
+    }
+  };
+
+  const soc2Overview = complianceReadiness?.compliance_overview?.soc2;
 
   return (
     <main className="admin-compliance-page">
@@ -171,12 +403,229 @@ const AdminCompliance = () => {
           {incidentSubmitting ? <p>{t('admin_compliance.submitting_incident')}</p> : null}
           {incidentMessage ? <p className="admin-compliance-success">{incidentMessage}</p> : null}
         </article>
+
+        <article className="admin-compliance-card admin-compliance-card--soc2">
+          <h2>SOC2 Readiness</h2>
+          <p className="admin-compliance-card__muted">
+            Generate and track SOC2 evidence artifacts for audit preparation.
+          </p>
+          <div className="admin-compliance-soc2-stats">
+            <div>
+              <span>Status</span>
+              <strong>{soc2Overview?.status || 'in_progress'}</strong>
+            </div>
+            <div>
+              <span>Controls coverage</span>
+              <strong>{Number(soc2Overview?.controls_coverage || 0)}%</strong>
+            </div>
+            <div>
+              <span>Evidence runs</span>
+              <strong>{Number(soc2Overview?.evidence_gather_runs || 0)}</strong>
+            </div>
+            <div>
+              <span>Access matrix runs</span>
+              <strong>{Number(soc2Overview?.access_matrix_runs || 0)}</strong>
+            </div>
+          </div>
+          <div className="admin-compliance-actions">
+            <button type="button" disabled={soc2ActionLoading} onClick={runSoc2EvidenceGather}>
+              Gather SOC2 Evidence
+            </button>
+            <button type="button" disabled={soc2ActionLoading} onClick={runSoc2AccessMatrix}>
+              Generate Access Matrix
+            </button>
+            <button type="button" disabled={soc2ActionLoading} onClick={exportSoc2AuditPacket}>
+              Export SOC2 Audit Packet
+            </button>
+          </div>
+          {soc2ControlSummary ? (
+            <p className="admin-compliance-card__muted">
+              Controls: {soc2ControlSummary.implemented || 0} implemented, {soc2ControlSummary.partial || 0} partial, {soc2ControlSummary.not_started || 0} not started.
+            </p>
+          ) : null}
+          {soc2Message ? <p className="admin-compliance-success">{soc2Message}</p> : null}
+        </article>
       </section>
 
       {loading ? <p className="admin-compliance-page__feedback">{t('admin_compliance.loading')}</p> : null}
       {error ? <p className="admin-compliance-page__feedback admin-compliance-page__feedback--error">{error}</p> : null}
 
       <section className="admin-compliance-page__grid">
+        <article className="admin-compliance-card">
+          <h2>SOC2 Control Mapping</h2>
+          <div className="admin-compliance-table-wrap">
+            <table className="admin-compliance-table">
+              <thead>
+                <tr>
+                  <th>Control</th>
+                  <th>Area</th>
+                  <th>Status</th>
+                  <th>Evidence count</th>
+                  <th>Hint</th>
+                </tr>
+              </thead>
+              <tbody>
+                {soc2Controls.map((control) => (
+                  <tr key={control.control_id}>
+                    <td>{control.control_id}</td>
+                    <td>{control.framework_area || 'N/A'}</td>
+                    <td>
+                      <span className={`admin-compliance-pill admin-compliance-pill--${String(control.status || 'info').toLowerCase()}`}>
+                        {control.status || 'not_started'}
+                      </span>
+                    </td>
+                    <td>{Number(control.evidence_count || 0)}</td>
+                    <td>{control.evidence_hint || 'N/A'}</td>
+                  </tr>
+                ))}
+                {!loading && soc2Controls.length === 0 ? (
+                  <tr>
+                    <td colSpan={5}>No SOC2 controls found.</td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article className="admin-compliance-card">
+          <h2>SOC2 Evidence Artifacts</h2>
+          <div className="admin-compliance-filters">
+            <input
+              type="text"
+              placeholder="Search source/type/control"
+              value={soc2ArtifactFilters.search}
+              onChange={(event) => setSoc2ArtifactFilters((current) => ({ ...current, search: event.target.value }))}
+            />
+            <select
+              value={soc2ArtifactFilters.source}
+              onChange={(event) => setSoc2ArtifactFilters((current) => ({ ...current, source: event.target.value }))}
+            >
+              <option value="all">All sources</option>
+              {soc2AvailableSources.map((value) => (
+                <option key={value} value={value}>{value}</option>
+              ))}
+            </select>
+            <select
+              value={soc2ArtifactFilters.type}
+              onChange={(event) => setSoc2ArtifactFilters((current) => ({ ...current, type: event.target.value }))}
+            >
+              <option value="all">All types</option>
+              {soc2AvailableTypes.map((value) => (
+                <option key={value} value={value}>{value}</option>
+              ))}
+            </select>
+            <select
+              value={soc2ArtifactFilters.control}
+              onChange={(event) => setSoc2ArtifactFilters((current) => ({ ...current, control: event.target.value }))}
+            >
+              <option value="all">All controls</option>
+              {soc2Controls.map((control) => (
+                <option key={control.control_id} value={control.control_id}>{control.control_id}</option>
+              ))}
+            </select>
+          </div>
+          <div className="admin-compliance-bulk-row">
+            <input
+              type="text"
+              placeholder="Bulk controls (e.g. CC6.1, CC7.2)"
+              value={soc2BulkControls}
+              onChange={(event) => setSoc2BulkControls(event.target.value)}
+            />
+            <select value={soc2BulkMode} onChange={(event) => setSoc2BulkMode(event.target.value)}>
+              <option value="replace">Replace</option>
+              <option value="add">Add</option>
+              <option value="remove">Remove</option>
+            </select>
+            <button type="button" disabled={soc2BulkSaving || !soc2SelectedArtifactIds.length} onClick={applyBulkSoc2Controls}>
+              {soc2BulkSaving ? 'Applying...' : `Apply to selected (${soc2SelectedArtifactIds.length})`}
+            </button>
+          </div>
+          <div className="admin-compliance-table-wrap">
+            <table className="admin-compliance-table">
+              <thead>
+                <tr>
+                  <th>
+                    <input
+                      type="checkbox"
+                      checked={allVisibleArtifactsSelected}
+                      onChange={toggleSelectAllVisibleArtifacts}
+                      aria-label="Select all visible artifacts"
+                    />
+                  </th>
+                  <th>Collected</th>
+                  <th>Source</th>
+                  <th>Type</th>
+                  <th>Controls</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {soc2Artifacts.map((artifact) => (
+                  <tr key={artifact.id}>
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={soc2SelectedArtifactIds.includes(artifact.id)}
+                        onChange={() => toggleArtifactSelection(artifact.id)}
+                        aria-label={`Select artifact ${artifact.id}`}
+                      />
+                    </td>
+                    <td>{artifact.collected_at ? new Date(artifact.collected_at).toLocaleString() : 'N/A'}</td>
+                    <td>{artifact.source || 'N/A'}</td>
+                    <td>{artifact.artifact_type || 'N/A'}</td>
+                    <td>
+                      <input
+                        className="admin-compliance-control-input"
+                        type="text"
+                        value={soc2MappingDrafts[artifact.id] ?? (Array.isArray(artifact.control_mappings) ? artifact.control_mappings.join(', ') : '')}
+                        onChange={(event) => setSoc2MappingDrafts((current) => ({ ...current, [artifact.id]: event.target.value }))}
+                        placeholder="CC6.1, CC7.2"
+                      />
+                    </td>
+                    <td className="admin-compliance-actions">
+                      <button type="button" onClick={() => downloadSoc2Artifact(artifact.id)}>
+                        Download
+                      </button>
+                      <button
+                        type="button"
+                        disabled={soc2MappingSavingId === artifact.id}
+                        onClick={() => saveSoc2ArtifactControls(artifact.id)}
+                      >
+                        {soc2MappingSavingId === artifact.id ? 'Saving...' : 'Save controls'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {!loading && soc2Artifacts.length === 0 ? (
+                  <tr>
+                    <td colSpan={6}>No evidence artifacts found.</td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+          <div className="admin-compliance-pagination">
+            <button
+              type="button"
+              disabled={soc2ArtifactPagination.page <= 1}
+              onClick={() => loadSoc2Artifacts(Math.max(1, soc2ArtifactPagination.page - 1))}
+            >
+              Previous
+            </button>
+            <span>
+              Page {soc2ArtifactPagination.page} of {soc2ArtifactPagination.total_pages} ({soc2ArtifactPagination.total} total)
+            </span>
+            <button
+              type="button"
+              disabled={soc2ArtifactPagination.page >= soc2ArtifactPagination.total_pages}
+              onClick={() => loadSoc2Artifacts(Math.min(soc2ArtifactPagination.total_pages, soc2ArtifactPagination.page + 1))}
+            >
+              Next
+            </button>
+          </div>
+        </article>
+
         <article className="admin-compliance-card">
           <h2>{t('admin_compliance.recent_events')}</h2>
           <div className="admin-compliance-table-wrap">
