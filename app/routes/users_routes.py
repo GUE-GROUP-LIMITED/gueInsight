@@ -389,12 +389,19 @@ def _log_security_event(event_type, severity='info', user_id=None, details=None)
 
 def _is_login_rate_limited(identifier):
     now = int(_utc_now().timestamp())
-    window = now // LOGIN_WINDOW_SECONDS
-    key = f"{identifier}:{window}"
-    attempts = _LOGIN_RATE_CACHE.get(key, 0)
-    if attempts >= LOGIN_MAX_ATTEMPTS:
+    window_start = now - LOGIN_WINDOW_SECONDS
+    history = _LOGIN_RATE_CACHE.get(identifier, [])
+
+    if isinstance(history, int):
+        history = []
+
+    recent_attempts = [attempt_ts for attempt_ts in history if attempt_ts > window_start]
+    if len(recent_attempts) >= LOGIN_MAX_ATTEMPTS:
+        _LOGIN_RATE_CACHE[identifier] = recent_attempts
         return True
-    _LOGIN_RATE_CACHE[key] = attempts + 1
+
+    recent_attempts.append(now)
+    _LOGIN_RATE_CACHE[identifier] = recent_attempts
     return False
 
 
