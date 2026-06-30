@@ -49,8 +49,8 @@ const Payment = () => {
 
 		try {
 			const response = await api.post(
-				'/checkout/create-session',
-				{ tier_id: selectedPlan, trial_days: trialDays },
+				'/auth/subscription/upgrade',
+				{ plan: selectedPlan },
 				{ validateStatus: () => true }
 			);
 
@@ -61,7 +61,11 @@ const Payment = () => {
 					window.location.assign(checkoutUrl);
 					return;
 				}
-				setSuccessMessage('Checkout session created, but no redirect URL was returned.');
+				if (response.data?.receipt_url) {
+					window.location.assign('/subscription?upgrade=success');
+					return;
+				}
+				setSuccessMessage('Subscription updated successfully.');
 				return;
 			}
 

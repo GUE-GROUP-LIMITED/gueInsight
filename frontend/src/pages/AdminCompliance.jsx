@@ -95,10 +95,12 @@ const AdminCompliance = () => {
   const handleUpgrade = async (tierId) => {
     setError('');
     try {
-      const res = await api.post('/checkout/create-session', { tier_id: tierId });
+      const res = await api.post('/auth/subscription/upgrade', { plan: tierId });
       const checkoutUrl = res?.data?.checkout_url;
       if (checkoutUrl) {
         window.location.href = checkoutUrl;
+      } else if (res?.data?.receipt_url) {
+        window.location.href = '/subscription?upgrade=success';
       } else {
         setError(t('admin_compliance.checkout_session_failed'));
       }
