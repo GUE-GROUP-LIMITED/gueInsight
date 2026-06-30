@@ -332,3 +332,53 @@ def test_subscription_upgrade_with_plan_aliases(client):
         response = client.post('/auth/subscription/upgrade', json={'plan': alias})
         assert response.status_code == 200
         assert response.get_json()['message'] == 'Subscription created'
+
+
+def test_subscription_upgrade_nonprod_stripe_error_falls_back(client, monkeypatch):
+    import stripe
+
+    def _raise_stripe_error(*args, **kwargs):
+        raise Exception('Invalid API Key provided: sk_test_invalid')
+
+    monkeypatch.setattr(stripe.Customer, 'create', _raise_stripe_error)
+
+    user = _create_user(email='nonprod-fallback@example.com')
+    _login(client, email='nonprod-fallback@example.com')
+
+    client.application.config.update(
+        TESTING=False,
+        IS_PRODUCTION=False,
+        ALLOW_NONPROD_BILLING_FALLBACK=True,
+        STRIPE_SECRET_KEY='sk_test_invalid',
+    )
+
+    response = client.post('/auth/subscription/upgrade', json={'plan': 'premium_individual'})
+    assert response.status_code == 200
+    assert response.get_json()['message'] == 'Subscription created'
+
+    subscription = Subscription.query.filter_by(user_id=user.id).order_by(Subscription.end_date.desc()).first()
+    assert subscription is not None
+    assert subscription.plan in {'premium_individual', 'compliance_pro'}
+
+
+def test_subscription_upgrade_production_stripe_error_is_strict(client, monkeypatch):
+    import stripe
+
+    def _raise_stripe_error(*args, **kwargs):
+        raise Exception('Invalid API Key provided: sk_test_invalid')
+
+    monkeypatch.setattr(stripe.Customer, 'create', _raise_stripe_error)
+
+    _create_user(email='prod-strict@example.com')
+    _login(client, email='prod-strict@example.com')
+
+    client.application.config.update(
+        TESTING=False,
+        IS_PRODUCTION=True,
+        ALLOW_NONPROD_BILLING_FALLBACK=False,
+        STRIPE_SECRET_KEY='sk_test_invalid',
+    )
+
+    response = client.post('/auth/subscription/upgrade', json={'plan': 'premium_individual'})
+    assert response.status_code == 500
+    assert 'Failed to initiate checkout' in response.get_json()['error']

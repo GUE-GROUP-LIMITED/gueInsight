@@ -528,6 +528,17 @@ def register_billing_routes(users_bp):
             import stripe
             
             stripe.api_key = current_app.config.get('STRIPE_SECRET_KEY')
+            is_production = bool(current_app.config.get('IS_PRODUCTION', False))
+            allow_nonprod_fallback = bool(
+                current_app.config.get('ALLOW_NONPROD_BILLING_FALLBACK', not is_production)
+            )
+
+            if not stripe.api_key and allow_nonprod_fallback:
+                # Local/staging fallback to keep non-production environments functional without Stripe secrets.
+                start_date = now
+                if current_subscription and current_subscription.end_date and current_subscription.end_date > now:
+                    start_date = current_subscription.end_date
+                return _create_internal_subscription(normalized_plan, normalized_plan, start_date)
             
             # Get or create Stripe customer
             stripe_customer_id = current_user.stripe_customer_id
@@ -577,6 +588,17 @@ def register_billing_routes(users_bp):
             }, 200
             
         except Exception as e:
+            is_production = bool(current_app.config.get('IS_PRODUCTION', False))
+            allow_nonprod_fallback = bool(
+                current_app.config.get('ALLOW_NONPROD_BILLING_FALLBACK', not is_production)
+            )
+            if allow_nonprod_fallback:
+                current_app.logger.warning('Stripe checkout failed in non-production, using internal fallback: %s', e)
+                start_date = now
+                if current_subscription and current_subscription.end_date and current_subscription.end_date > now:
+                    start_date = current_subscription.end_date
+                return _create_internal_subscription(normalized_plan, normalized_plan, start_date)
+
             current_app.logger.error(f"Failed to create Stripe checkout session: {e}")
             return {'error': f'Failed to initiate checkout: {str(e)}'}, 500
 
