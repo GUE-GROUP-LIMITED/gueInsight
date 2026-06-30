@@ -37,6 +37,21 @@ logger = logging.getLogger(__name__)
 def register_enterprise_routes(users_bp):
     """Register enterprise feature endpoints to user blueprint."""
 
+    def _get_latest_subscription(user_id):
+        return (
+            Subscription.query
+            .filter_by(user_id=user_id)
+            .order_by(Subscription.end_date.desc())
+            .first()
+        )
+
+    def _is_subscription_active(subscription):
+        if not subscription:
+            return False
+        if subscription.end_date is None:
+            return True
+        return subscription.end_date >= datetime.utcnow()
+
     def _normalize_plan(plan_like):
         value = str(plan_like or 'free').strip().lower()
         legacy_map = {
@@ -49,12 +64,9 @@ def register_enterprise_routes(users_bp):
         return legacy_map.get(value, value if value in COMPLIANCE_TIERS else 'free')
 
     def _get_user_plan(user_id):
-        latest = (
-            Subscription.query
-            .filter_by(user_id=user_id)
-            .order_by(Subscription.end_date.desc())
-            .first()
-        )
+        latest = _get_latest_subscription(user_id)
+        if not _is_subscription_active(latest):
+            return 'free'
         return _normalize_plan(getattr(latest, 'plan', None)) if latest else 'free'
 
     def _plan_access(plan_key):
@@ -63,6 +75,15 @@ def register_enterprise_routes(users_bp):
         if plan_key == 'compliance_pro':
             return 'compliance'
         return 'free'
+
+    def _require_plan(access_level):
+        plan_key = _get_user_plan(current_user.id)
+        tier = _plan_access(plan_key)
+        if access_level == 'enterprise' and tier != 'enterprise':
+            return None, None, jsonify({'error': 'Enterprise plan required'}), 403
+        if access_level == 'compliance' and tier == 'free':
+            return None, None, jsonify({'error': 'Compliance plan required'}), 403
+        return plan_key, tier, None, None
 
     def _safe_json_load(value, fallback=None):
         if not value:
@@ -128,11 +149,9 @@ def register_enterprise_routes(users_bp):
     @login_required
     def list_sub_users():
         """Get all sub-users for current user (enterprise only)."""
-        subscription = Subscription.query.filter_by(user_id=current_user.id).first()
-        
-        # Verify enterprise plan
-        if not subscription or subscription.plan not in ['enterprise_professional', 'enterprise_risk', 'enterprise_elite', 'premium_small_business', 'premium_large_business']:
-            return jsonify({'error': 'Enterprise plan required'}), 403
+        _, _, error_response, error_code = _require_plan('enterprise')
+        if error_response:
+            return error_response, error_code
         
         sub_users = SubUser.query.filter_by(
             parent_user_id=current_user.id,
@@ -149,12 +168,11 @@ def register_enterprise_routes(users_bp):
     @login_required
     def add_sub_user():
         """Add a new sub-user to enterprise account."""
-        subscription = Subscription.query.filter_by(user_id=current_user.id).first()
+        _, _, error_response, error_code = _require_plan('enterprise')
+        if error_response:
+            return error_response, error_code
         
-        if not subscription or subscription.plan not in ['enterprise_professional', 'enterprise_risk', 'enterprise_elite', 'premium_small_business', 'premium_large_business']:
-            return jsonify({'error': 'Enterprise plan required'}), 403
-        
-        data = request.get_json()
+        data = request.get_json() or {}
         email = data.get('email')
         role = data.get('role', 'analyst')  # analyst, manager, admin
         permissions = data.get('permissions', '')  # comma-separated
@@ -202,12 +220,16 @@ def register_enterprise_routes(users_bp):
     @login_required
     def update_sub_user(sub_user_id):
         """Update sub-user role or permissions."""
+        _, _, error_response, error_code = _require_plan('enterprise')
+        if error_response:
+            return error_response, error_code
+
         sub_user = SubUser.query.filter_by(
             parent_user_id=current_user.id,
             sub_user_id=sub_user_id
         ).first_or_404()
         
-        data = request.get_json()
+        data = request.get_json() or {}
         
         if 'role' in data:
             sub_user.role = data['role']
@@ -222,6 +244,10 @@ def register_enterprise_routes(users_bp):
     @login_required
     def remove_sub_user(sub_user_id):
         """Remove (deactivate) a sub-user."""
+        _, _, error_response, error_code = _require_plan('enterprise')
+        if error_response:
+            return error_response, error_code
+
         sub_user = SubUser.query.filter_by(
             parent_user_id=current_user.id,
             sub_user_id=sub_user_id
@@ -241,7 +267,11 @@ def register_enterprise_routes(users_bp):
     @login_required
     def create_batch_job():
         """Create a new batch file processing job."""
-        data = request.get_json()
+        _, _, error_response, error_code = _require_plan('enterprise')
+        if error_response:
+            return error_response, error_code
+
+        data = request.get_json() or {}
         job_name = data.get('job_name', 'Batch Job')
         files = data.get('files', [])  # List of file paths to process
         
@@ -287,6 +317,10 @@ def register_enterprise_routes(users_bp):
     @login_required
     def get_batch_job(job_id):
         """Get batch job status and progress."""
+        _, _, error_response, error_code = _require_plan('enterprise')
+        if error_response:
+            return error_response, error_code
+
         batch_job = BatchFileJob.query.filter_by(
             user_id=current_user.id,
             id=job_id
@@ -302,6 +336,10 @@ def register_enterprise_routes(users_bp):
     @login_required
     def list_batch_jobs():
         """List all batch jobs for current user."""
+        _, _, error_response, error_code = _require_plan('enterprise')
+        if error_response:
+            return error_response, error_code
+
         limit = request.args.get('limit', 10, type=int)
         offset = request.args.get('offset', 0, type=int)
         status = request.args.get('status')  # Optional filter
@@ -326,6 +364,10 @@ def register_enterprise_routes(users_bp):
     @login_required
     def cancel_batch_job(job_id):
         """Cancel a batch job."""
+        _, _, error_response, error_code = _require_plan('enterprise')
+        if error_response:
+            return error_response, error_code
+
         batch_job = BatchFileJob.query.filter_by(
             user_id=current_user.id,
             id=job_id
@@ -352,6 +394,10 @@ def register_enterprise_routes(users_bp):
     @login_required
     def get_analytics_summary():
         """Get analytics summary for current user."""
+        _, _, error_response, error_code = _require_plan('compliance')
+        if error_response:
+            return error_response, error_code
+
         days = request.args.get('days', 30, type=int)
         cutoff_date = datetime.utcnow() - timedelta(days=days)
         
@@ -413,6 +459,10 @@ def register_enterprise_routes(users_bp):
     @login_required
     def get_analytics_timeline():
         """Get analytics timeline (daily breakdown)."""
+        _, _, error_response, error_code = _require_plan('compliance')
+        if error_response:
+            return error_response, error_code
+
         days = request.args.get('days', 30, type=int)
         cutoff_date = datetime.utcnow() - timedelta(days=days)
         
@@ -433,6 +483,10 @@ def register_enterprise_routes(users_bp):
     @login_required
     def get_threat_analytics():
         """Get threat detection analytics."""
+        _, _, error_response, error_code = _require_plan('compliance')
+        if error_response:
+            return error_response, error_code
+
         days = request.args.get('days', 30, type=int)
         cutoff_date = datetime.utcnow() - timedelta(days=days)
         
@@ -794,6 +848,10 @@ def register_enterprise_routes(users_bp):
     @login_required
     def list_alert_rules():
         """Get all alert rules for current user."""
+        _, _, error_response, error_code = _require_plan('enterprise')
+        if error_response:
+            return error_response, error_code
+
         rules = AlertRule.query.filter_by(user_id=current_user.id).all()
         
         return jsonify({
@@ -814,7 +872,11 @@ def register_enterprise_routes(users_bp):
     @login_required
     def create_alert_rule():
         """Create a new alert rule."""
-        data = request.get_json()
+        _, _, error_response, error_code = _require_plan('enterprise')
+        if error_response:
+            return error_response, error_code
+
+        data = request.get_json() or {}
         rule_type = data.get('rule_type')  # keyword, ioc, severity, etc.
         value = data.get('value')
         severity = data.get('severity', 'medium')
@@ -845,9 +907,13 @@ def register_enterprise_routes(users_bp):
     @login_required
     def update_alert_rule(rule_id):
         """Update an alert rule."""
+        _, _, error_response, error_code = _require_plan('enterprise')
+        if error_response:
+            return error_response, error_code
+
         rule = AlertRule.query.filter_by(id=rule_id, user_id=current_user.id).first_or_404()
         
-        data = request.get_json()
+        data = request.get_json() or {}
         
         if 'enabled' in data:
             rule.enabled = data['enabled']
@@ -864,6 +930,10 @@ def register_enterprise_routes(users_bp):
     @login_required
     def get_alert_processing_logs():
         """Get alert processing logs for debugging."""
+        _, _, error_response, error_code = _require_plan('enterprise')
+        if error_response:
+            return error_response, error_code
+
         limit = request.args.get('limit', 20, type=int)
         
         # Get recent alert processing logs
@@ -888,6 +958,10 @@ def register_enterprise_routes(users_bp):
     @login_required
     def list_integrations():
         """List all security tool integrations for current user."""
+        _, _, error_response, error_code = _require_plan('enterprise')
+        if error_response:
+            return error_response, error_code
+
         integrations = SecurityToolIntegration.query.filter_by(user_id=current_user.id).all()
         
         return jsonify({
@@ -899,7 +973,11 @@ def register_enterprise_routes(users_bp):
     @login_required
     def add_integration():
         """Add a new security tool integration."""
-        data = request.get_json()
+        _, _, error_response, error_code = _require_plan('enterprise')
+        if error_response:
+            return error_response, error_code
+
+        data = request.get_json() or {}
         tool_name = data.get('tool_name')  # virustotal, abuseipdb, shodan, etc.
         api_key = data.get('api_key')
         
@@ -938,6 +1016,10 @@ def register_enterprise_routes(users_bp):
     @login_required
     def remove_integration(integration_id):
         """Remove a security tool integration."""
+        _, _, error_response, error_code = _require_plan('enterprise')
+        if error_response:
+            return error_response, error_code
+
         integration = SecurityToolIntegration.query.filter_by(
             user_id=current_user.id,
             id=integration_id
@@ -954,6 +1036,10 @@ def register_enterprise_routes(users_bp):
     @login_required
     def test_integration(integration_id):
         """Test a security tool integration."""
+        _, _, error_response, error_code = _require_plan('enterprise')
+        if error_response:
+            return error_response, error_code
+
         integration = SecurityToolIntegration.query.filter_by(
             user_id=current_user.id,
             id=integration_id

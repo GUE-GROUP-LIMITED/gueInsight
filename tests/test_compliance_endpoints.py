@@ -97,6 +97,18 @@ def test_signup_requires_explicit_consent(client):
     assert valid_response.status_code == 201
     payload = valid_response.get_json()
     assert payload['user']['gdpr_consent_at'] is not None
+    assert payload['user']['current_plan'] == 'Free'
+
+    created_user = User.query.filter_by(email='with-consent@example.com').first()
+    assert created_user is not None
+    created_subscription = (
+        Subscription.query
+        .filter_by(user_id=created_user.id)
+        .order_by(Subscription.end_date.desc())
+        .first()
+    )
+    assert created_subscription is not None
+    assert created_subscription.plan == 'free'
 
 
 def test_login_rate_limit_logs_security_event(client):
@@ -326,6 +338,20 @@ def test_user_security_events_requires_enterprise_plan(client):
 
     response = client.get('/auth/security_events')
     assert response.status_code == 403
+
+
+def test_enterprise_only_endpoints_require_active_enterprise_subscription(client):
+    user = _create_user(email='expired-enterprise@example.com')
+    _set_subscription(user.id, plan='enterprise_risk', days=-1)
+    _login(client, email='expired-enterprise@example.com')
+
+    sub_users_response = client.get('/auth/sub-users')
+    assert sub_users_response.status_code == 403
+    assert 'Enterprise plan required' in sub_users_response.get_json()['error']
+
+    analytics_response = client.get('/auth/analytics/summary')
+    assert analytics_response.status_code == 403
+    assert 'Compliance plan required' in analytics_response.get_json()['error']
 
 
 def test_user_security_events_returns_user_and_global_for_enterprise(client):

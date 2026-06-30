@@ -1,10 +1,12 @@
 from flask import request, current_app, url_for, send_file
 from flask_login import current_user, login_user, logout_user, login_required
 from werkzeug.security import generate_password_hash
+import re
 
 
 def register_auth_privacy_routes(users_bp):
     from app.routes import users_routes as ur
+    email_pattern = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
     @users_bp.route('/auth/session', methods=['GET'])
     def auth_session():
@@ -102,8 +104,14 @@ def register_auth_privacy_routes(users_bp):
         if not email or not password:
             return {'error': 'Email and password are required.'}, 400
 
-        if len(password) < 6:
-            return {'error': 'Password must be at least 6 characters.'}, 400
+        if not email_pattern.match(email):
+            return {'error': 'A valid email address is required.'}, 400
+
+        if len(password) < 10:
+            return {'error': 'Password must be at least 10 characters.'}, 400
+
+        if not any(ch.isupper() for ch in password) or not any(ch.islower() for ch in password) or not any(ch.isdigit() for ch in password):
+            return {'error': 'Password must include uppercase, lowercase, and numeric characters.'}, 400
 
         existing_user = ur.User.query.filter_by(email=email).first()
         if existing_user:
@@ -132,6 +140,17 @@ def register_auth_privacy_routes(users_bp):
             role=ur.UserRole.USER,
         )
         ur.db.session.add(new_user)
+        ur.db.session.commit()
+
+        # Provision a default free subscription so access/limits logic has a stable baseline.
+        free_subscription = ur.Subscription(
+            user_id=new_user.id,
+            plan='free',
+            start_date=now,
+            end_date=now + ur.datetime.timedelta(days=3650),
+            is_trial=False,
+        )
+        ur.db.session.add(free_subscription)
         ur.db.session.commit()
 
         ur._get_or_create_user_preference(new_user.id)
