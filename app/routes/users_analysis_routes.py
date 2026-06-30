@@ -783,12 +783,16 @@ def register_analysis_routes(users_bp):
         if uploaded_file:
             file_analysis_started_at = ur._utc_now()
 
-            source = str(request.form.get('source') or 'manual').strip().lower()
+            source = str(request.form.get('source') or '').strip().lower()
             allowed_sources = {'manual', 'email_gateway', 'edr', 'siem', 'firewall'}
+            if not source:
+                return _error('source is required', 400)
             if source not in allowed_sources:
                 return _error('source must be one of: manual, email_gateway, edr, siem, firewall', 400)
 
-            confidence = str(request.form.get('confidence') or 'medium').strip().lower()
+            confidence = str(request.form.get('confidence') or '').strip().lower()
+            if not confidence:
+                return _error('confidence is required', 400)
             if confidence not in {'low', 'medium', 'high'}:
                 return _error('confidence must be one of: low, medium, high', 400)
 

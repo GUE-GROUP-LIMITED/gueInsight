@@ -234,7 +234,11 @@ def test_upload_file_success_returns_redirect_payload(client, monkeypatch, tmp_p
 
     response = client.post(
         "/upload",
-        data={"file": (io.BytesIO(b"hello world"), "sample.txt")},
+        data={
+            "file": (io.BytesIO(b"hello world"), "sample.txt"),
+            "source": "manual",
+            "confidence": "medium",
+        },
         content_type="multipart/form-data",
     )
 
@@ -272,7 +276,11 @@ def test_upload_file_processing_exception_returns_json_error(client, monkeypatch
 
     response = client.post(
         "/upload",
-        data={"file": (io.BytesIO(b"boom"), "sample.txt")},
+        data={
+            "file": (io.BytesIO(b"boom"), "sample.txt"),
+            "source": "manual",
+            "confidence": "medium",
+        },
         content_type="multipart/form-data",
     )
 
