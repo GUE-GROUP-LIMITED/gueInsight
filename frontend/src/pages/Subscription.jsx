@@ -119,9 +119,18 @@ const Subscription = () => {
 	const [actionError, setActionError] = useState('');
 
 	useEffect(() => {
-		if (!user) return;
-		api.get('/auth/subscription').then(res => setSubDetails(res.data)).catch(() => {});
-	}, [user]);
+		if (!user) {
+			setSubDetails(null);
+			return;
+		}
+
+		setSubDetails({
+			is_trial: Boolean(user?.is_trial),
+			start_date: user?.plan_started_at || user?.created_at || null,
+			end_date: user?.plan_expires_at || null,
+			status: user?.plan_status || (isFreePlan ? 'active' : 'active'),
+		});
+	}, [isFreePlan, user]);
 
 	const formatDate = (iso) => {
 		if (!iso) return null;
