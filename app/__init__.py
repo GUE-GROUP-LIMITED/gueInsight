@@ -92,7 +92,11 @@ def create_app():
 
     @app.route('/healthz')
     def healthz():
-        return {'status': 'ok'}, 200
+        return {
+            'status': 'ok',
+            'service': 'gueInsight backend',
+            'environment': app.config.get('APP_ENV', 'development'),
+        }, 200
 
     @app.route('/<path:path>', methods=['OPTIONS'])
     def handle_options(path):
@@ -115,9 +119,11 @@ def create_app():
     app.register_blueprint(users_bp)
     app.register_blueprint(admin_bp)
 
-    with app.app_context():
-        from app.models import User, Subscription  # Import your models
-        db.create_all()  # Create tables
+    should_create_schema = bool(app.config.get('AUTO_CREATE_SCHEMA', True))
+    if should_create_schema:
+        with app.app_context():
+            from app.models import User, Subscription  # Import your models
+            db.create_all()  # Create tables only outside production
 
     # Register webhook routes before returning the app so Render serves them.
     app.register_blueprint(stripe_bp)

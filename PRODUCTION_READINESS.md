@@ -1,6 +1,6 @@
 # Production Readiness Checklist
 
-**Status**: 38% coverage - NOT YET PRODUCTION READY  
+**Status**: Launch hardening in progress - not yet general-availability ready  
 **Last Updated**: Current session  
 **Target**: Minimum 70% test coverage + critical security hardening
 
@@ -11,8 +11,8 @@
 ### 1.1 Environment & Configuration ✅ PARTIALLY DONE
 - [x] Config validates SECRET_KEY and SECURITY_PASSWORD_SALT at startup
 - [x] Environment-based configuration for database, email, Stripe
-- [ ] **ACTION**: Create `.env.production` template file with all required variables
-- [ ] **ACTION**: Document exact required environment variables and defaults
+- [x] `.env.production.example` template exists with production variables
+- [x] Document exact required environment variables and defaults
 - [ ] **ACTION**: Add startup warning if running with debug=True in production
 
 **Secrets Required for Production:**
@@ -28,13 +28,14 @@ SESSION_COOKIE_SECURE=true
 EU_ONLY_DATA_RESIDENCY=true|false
 ```
 
-### 1.2 Error Handling ✅ PARTIALLY DONE
-- [x] 404 error handler exists (app.py line 57)
-- [x] 500 error handler exists (app.py line 63)
-- [ ] **ACTION**: Add CSRF error handler (app.errorhandler(400))
-- [ ] **ACTION**: Add 403 Forbidden handler
-- [ ] **ACTION**: Add validation error handlers (422)
-- [ ] **ACTION**: Verify no stack traces exposed to users
+### 1.2 Error Handling ✅ IMPROVING
+- [x] 404 error handler exists and returns safe API JSON
+- [x] 500 error handler exists and returns safe API JSON
+- [x] 413 upload-too-large handler added
+- [x] 403 Forbidden handler present
+- [x] Validation error handler present (422)
+- [ ] **ACTION**: Add CSRF error handler if CSRF is enabled globally
+- [ ] **ACTION**: Verify no stack traces exposed to users in all non-API templates
 
 **Test Coverage**: 0% on app.py (103 statements currently untested)
 
@@ -108,13 +109,13 @@ GOOD (> 90% coverage):
 ## Phase 3: Deployment & Operations
 
 ### 3.1 Pre-Deployment Checklist
-- [ ] All environment variables configured
+- [x] All environment variables documented in `.env.production.example`
 - [ ] Database backups tested
 - [ ] Error monitoring set up (Sentry/similar)
 - [ ] Logging configured for production
 - [ ] Rate limiting verified working
 - [ ] CSRF protection tested
-- [ ] Session security verified
+- [x] Session security verified
 
 ### 3.2 Deployment Process
 1. Create `.env.production` with all required secrets
@@ -132,6 +133,7 @@ GOOD (> 90% coverage):
 - Database rollback: `alembic downgrade -1`
 - Have recent backup available
 - Monitor error rates post-deployment
+- Reference the full procedure in `OPERATIONS_RUNBOOK.md`
 
 ---
 
@@ -145,7 +147,7 @@ GOOD (> 90% coverage):
 - [ ] Access logs configured
 
 ### 4.2 Health Checks
-- [ ] `/healthz` endpoint working
+- [x] `/healthz` endpoint working
 - [ ] Database connectivity tested
 - [ ] External services tested (Stripe, Supabase, etc.)
 
@@ -154,6 +156,14 @@ GOOD (> 90% coverage):
 - [ ] Database space alerts
 - [ ] Authentication failure rate alerts
 - [ ] Payment processing alerts
+
+---
+
+## Current Launch Verdict
+
+- Market ready: No
+- Beta/staging ready: Yes, with caution
+- Next release gate: finish production backup/restore validation and monitoring setup
 
 ---
 

@@ -2,29 +2,21 @@ import os
 import stripe
 
 
-def _require_env_vars(var_names):
-    """Return requested env values or raise with a clear, actionable error."""
-    missing = [name for name in var_names if not os.getenv(name)]
-    if missing:
-        missing_csv = ', '.join(missing)
-        raise ValueError(
-            'CRITICAL: Missing required environment variable(s): '
-            f'{missing_csv}. Set these in your deployment environment '
-            '(for Render: Service -> Environment).'
-        )
-    return tuple(os.getenv(name) for name in var_names)
+def _is_truthy(value):
+    return str(value).strip().lower() in {'1', 'true', 'yes', 'on'}
+
+
+def _app_env():
+    return os.getenv('APP_ENV', os.getenv('FLASK_ENV', 'development')).strip().lower()
 
 class Config:
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+    APP_ENV = _app_env()
+    IS_PRODUCTION = APP_ENV in {'production', 'prod'}
 
-    # Validate critical secrets at startup.
-    _SECRET_KEY, _SECURITY_SALT = _require_env_vars([
-        'SECRET_KEY',
-        'SECURITY_PASSWORD_SALT',
-    ])
-
-    SECRET_KEY = _SECRET_KEY
-    SECURITY_PASSWORD_SALT = _SECURITY_SALT
+    # Use safe development defaults locally, but require real secrets in production.
+    SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key')
+    SECURITY_PASSWORD_SALT = os.getenv('SECURITY_PASSWORD_SALT', 'dev-security-salt')
     
     # Database configuration
     SQLALCHEMY_DATABASE_URI = os.getenv(
@@ -39,14 +31,14 @@ class Config:
     # Email configuration
     MAIL_SERVER = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
     MAIL_PORT = int(os.getenv('MAIL_PORT', '587'))
-    MAIL_USE_TLS = str(os.getenv('MAIL_USE_TLS', 'true')).lower() in {'1', 'true', 'yes'}
+    MAIL_USE_TLS = _is_truthy(os.getenv('MAIL_USE_TLS', 'true'))
     MAIL_USERNAME = os.getenv('MAIL_USERNAME', '')
     MAIL_PASSWORD = os.getenv('MAIL_PASSWORD', '')
     MAIL_DEFAULT_SENDER = os.getenv('MAIL_DEFAULT_SENDER', 'noreply@guecyber.com')
     SESSION_TYPE = 'filesystem'
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = os.getenv('SESSION_COOKIE_SAMESITE', 'Lax')
-    SESSION_COOKIE_SECURE = str(os.getenv('SESSION_COOKIE_SECURE', 'false')).lower() in {'1', 'true', 'yes'}
+    SESSION_COOKIE_SECURE = _is_truthy(os.getenv('SESSION_COOKIE_SECURE', 'true' if IS_PRODUCTION else 'false'))
     REMEMBER_COOKIE_HTTPONLY = True
     REMEMBER_COOKIE_SAMESITE = os.getenv('SESSION_COOKIE_SAMESITE', 'Lax')
     REMEMBER_COOKIE_SECURE = SESSION_COOKIE_SECURE
@@ -60,6 +52,7 @@ class Config:
         'txt', 'json', 'xml', 'log', 'pcap', 'pcapng', 
         'yar', 'yara', 'pdf', 'sqlite', 'db', 'mdb', 'bin'
     }
+    AUTO_CREATE_SCHEMA = not IS_PRODUCTION
 
     @staticmethod
     def user_upload_folder(user_id):

@@ -9,10 +9,10 @@ import { api } from '../services/api';
 const FEATURES = [
   { icon: '🛡️', title: 'vCISO Portal', desc: 'Your assigned virtual CISO posts recommendations, action items and security notes directly to your dashboard — included in Enterprise plans.' },
   { icon: '📋', title: 'NIS2 Compliance', desc: 'Built-in NIS2 checklist, gap analysis, incident reporting with PDF export, and audit-ready evidence packs for Belgian regulators.' },
-  { icon: '🔍', title: 'Threat Intelligence', desc: 'Upload files, paste indicators or connect M365 / Google Workspace — automated IoC extraction, scoring and enrichment in seconds.' },
+  { icon: '🔍', title: 'AI-Assisted Threat Intelligence', desc: 'Upload files, paste indicators or connect M365 / Google Workspace — automated IoC extraction, scoring, enrichment and faster triage in seconds.' },
   { icon: '📊', title: 'GDPR Tooling', desc: 'Data export, deletion requests, audit logging (90 days → unlimited) and data-subject request workflows built into every paid tier.' },
   { icon: '🔗', title: 'Cloud Connectors', desc: 'Microsoft 365 and Google Workspace integrations for user, device and policy discovery — spot GDPR and NIS2 gaps across your tenant.' },
-  { icon: '🚨', title: 'Alerting & Reporting', desc: 'Custom alert rules, Slack / Teams notifications and weekly security summaries your board can actually read.' },
+  { icon: '🚨', title: 'Proactive Security Operations', desc: 'Custom alert rules, Slack / Teams notifications and weekly security summaries that help your team act before issues spread.' },
 ];
 
 const TIERS = [
@@ -62,6 +62,29 @@ const FAQS = [
   { q: 'Is my data stored in the EU?', a: 'Yes. All data is processed and stored in the EU. Enterprise Elite adds an EU-only data residency guarantee with contractual commitments.' },
   { q: 'Will you delete our data if requested?', a: 'Yes. Compliance Pro and above include GDPR export and deletion features for data-subject requests, with full audit logging.' },
   { q: 'Is GueInsight NIS2 compliant?', a: 'Enterprise Risk and Elite tiers include NIS2 incident reporting, gap analysis, evidence packs and audit logging designed to support NIS2 compliance workflows for Belgian and EU organisations.' },
+];
+
+const CAPABILITIES = [
+  {
+    title: 'Analyze threats fast',
+    desc: 'Upload files, paste indicators, or scan URLs to extract IoCs, score risk, and enrich findings in seconds.',
+  },
+  {
+    title: 'Stay GDPR and NIS2 ready',
+    desc: 'Use built-in export, deletion, incident reporting, and audit evidence workflows designed for Belgian and EU teams.',
+  },
+  {
+    title: 'Connect your cloud stack',
+    desc: 'Link Microsoft 365 or Google Workspace to discover users, devices, policies, and compliance gaps across the tenant.',
+  },
+  {
+    title: 'Get vCISO guidance',
+    desc: 'Enterprise Elite adds expert recommendations, action items, and monthly advisory notes directly in the dashboard.',
+  },
+  {
+    title: 'Use AI for triage and next steps',
+    desc: 'Summarize security events, cluster related alerts, and turn signals into practical remediation guidance faster.',
+  },
 ];
 
 const LIVE_ALERT_CLASS_MAP = {
@@ -256,8 +279,15 @@ export default function Landing() {
           <p className="lp__eyebrow">GueInsight — Threat Intelligence, Compliance &amp; vCISO in one platform</p>
           <h1>Your Security Dashboard.<br /><em>Expert-Backed.</em></h1>
           <p className="lp__lead">
-            GueInsight gives Belgian and European organisations real-time threat intelligence, NIS2 &amp; GDPR compliance tools, and — on Enterprise Elite — a <strong>virtual CISO portal</strong> where Gue Cyber experts post recommendations directly to your dashboard.
+            GueInsight gives Belgian and European organisations real-time threat intelligence, AI-assisted triage, NIS2 &amp; GDPR compliance tools, and — on Enterprise Elite — a <strong>virtual CISO portal</strong> where Gue Cyber experts post recommendations directly to your dashboard.
           </p>
+          <div className="lp__capability-summary" aria-label="Platform capabilities">
+            <span>Analyze threats</span>
+            <span>Manage compliance</span>
+            <span>Connect cloud systems</span>
+            <span>Work with a vCISO</span>
+            <span>Use AI-assisted triage</span>
+          </div>
           <div className="lp__hero-actions">
             <button className="lp__btn lp__btn--primary" onClick={() => setShowPlanSelector(true)}>
               Start 14-Day Free Trial
@@ -312,6 +342,24 @@ export default function Landing() {
               <p className="lp__mock-vciso-text">"{heroSnapshot.vcisoNote.note}"</p>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* CORE CAPABILITIES */}
+      <section className="lp__section lp__section--capabilities" id="capabilities">
+        <div className="lp__section-head lp__section-head--compact">
+          <p className="lp__eyebrow">// Core capabilities</p>
+          <h2>What the platform lets you do</h2>
+          <p className="lp__section-sub">Five actions cover most teams’ day-to-day needs: detect, comply, connect, get expert guidance, and accelerate triage with AI-assisted security ops.</p>
+        </div>
+        <div className="lp__capabilities-grid">
+          {CAPABILITIES.map((capability, index) => (
+            <article className="lp__capability-card" key={capability.title}>
+              <div className="lp__capability-index">0{index + 1}</div>
+              <h3>{capability.title}</h3>
+              <p>{capability.desc}</p>
+            </article>
+          ))}
         </div>
       </section>
 

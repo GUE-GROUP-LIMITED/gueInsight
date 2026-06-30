@@ -83,6 +83,20 @@ def init_production_errors(app):
             }), 422
         
         return render_template('errors/422.html'), 422
+
+
+    @app.errorhandler(413)
+    def handle_payload_too_large(error):
+        """Handle oversize uploads with a user-friendly response."""
+        logger.warning(f"Payload too large: {request.path} - {error}")
+
+        if request.path.startswith('/api/'):
+            return jsonify({
+                'error': 'Payload too large',
+                'message': 'The uploaded file exceeds the allowed size for your plan.'
+            }), 413
+
+        return render_template('errors/422.html'), 413
     
     
     @app.errorhandler(500)
@@ -154,7 +168,8 @@ def init_production_errors(app):
         if request.path.startswith('/api/'):
             return jsonify({
                 'error': 'Internal server error',
-                'message': 'An unexpected error occurred. The team has been notified.'
+                'message': 'An unexpected error occurred. The team has been notified.',
+                'request_id': _get_request_id()
             }), 500
         
         return render_template('errors/500.html'), 500
@@ -186,6 +201,8 @@ def validate_production_config(app):
     Raises ValueError if critical config is missing or invalid.
     """
     errors = []
+    app_env = str(app.config.get('APP_ENV') or app.config.get('ENV') or '').strip().lower()
+    is_production = app_env in {'production', 'prod'}
     
     # Check SECRET_KEY
     if not app.config.get('SECRET_KEY'):
@@ -197,14 +214,26 @@ def validate_production_config(app):
     
     # Check database URI for production (should not be SQLite)
     db_uri = app.config.get('SQLALCHEMY_DATABASE_URI', '')
-    if app.config.get('ENV') == 'production':
+    if is_production:
         if 'sqlite' in db_uri.lower():
             errors.append('SQLite database is not suitable for production. Use PostgreSQL.')
-        
-        # Ensure SESSION_COOKIE_SECURE is True in production
+
+        if db_uri.startswith('postgres://'):
+            errors.append('Use postgres+psycopg2 or postgresql:// for production database URIs.')
+
+        # Ensure secure cookies in production.
         if not app.config.get('SESSION_COOKIE_SECURE', False):
             app.logger.warning('SESSION_COOKIE_SECURE is not enabled. Enabling for production.')
             app.config['SESSION_COOKIE_SECURE'] = True
+        if not app.config.get('REMEMBER_COOKIE_SECURE', False):
+            app.logger.warning('REMEMBER_COOKIE_SECURE is not enabled. Enabling for production.')
+            app.config['REMEMBER_COOKIE_SECURE'] = True
+
+        if app.config.get('SECRET_KEY') in {'dev-secret-key', 'change-me', 'secret', 'test-secret-key'}:
+            errors.append('SECRET_KEY must be a strong, unique production secret.')
+
+        if app.config.get('SECURITY_PASSWORD_SALT') in {'dev-security-salt', 'change-me', 'salt', 'test-salt'}:
+            errors.append('SECURITY_PASSWORD_SALT must be a strong, unique production secret.')
     
     if errors:
         error_msg = '\n'.join([f'  - {e}' for e in errors])

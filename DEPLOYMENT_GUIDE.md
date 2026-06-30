@@ -449,6 +449,10 @@ Create alerts for:
 - Disk usage > 80%
 - OOM killer events
 
+### Operational Runbook
+
+Use [OPERATIONS_RUNBOOK.md](OPERATIONS_RUNBOOK.md) for the launch gate, alert thresholds, and rollback steps.
+
 ---
 
 ## Incident Response
@@ -509,6 +513,18 @@ Problem Detected?
 ```
 
 **Always prioritize user stability over rapid deployment.**
+
+---
+
+## Market-Ready Criteria
+
+Do not promote to general availability until all of the following are true:
+- Production config validation passes with real secrets and PostgreSQL
+- Launch-critical tests pass, including security and production error handling
+- Monitoring and alerting are configured and tested
+- Backup and restore have been verified on a fresh schema
+- Rollback has been rehearsed and documented
+- The operations runbook is accepted by the team
 
 ---
 
