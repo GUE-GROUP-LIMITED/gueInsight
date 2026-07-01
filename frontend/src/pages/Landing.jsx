@@ -332,9 +332,7 @@ export default function Landing() {
             <span>Use AI-assisted triage</span>
           </div>
           <div className="lp__hero-actions">
-            <button className="lp__btn lp__btn--primary" onClick={() => setShowPlanSelector(true)}>
-              Start 14-Day Free Trial
-            </button>
+            <Link to="/subscription" className="lp__btn lp__btn--primary">View Plans</Link>
             <Link to="/subscription" className="lp__btn lp__btn--ghost">View Plans →</Link>
           </div>
           <div className="lp__trust-row">
