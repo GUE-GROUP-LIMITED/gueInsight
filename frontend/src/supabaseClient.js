@@ -9,6 +9,10 @@ const createFallbackClient = () => ({
 		getSession: async () => ({ data: { session: null }, error: null }),
 		onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
 		signOut: async () => ({ error: null }),
+		resetPasswordForEmail: async () => ({
+			data: null,
+			error: { message: 'Password reset service is currently unavailable. Please contact support.' },
+		}),
 	},
 });
 

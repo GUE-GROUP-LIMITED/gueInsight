@@ -12,15 +12,37 @@ const ResetPassword = () => {
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const withTimeout = (promise, timeoutMs = 15000) =>
+    Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Reset request timed out. Please try again.')), timeoutMs);
+      }),
+    ]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     setSuccess('');
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
-    if (error) setError(error.message);
-    else setSuccess('Check your email for password reset instructions!');
-    setLoading(false);
+
+    try {
+      if (typeof supabase?.auth?.resetPasswordForEmail !== 'function') {
+        throw new Error('Password reset is temporarily unavailable. Please contact support.');
+      }
+
+      const { error } = await withTimeout(supabase.auth.resetPasswordForEmail(email));
+
+      if (error) {
+        setError(error.message || 'Unable to send reset email right now. Please try again.');
+      } else {
+        setSuccess('Check your email for password reset instructions!');
+      }
+    } catch (err) {
+      setError(err?.message || 'Unable to send reset email right now. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
