@@ -105,6 +105,32 @@ def sign_up_user(email: str, password: str, user_metadata: Optional[Dict[str, An
     return data, None
 
 
+def request_password_reset(email: str, redirect_to: Optional[str] = None, timeout_seconds: int = 15) -> Tuple[bool, Optional[str]]:
+    if not supabase_auth_enabled():
+        return False, 'Supabase Auth is not configured.'
+
+    url = f"{_supabase_base_url()}/auth/v1/recover"
+    payload: Dict[str, Any] = {'email': email}
+    if redirect_to:
+        payload['redirect_to'] = redirect_to
+
+    try:
+        response = requests.post(
+            url,
+            json=payload,
+            headers=_headers(_supabase_anon_key()),
+            timeout=timeout_seconds,
+        )
+    except requests.RequestException as exc:
+        return False, f'Supabase password reset request failed: {exc}'
+
+    data = response.json() if response.content else {}
+    if response.status_code >= 400:
+        return False, data.get('msg') or data.get('error_description') or 'Password reset request failed.'
+
+    return True, None
+
+
 def create_admin_user(email: str, password: str, user_metadata: Optional[Dict[str, Any]] = None, timeout_seconds: int = 15) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
     if not supabase_auth_enabled():
         return None, 'Supabase Auth is not configured.'

@@ -42,11 +42,13 @@ except Exception:
 try:
     from app.integrations.supabase_auth import (
         sign_in_with_password,
+        request_password_reset,
         sync_local_user_from_supabase,
         supabase_auth_enabled,
     )
 except Exception:
     sign_in_with_password = None
+    request_password_reset = None
     sync_local_user_from_supabase = None
     supabase_auth_enabled = lambda: False
 from werkzeug.exceptions import RequestEntityTooLarge

@@ -192,6 +192,77 @@ def register_auth_privacy_routes(users_bp):
             logout_user()
         return {'message': 'Logged out.'}, 200
 
+    @users_bp.route('/auth/password/reset/request', methods=['POST'])
+    def auth_password_reset_request():
+        payload = request.get_json(silent=True) or request.form
+        email = (payload.get('email') or '').strip().lower()
+        redirect_to = (payload.get('redirect_to') or '').strip() or None
+
+        if not email or not email_pattern.match(email):
+            return {'error': 'A valid email address is required.'}, 400
+
+        user = ur.User.query.filter_by(email=email).first()
+        if not user:
+            # Do not reveal user existence; keep response generic.
+            return {'message': 'If that account exists, a reset email has been sent.'}, 200
+
+        if ur.request_password_reset and ur.supabase_auth_enabled():
+            ok, reset_error = ur.request_password_reset(email, redirect_to=redirect_to)
+            if not ok:
+                current_app.logger.warning('Supabase reset request failed for %s: %s', email, reset_error)
+                return {'error': reset_error or 'Unable to send reset email right now.'}, 503
+            return {'message': 'If that account exists, a reset email has been sent.'}, 200
+
+        serializer = ur.get_serializer(current_app.config['SECRET_KEY'], current_app.config['SECURITY_PASSWORD_SALT'])
+        token = serializer.dumps({'user_id': user.id, 'email': user.email})
+        frontend_url = (current_app.config.get('FRONTEND_URL') or 'http://localhost:5173').rstrip('/')
+        reset_link = f'{frontend_url}/reset-password?token={token}'
+
+        try:
+            msg = ur.Message('Password Reset Request', recipients=[user.email])
+            msg.body = (
+                'We received a request to reset your GueInsight password.\n\n'
+                f'Reset link (valid for 1 hour): {reset_link}\n\n'
+                'If you did not request this, you can ignore this email.'
+            )
+            ur.mail.send(msg)
+        except Exception as exc:
+            current_app.logger.exception('Password reset email failed for %s: %s', email, exc)
+            return {'error': 'Unable to send reset email right now. Please contact support.'}, 503
+
+        return {'message': 'If that account exists, a reset email has been sent.'}, 200
+
+    @users_bp.route('/auth/password/reset/confirm', methods=['POST'])
+    def auth_password_reset_confirm():
+        payload = request.get_json(silent=True) or request.form
+        token = (payload.get('token') or '').strip()
+        password = payload.get('password') or ''
+
+        if not token:
+            return {'error': 'Reset token is required.'}, 400
+        if len(password) < 10:
+            return {'error': 'Password must be at least 10 characters.'}, 400
+        if not any(ch.isupper() for ch in password) or not any(ch.islower() for ch in password) or not any(ch.isdigit() for ch in password):
+            return {'error': 'Password must include uppercase, lowercase, and numeric characters.'}, 400
+
+        serializer = ur.get_serializer(current_app.config['SECRET_KEY'], current_app.config['SECURITY_PASSWORD_SALT'])
+        try:
+            token_payload = serializer.loads(token, max_age=3600)
+        except Exception:
+            return {'error': 'Reset link is invalid or expired.'}, 400
+
+        user_id = int(token_payload.get('user_id') or 0)
+        email = (token_payload.get('email') or '').strip().lower()
+        user = ur.User.query.filter_by(id=user_id, email=email).first()
+        if not user:
+            return {'error': 'Reset link is invalid or expired.'}, 400
+
+        user.password = generate_password_hash(password, method='pbkdf2:sha256')
+        user.last_login_at = ur._utc_now()
+        ur.db.session.commit()
+
+        return {'message': 'Password updated successfully. You can now sign in.'}, 200
+
     @users_bp.route('/auth/privacy/consent', methods=['GET', 'PATCH'])
     @login_required
     def auth_privacy_consent():
