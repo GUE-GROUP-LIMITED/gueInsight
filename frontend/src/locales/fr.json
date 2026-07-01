@@ -208,7 +208,7 @@
   },
   "pricing": {
     "title": "Tarifs",
-    "hero_subtitle": "Analyse de conformité prête pour le RGPD et NIS2 pour chaque équipe",
+    "hero_subtitle": "Tarification pour Free, Starter, Compliance Pro, Enterprise Professional, Enterprise Risk et Enterprise Elite",
     "most_popular": "Le plus populaire",
     "current_plan": "Plan actuel :"
   },
@@ -355,7 +355,7 @@
     "checkout_error": "Erreur de paiement"
   },
   "pricing_page": {
-    "hero_body": "Importez des fichiers ou connectez M365/Google Workspace pour analyser les menaces, auditer les locataires et générer des preuves de conformité.",
+    "hero_body": "Comparez les offres de Free à Enterprise Elite. Commencez par l'analyse de base, puis ajoutez les exports et suppressions RGPD, les workflows NIS2, la résidence des données dans l'UE, l'accès API et l'accompagnement vCISO selon vos besoins.",
     "starter_desc": "Pour bien démarrer avec une analyse de base et l'onboarding.",
     "starter_features": ["Types de fichiers de base (TXT, JSON, XML, journaux)", "Analyse manuelle", "Support communautaire"],
     "starter_cta": "Démarrer gratuitement",

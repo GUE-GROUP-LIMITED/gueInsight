@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import TrialModal from '../components/TrialModal';
-import PlanSelector from '../components/PlanSelector';
 import PublicHeader from '../components/PublicHeader';
 import './Landing.css';
 import { api } from '../services/api';
@@ -191,7 +190,6 @@ function getRelativeUpdateLabel(isoDate) {
 }
 
 export default function Landing() {
-  const [showPlanSelector, setShowPlanSelector] = useState(false);
   const [showTrialModal, setShowTrialModal] = useState(false);
   const [openFaq, setOpenFaq] = useState(null);
   const [heroSnapshot, setHeroSnapshot] = useState(FALLBACK_HERO_STATE);
@@ -314,7 +312,8 @@ export default function Landing() {
         whoTo="#who"
         pricingTo="#pricing"
         loginTo="/login"
-        trialTo="/signup"
+        trialLabel="View Plans"
+        trialTo="/subscription"
       />
 
       {/* HERO */}
@@ -491,8 +490,7 @@ export default function Landing() {
             <li>✦ Direct line to Gue Cyber expertise</li>
           </ul>
           <div className="lp__hero-actions" style={{marginTop:'28px'}}>
-            <Link to="/support" className="lp__btn lp__btn--primary">Talk to Gue Cyber</Link>
-            <Link to="/subscription" className="lp__btn lp__btn--ghost">See Elite Plan →</Link>
+            <Link to="/subscription" className="lp__btn lp__btn--primary">View Plans</Link>
           </div>
         </div>
         <div className="lp__vciso-right">
@@ -647,7 +645,7 @@ export default function Landing() {
         <h2>Ready to Secure Your Organisation?</h2>
         <p>Start on Free — or jump straight into a 14-day trial of a paid plan. No commitment until the trial ends.</p>
         <div className="lp__hero-actions">
-          <button className="lp__btn lp__btn--primary" onClick={() => setShowPlanSelector(true)}>Start 14-Day Free Trial</button>
+          <Link to="/subscription" className="lp__btn lp__btn--primary">View Plans</Link>
           <Link to="/support" className="lp__btn lp__btn--ghost">Talk to Gue Cyber →</Link>
         </div>
       </section>
@@ -658,7 +656,6 @@ export default function Landing() {
           onCancel={() => setShowTrialModal(false)}
         />
       )}
-      {showPlanSelector && <PlanSelector onClose={() => setShowPlanSelector(false)} />}
     </div>
   );
 }

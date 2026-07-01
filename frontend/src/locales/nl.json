@@ -78,7 +78,7 @@
   },
   "pricing": {
     "title": "Prijzen",
-    "hero_subtitle": "GDPR- en NIS2-klare compliance-analyse voor elk team",
+    "hero_subtitle": "Prijzen voor Free, Starter, Compliance Pro, Enterprise Professional, Enterprise Risk en Enterprise Elite",
     "most_popular": "Meest populair",
     "current_plan": "Huidig plan:"
   },
@@ -342,7 +342,7 @@
     "checkout_error": "Checkout-fout"
   },
   "pricing_page": {
-    "hero_body": "Upload bestanden of koppel M365/Google Workspace om dreigingen te analyseren, tenants te auditen en nalevingsbewijsmateriaal te genereren.",
+    "hero_body": "Vergelijk plannen van Free tot Enterprise Elite. Begin met basisanalyse en voeg daarna GDPR-export en -verwijdering, NIS2-workflows, EU-dataresidentie, API-toegang en vCISO-begeleiding toe naarmate je behoeften groeien.",
     "starter_desc": "Voor een eerste start met basisanalyse en onboarding.",
     "starter_features": ["Basisbestandstypen (TXT, JSON, XML, logs)", "Handmatige analyse", "Community-ondersteuning"],
     "starter_cta": "Gratis starten",

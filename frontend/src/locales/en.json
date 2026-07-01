@@ -206,12 +206,12 @@
   },
   "pricing": {
     "title": "Pricing",
-    "hero_subtitle": "GDPR & NIS2-ready compliance analysis for every team",
+    "hero_subtitle": "Pricing for Free, Starter, Compliance Pro, Enterprise Professional, Enterprise Risk, and Enterprise Elite",
     "most_popular": "Most popular",
     "current_plan": "Current plan:"
   },
   "pricing_page": {
-    "hero_body": "Upload files or connect M365/Google Workspace to analyze threats, audit tenants, and generate compliance evidence.",
+    "hero_body": "Compare plans from Free through Enterprise Elite. Start with basic analysis, then add GDPR export and deletion, NIS2 workflows, EU data residency, API access, and vCISO guidance as your needs grow.",
     "starter_desc": "For getting started with basic analysis and onboarding.",
     "starter_features": ["Basic file types (TXT, JSON, XML, logs)", "Manual analysis", "Community support"],
     "starter_cta": "Start Free",
