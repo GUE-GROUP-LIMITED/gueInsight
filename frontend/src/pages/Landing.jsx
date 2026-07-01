@@ -15,21 +15,65 @@ const FEATURES = [
   { icon: '🚨', title: 'Proactive Security Operations', desc: 'Custom alert rules, Slack / Teams notifications and weekly security summaries that help your team act before issues spread.' },
 ];
 
+const TRUST_PACK = [
+  {
+    title: 'Readiness, not certification',
+    body: 'SOC2 Type II readiness assessment and ISO 27001-aligned controls are presented as readiness claims, not as third-party certifications we do not hold.',
+  },
+  {
+    title: 'Operational proof points',
+    body: 'EU-only residency, audit packs, export/delete workflows, and vCISO guidance all surface in the public product flow and dashboard.',
+  },
+  {
+    title: 'Verifiable product motion',
+    body: 'The live landing snapshot, support workflow, documentation, and multi-language UI are all public and usable without a sales call.',
+  },
+];
+
+const USE_CASE_NOTES = [
+  {
+    title: 'Security team triage',
+    body: 'Reduce manual review time by routing indicators, alerts, and remediation steps into one dashboard view.',
+  },
+  {
+    title: 'Compliance operations',
+    body: 'Keep GDPR export, deletion, and incident evidence flows visible and repeatable for audit preparation.',
+  },
+  {
+    title: 'Executive reporting',
+    body: 'Use the same platform outputs to brief leadership on risk posture, incident trends, and follow-up actions.',
+  },
+];
+
 const TIERS = [
   {
-    id: 'starter', name: 'Starter', price: '€0', period: 'Free forever',
+    id: 'free', name: 'Free', price: '€0', period: 'forever',
     desc: 'Basic threat detection for individuals',
     items: ['Manual file / text analysis', 'Basic threat scoring', 'Email alerts', '2 MB file limit', '30-day log retention'],
     cta: 'Get Started Free', ctaPath: '/signup', ghost: true,
     badges: [],
   },
   {
-    id: 'compliance_pro', name: 'Compliance Pro', price: '€29.90', period: '/month',
+    id: 'starter', name: 'Starter', price: '€49.90', period: '/month',
+    desc: 'For small teams and individual professionals',
+    items: ['PDF, PCAP, logs analysis', 'Basic threat detection', 'Email support', '30-day retention'],
+    cta: 'Start 14-Day Trial', ctaPath: '/signup',
+    badges: [],
+  },
+  {
+    id: 'compliance_pro', name: 'Compliance Pro', price: '€99.90', period: '/month',
     desc: 'GDPR-focused threat detection with audit trails',
     items: ['All Starter features', 'GDPR export & deletion', 'Audit logging — 90 days', 'M365 basic integration', 'Email + Slack alerts', '8 MB file limit'],
     cta: 'Start 14-Day Trial', ctaPath: '/signup',
     badges: ['GDPR', 'M365'],
     highlighted: false,
+  },
+  {
+    id: 'enterprise_professional', name: 'Enterprise Professional', price: '€299.90', period: '/month',
+    desc: 'GDPR + NIS2 compliance for growing enterprises',
+    items: ['All file types + databases', 'Full GDPR compliance tools', 'NIS2 risk management', 'M365 + Google Workspace', '90-day retention & audit logs'],
+    cta: 'Start 14-Day Trial', ctaPath: '/signup',
+    badges: ['GDPR', 'NIS2'],
   },
   {
     id: 'enterprise_risk', name: 'Enterprise Risk', price: '€499', period: '/month',
@@ -50,14 +94,14 @@ const TIERS = [
 ];
 
 const STEPS = [
-  { n: '01', title: 'Sign up & choose a plan', desc: 'Start free or select a paid tier. Paid plans include a 14-day trial — your card is validated but not charged until the trial ends.' },
+  { n: '01', title: 'Sign up & choose a plan', desc: 'Start on Free, or select a paid tier. Paid plans include a 14-day trial — your card is validated but not charged until the trial ends.' },
   { n: '02', title: 'Connect your environment', desc: 'Link Microsoft 365, Google Workspace or upload files directly. Your data stays in the EU.' },
   { n: '03', title: 'Get instant intelligence', desc: 'Automated IoC extraction, threat scoring and compliance gap analysis start immediately.' },
   { n: '04', title: 'Act on vCISO guidance', desc: 'Enterprise Elite subscribers receive expert recommendations, action items and notes posted directly to their dashboard by Gue Cyber.' },
 ];
 
 const FAQS = [
-  { q: 'Do I need to give a payment card to try it?', a: 'Yes — we require a payment method at trial sign-up. The card is validated but you will not be charged until the 14-day trial ends, unless you keep the subscription.' },
+  { q: 'Do I need to give a payment card to try it?', a: 'Yes — paid plans require a payment method at trial sign-up. The card is validated but you will not be charged until the 14-day trial ends, unless you keep the subscription.' },
   { q: 'What is the vCISO Portal?', a: 'Enterprise Elite subscribers get a dedicated section on their dashboard where Gabriel Aloho (Gue Cyber founder) or an assigned vCISO posts security recommendations, action items, and advisory notes directly to your account.' },
   { q: 'Is my data stored in the EU?', a: 'Yes. All data is processed and stored in the EU. Enterprise Elite adds an EU-only data residency guarantee with contractual commitments.' },
   { q: 'Will you delete our data if requested?', a: 'Yes. Compliance Pro and above include GDPR export and deletion features for data-subject requests, with full audit logging.' },
@@ -390,6 +434,32 @@ export default function Landing() {
         </div>
       </section>
 
+      <section className="lp__section lp__section--alt" id="proof">
+        <div className="lp__section-head">
+          <p className="lp__eyebrow">// Trust pack</p>
+          <h2>What buyers should verify before they buy</h2>
+          <p className="lp__section-sub">This section keeps the public page honest: it highlights what is verified, what is a readiness claim, and where the product already shows measurable output.</p>
+        </div>
+        <div className="lp__features-grid">
+          {TRUST_PACK.map((item) => (
+            <article className="lp__feature-card" key={item.title}>
+              <div className="lp__feature-icon">✓</div>
+              <h3>{item.title}</h3>
+              <p>{item.body}</p>
+            </article>
+          ))}
+        </div>
+        <div className="lp__features-grid" style={{ marginTop: '16px' }}>
+          {USE_CASE_NOTES.map((item) => (
+            <article className="lp__feature-card" key={item.title}>
+              <div className="lp__feature-icon">▣</div>
+              <h3>{item.title}</h3>
+              <p>{item.body}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
       {/* HOW IT WORKS */}
       <section className="lp__section lp__section--alt" id="how">
         <div className="lp__section-head">
@@ -489,7 +559,7 @@ export default function Landing() {
             </div>
           ))}
         </div>
-        <p className="lp__pricing-note">* Trials are 14 days. Payment method required at signup — not charged until trial ends. Cancel anytime.</p>
+        <p className="lp__pricing-note">* Trials are 14 days. Payment method is required for paid-plan trials — not charged until the trial ends. Cancel anytime.</p>
       </section>
 
       {/* COMPLIANCE TABLE */}
@@ -575,7 +645,7 @@ export default function Landing() {
       {/* FINAL CTA */}
       <section className="lp__final-cta">
         <h2>Ready to Secure Your Organisation?</h2>
-        <p>Start free — or jump straight into a 14-day trial of a paid plan. No commitment until the trial ends.</p>
+        <p>Start on Free — or jump straight into a 14-day trial of a paid plan. No commitment until the trial ends.</p>
         <div className="lp__hero-actions">
           <button className="lp__btn lp__btn--primary" onClick={() => setShowPlanSelector(true)}>Start 14-Day Free Trial</button>
           <Link to="/support" className="lp__btn lp__btn--ghost">Talk to Gue Cyber →</Link>

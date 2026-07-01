@@ -26,6 +26,8 @@ const PublicHeader = ({
 	howTo,
 	whoTo,
 	pricingTo,
+	resourcesTo = '/resources',
+	statusTo = '/status',
 	loginTo = '/login',
 	showLogin = true,
 	trialLabel = 'Start Free Trial',
@@ -54,6 +56,8 @@ const PublicHeader = ({
 					<li>{renderNavTarget(howTo, 'How It Works')}</li>
 					<li>{renderNavTarget(whoTo, "Who It's For")}</li>
 					<li>{renderNavTarget(pricingTo, 'Pricing')}</li>
+					<li>{renderNavTarget(resourcesTo, 'Resources')}</li>
+					<li>{renderNavTarget(statusTo, 'Status')}</li>
 					<li><a href="https://www.guecyber.com" target="_blank" rel="noreferrer">Gue Cyber</a></li>
 				</ul>
 				{showLogin ? <Link to={loginTo} className="gi-nav-login">Log In</Link> : null}

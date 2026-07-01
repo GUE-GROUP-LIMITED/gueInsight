@@ -1,0 +1,147 @@
+.resources-page {
+  width: min(1180px, calc(100vw - 32px));
+  margin: 0 auto 72px;
+  color: #d9e7f5;
+}
+
+.resources-page__hero {
+  padding: 72px 0 40px;
+}
+
+.resources-page__eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.72rem;
+  color: #00c2e0;
+  margin-bottom: 12px;
+}
+
+.resources-page h1,
+.resources-page h2,
+.resources-page h3 {
+  font-family: 'Syne', sans-serif;
+  color: #eef6ff;
+}
+
+.resources-page h1 {
+  font-size: clamp(2.2rem, 5vw, 4rem);
+  line-height: 1.05;
+  max-width: 11ch;
+  margin-bottom: 16px;
+}
+
+.resources-page p {
+  max-width: 68ch;
+  line-height: 1.75;
+  color: #9fbbd0;
+}
+
+.resources-page__hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.resources-page__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0 18px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.resources-page__button--primary {
+  background: #00c2e0;
+  color: #05101c;
+}
+
+.resources-page__button--ghost {
+  border: 1px solid rgba(0, 194, 224, 0.22);
+  color: #00c2e0;
+}
+
+.resources-page__section {
+  padding: 42px 0;
+}
+
+.resources-page__section--alt {
+  background: rgba(12, 26, 43, 0.55);
+  padding-left: 16px;
+  padding-right: 16px;
+  border-radius: 16px;
+}
+
+.resources-page__section-head {
+  margin-bottom: 22px;
+}
+
+.resources-page__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.resources-page__grid--narrow {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.resources-page__card {
+  background: #0c1a2b;
+  border: 1px solid rgba(0, 194, 224, 0.16);
+  border-radius: 14px;
+  padding: 22px;
+}
+
+.resources-page__table-wrap {
+  overflow-x: auto;
+}
+
+.resources-page__table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 720px;
+}
+
+.resources-page__table th,
+.resources-page__table td {
+  text-align: left;
+  padding: 14px 12px;
+  border-bottom: 1px solid rgba(0, 194, 224, 0.12);
+}
+
+.resources-page__table th {
+  color: #eef6ff;
+}
+
+.resources-page__roi {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  align-items: end;
+}
+
+.resources-page__roi label,
+.resources-page__roi-result {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #0c1a2b;
+  border: 1px solid rgba(0, 194, 224, 0.16);
+  border-radius: 14px;
+  padding: 20px;
+}
+
+.resources-page__roi input {
+  width: 100%;
+}
+
+.resources-page__roi-result strong {
+  font-family: 'Syne', sans-serif;
+  font-size: 2rem;
+  color: #00e5a0;
+}

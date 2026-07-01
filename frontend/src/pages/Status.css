@@ -1,0 +1,80 @@
+.status-page {
+  width: min(1120px, calc(100vw - 32px));
+  margin: 0 auto 72px;
+  color: #d9e7f5;
+}
+
+.status-page__hero {
+  padding: 72px 0 34px;
+}
+
+.status-page__eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.72rem;
+  color: #00c2e0;
+  margin-bottom: 12px;
+}
+
+.status-page h1,
+.status-page h2,
+.status-page h3 {
+  font-family: 'Syne', sans-serif;
+  color: #eef6ff;
+}
+
+.status-page h1 {
+  font-size: clamp(2.2rem, 4.7vw, 3.8rem);
+  line-height: 1.05;
+  max-width: 12ch;
+  margin-bottom: 16px;
+}
+
+.status-page p {
+  max-width: 68ch;
+  color: #9fbbd0;
+  line-height: 1.75;
+}
+
+.status-page__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.status-page__card,
+.status-page__feed-item {
+  background: #0c1a2b;
+  border: 1px solid rgba(0, 194, 224, 0.16);
+  border-radius: 14px;
+  padding: 22px;
+}
+
+.status-page__pill {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(0, 229, 160, 0.12);
+  color: #00e5a0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-bottom: 14px;
+}
+
+.status-page__feed {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.status-page__feed-item span {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  color: #00c2e0;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}

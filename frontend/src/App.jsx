@@ -18,6 +18,8 @@ import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminCompliance from './pages/AdminCompliance';
 import Documentation from './pages/Documentation';
+import Resources from './pages/Resources';
+import Status from './pages/Status';
 import UserManagement from './pages/UserManagement';
 import Support from './pages/Support';
 import AdminSupport from './pages/AdminSupport';
@@ -62,6 +64,8 @@ const AppShell = () => {
         <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
         <Route path="/subscription" element={<Subscription />} />
         <Route path="/docs" element={<Documentation />} />
+        <Route path="/resources" element={<Resources />} />
+        <Route path="/status" element={<Status />} />
         <Route path="/payment" element={<ProtectedRoute><Payment /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute adminOnly={true}><AdminDashboard /></ProtectedRoute>} />
         <Route path="/admin/compliance" element={<ProtectedRoute adminOnly={true}><AdminCompliance /></ProtectedRoute>} />

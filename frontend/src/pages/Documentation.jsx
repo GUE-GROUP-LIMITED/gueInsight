@@ -7,7 +7,7 @@ import { useTranslation } from '../i18n/index';
 const DOC_OVERVIEW_CARDS = [
   {
     title: '1. Get started',
-    text: 'Create an account, verify your email, and land on the Starter plan with no card required.',
+    text: 'Create an account, verify your email, and land on the Free plan with no card required.',
     linkTo: '#getting-started',
     linkLabel: 'Open getting started',
   },
@@ -29,6 +29,13 @@ const DOC_OVERVIEW_CARDS = [
     linkTo: '#compliance',
     linkLabel: 'Open compliance guide',
   },
+];
+
+const DOC_API_ENDPOINTS = [
+  { method: 'GET', path: '/api/public/landing-snapshot', detail: 'Public dashboard snapshot used on the landing page.' },
+  { method: 'GET', path: '/auth/analytics/summary', detail: 'Authenticated analytics summary for dashboard reporting.' },
+  { method: 'GET', path: '/auth/dashboard/compliance', detail: 'Compliance posture and plan-tier overview.' },
+  { method: 'GET', path: '/auth/integrations', detail: 'List configured security tool integrations for the current account.' },
 ];
 
 const DOC_QUICK_LINKS = [
@@ -121,10 +128,12 @@ const Documentation = () => {
                 <h3>{t('docs.step2_title')}</h3>
                 <p>{t('docs.step2_intro')}</p>
                 <ul className="plan-list">
-                  <li><strong>{t('landing.starter')}</strong> — {t('docs.starter_desc')}</li>
-                  <li><strong>{t('landing.compliance_pro')}</strong> — {t('docs.compliance_pro_desc')}</li>
-                  <li><strong>{t('landing.enterprise_risk')}</strong> — {t('docs.enterprise_risk_desc')}</li>
-                  <li><strong>{t('docs.enterprise_elite_name')}</strong> — {t('docs.enterprise_elite_desc')}</li>
+                  <li><strong>Free</strong> — Free forever for basic analysis and learning</li>
+                  <li><strong>Starter</strong> — €49.90/month for small teams and individual professionals</li>
+                  <li><strong>Compliance Pro</strong> — €99.90/month for GDPR-focused threat detection</li>
+                  <li><strong>Enterprise Professional</strong> — €299.90/month for GDPR + NIS2 compliance</li>
+                  <li><strong>Enterprise Risk</strong> — €499/month for NIS2 + ISO27001 critical infrastructure</li>
+                  <li><strong>Enterprise Elite</strong> — €999/month for SOC2 readiness and EU data residency</li>
                 </ul>
                 <p>{t('docs.step2_outro_prefix')} <Link to="/subscription">{t('docs.subscription_link')}</Link> {t('docs.step2_outro_suffix')}</p>
               </div>
@@ -140,6 +149,38 @@ const Documentation = () => {
                   <li>{t('docs.step3_item5')}</li>
                 </ul>
               </div>
+            </div>
+          </section>
+
+          <section id="api-access" className="doc-section">
+            <div className="doc-section__header">
+              <p className="doc-section__eyebrow">API access</p>
+              <h2>Developer-facing endpoints</h2>
+              <p>API access is currently exposed for integrations and authenticated dashboard workflows. This is the minimal public reference.</p>
+            </div>
+
+            <div className="doc-subsection doc-card">
+              <table className="features-table">
+                <thead>
+                  <tr>
+                    <th>Method</th>
+                    <th>Endpoint</th>
+                    <th>Purpose</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {DOC_API_ENDPOINTS.map((endpoint) => (
+                    <tr key={endpoint.path}>
+                      <td>{endpoint.method}</td>
+                      <td><code>{endpoint.path}</code></td>
+                      <td>{endpoint.detail}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p style={{ marginTop: '16px' }}>
+                Authenticated endpoints require a logged-in session. For enterprise integrations, contact support for implementation help and access guidance.
+              </p>
             </div>
           </section>
 
@@ -467,7 +508,7 @@ const Documentation = () => {
 
           <section className="doc-cta">
             <h2>Ready to get started?</h2>
-            <p>Create a free Starter account today. No credit card required.</p>
+            <p>Create a free account today. Paid plans require a payment method for the 14-day trial.</p>
             <div className="cta-buttons">
               <Link to="/signup" className="btn btn--primary">Start Free</Link>
               <Link to="/support" className="btn btn--secondary">Contact Support</Link>
