@@ -24,6 +24,10 @@ def register_auth_privacy_routes(users_bp):
             f"Verify your account: {verify_url}\n\n"
             "If you did not request this account, you can ignore this email."
         )
+
+        if current_app.config.get('TESTING') or current_app.config.get('MAIL_SUPPRESS_SEND'):
+            return verify_url
+
         mail.send(msg)
         return verify_url
 
