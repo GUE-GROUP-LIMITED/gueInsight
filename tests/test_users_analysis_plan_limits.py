@@ -1,5 +1,6 @@
 import io
 import types
+from datetime import datetime
 
 import pytest
 from werkzeug.security import generate_password_hash
@@ -36,6 +37,8 @@ def _create_user(email="limit@example.com", password="password", role=UserRole.U
         last_name="Tester",
         phone_number="+1234567890",
         role=role,
+        is_active=True,
+        email_verified_at=datetime.utcnow(),
     )
     db.session.add(user)
     db.session.commit()

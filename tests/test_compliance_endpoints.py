@@ -43,6 +43,7 @@ def _create_user(email='user@example.com', role=UserRole.USER, is_active=True):
         phone_number='0000000000',
         role=role,
         is_active=is_active,
+        email_verified_at=datetime.utcnow() if is_active else None,
     )
     db.session.add(user)
     db.session.commit()

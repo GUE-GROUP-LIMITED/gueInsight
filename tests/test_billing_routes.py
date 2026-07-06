@@ -38,6 +38,7 @@ def _create_user(email='billing@example.com'):
         phone_number='0000000000',
         role=UserRole.USER,
         is_active=True,
+        email_verified_at=datetime.utcnow(),
     )
     db.session.add(user)
     db.session.commit()

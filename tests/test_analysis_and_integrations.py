@@ -53,7 +53,9 @@ def _create_user(email='test@example.com', password='password', role=UserRole.US
         first_name='Test',
         last_name='User',
         phone_number='+1234567890',
-        role=role
+        role=role,
+        is_active=True,
+        email_verified_at=datetime.utcnow(),
     )
     db.session.add(user)
     db.session.commit()
