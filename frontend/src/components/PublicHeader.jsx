@@ -1,4 +1,6 @@
+import { useContext } from 'react';
 import { Link } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
 import './PublicHeader.css';
 
 const renderNavTarget = (to, children) => {
@@ -34,12 +36,23 @@ const PublicHeader = ({
 	trialTo = '/signup',
 	onTrialClick,
 }) => {
+	const { user, logout, loading } = useContext(AuthContext);
+	const isAuthenticated = Boolean(user);
+
 	const TrialAction = onTrialClick ? 'button' : trialTo.startsWith('http') ? 'a' : Link;
 	const trialProps = onTrialClick
 		? { type: 'button', onClick: onTrialClick }
 		: trialTo.startsWith('http')
 			? { href: trialTo, target: '_blank', rel: 'noreferrer' }
 			: { to: trialTo };
+
+	const handleLogout = async () => {
+		try {
+			await logout();
+		} finally {
+			window.location.assign('/');
+		}
+	};
 
 	return (
 		<nav className="gi-nav" aria-label="Primary">
@@ -60,7 +73,13 @@ const PublicHeader = ({
 					<li>{renderNavTarget(statusTo, 'Status')}</li>
 					<li><a href="https://www.guecyber.com" target="_blank" rel="noreferrer">Gue Cyber</a></li>
 				</ul>
-				{showLogin ? <Link to={loginTo} className="gi-nav-login">Log In</Link> : null}
+				{showLogin && !loading ? (
+					isAuthenticated ? (
+						<button type="button" className="gi-nav-login" onClick={handleLogout}>Log Out</button>
+					) : (
+						<Link to={loginTo} className="gi-nav-login">Log In</Link>
+					)
+				) : null}
 				<TrialAction className="gi-nav-cta" {...trialProps}>{trialLabel}</TrialAction>
 			</div>
 		</nav>
