@@ -9,7 +9,7 @@
 }
 
 .app-navbar__container {
-  width: min(1220px, calc(100vw - 24px));
+  width: min(1460px, calc(100vw - 24px));
   margin: 0 auto;
   min-height: 74px;
   display: flex;
