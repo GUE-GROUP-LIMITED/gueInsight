@@ -15,7 +15,7 @@ def client():
     Config.SECURITY_PASSWORD_SALT = 'test-salt'
 
     app = create_app()
-    app.config.update(TESTING=True)
+    app.config.update(TESTING=True, MAIL_SUPPRESS_SEND=True)
 
     login_manager = LoginManager()
     login_manager.init_app(app)

@@ -13,7 +13,7 @@ def client():
     Config.SECURITY_PASSWORD_SALT = 'test-salt'
 
     app = create_app()
-    app.config.update(TESTING=True)
+    app.config.update(TESTING=True, MAIL_SUPPRESS_SEND=True)
 
     with app.app_context():
         yield app.test_client()

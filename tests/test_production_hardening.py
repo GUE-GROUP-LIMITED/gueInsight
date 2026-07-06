@@ -68,7 +68,7 @@ def test_create_app_skips_auto_schema_creation_in_production(monkeypatch):
 
 def test_production_error_handlers_return_safe_api_responses():
     app = Flask(__name__)
-    app.config.update(TESTING=True)
+    app.config.update(TESTING=True, MAIL_SUPPRESS_SEND=True)
     init_production_errors(app)
 
     @app.get('/api/boom')
