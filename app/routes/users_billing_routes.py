@@ -526,8 +526,12 @@ def register_billing_routes(users_bp):
         # Paid plan - redirect to Stripe Checkout
         try:
             import stripe
-            
-            stripe.api_key = current_app.config.get('STRIPE_SECRET_KEY')
+
+            stripe_key = (
+                current_app.config.get('STRIPE_SECRET_KEY')
+                or current_app.config.get('STRIPE_API_KEY')
+            )
+            stripe.api_key = stripe_key
             is_production = bool(current_app.config.get('IS_PRODUCTION', False))
             allow_nonprod_fallback = bool(
                 current_app.config.get('ALLOW_NONPROD_BILLING_FALLBACK', not is_production)
@@ -539,6 +543,10 @@ def register_billing_routes(users_bp):
                 if current_subscription and current_subscription.end_date and current_subscription.end_date > now:
                     start_date = current_subscription.end_date
                 return _create_internal_subscription(normalized_plan, normalized_plan, start_date)
+
+            if not stripe.api_key:
+                current_app.logger.error('Stripe key missing in production configuration for paid checkout')
+                return {'error': 'Billing is temporarily unavailable. Please contact support.'}, 503
             
             # Get or create Stripe customer
             stripe_customer_id = current_user.stripe_customer_id
@@ -553,33 +561,63 @@ def register_billing_routes(users_bp):
                 ur.db.session.add(current_user)
                 ur.db.session.commit()
             
-            # Get Stripe price ID for plan
+            # Prefer configured Stripe Price IDs, but support inline recurring price fallback.
             price_id = tier_config.get('stripe_price_id')
-            if not price_id:
-                return {'error': f'Stripe integration not configured for {normalized_plan} plan'}, 500
-            
-            # Create Stripe Checkout session
-            checkout_session = stripe.checkout.Session.create(
-                payment_method_types=['card'],
-                customer=stripe_customer_id,
-                line_items=[
+            amount_minor = int(tier_config.get('price_monthly_eur', 0) or 0)
+
+            def _inline_line_items():
+                return [
                     {
-                        'price': price_id,
+                        'price_data': {
+                            'currency': 'eur',
+                            'product_data': {'name': f"gueInsight - {tier_config.get('name', normalized_plan)}"},
+                            'unit_amount': amount_minor,
+                            'recurring': {'interval': 'month'},
+                        },
                         'quantity': 1,
                     }
-                ],
-                mode='subscription',
-                success_url=current_app.config.get('FRONTEND_URL', 'http://localhost:5173') + '/subscription?upgrade=success',
-                cancel_url=current_app.config.get('FRONTEND_URL', 'http://localhost:5173') + '/subscription?upgrade=cancelled',
-                metadata={
-                    'user_id': str(current_user.id),
-                    'tier': normalized_plan,
-                    'current_plan': current_plan or 'free',
-                    'trial_days': '14',
-                },
-                billing_address_collection='auto',
-                phone_number_collection={'enabled': True},
-            )
+                ]
+
+            line_items = [{'price': price_id, 'quantity': 1}] if price_id else _inline_line_items()
+
+            try:
+                checkout_session = stripe.checkout.Session.create(
+                    payment_method_types=['card'],
+                    customer=stripe_customer_id,
+                    line_items=line_items,
+                    mode='subscription',
+                    success_url=current_app.config.get('FRONTEND_URL', 'http://localhost:5173') + '/subscription?upgrade=success',
+                    cancel_url=current_app.config.get('FRONTEND_URL', 'http://localhost:5173') + '/subscription?upgrade=cancelled',
+                    metadata={
+                        'user_id': str(current_user.id),
+                        'tier': normalized_plan,
+                        'current_plan': current_plan or 'free',
+                        'trial_days': '14',
+                    },
+                    billing_address_collection='auto',
+                    phone_number_collection={'enabled': True},
+                )
+            except stripe.error.InvalidRequestError as stripe_error:
+                # If configured price IDs are stale/missing in Stripe, retry with inline price_data.
+                if price_id and 'No such price' in str(stripe_error):
+                    checkout_session = stripe.checkout.Session.create(
+                        payment_method_types=['card'],
+                        customer=stripe_customer_id,
+                        line_items=_inline_line_items(),
+                        mode='subscription',
+                        success_url=current_app.config.get('FRONTEND_URL', 'http://localhost:5173') + '/subscription?upgrade=success',
+                        cancel_url=current_app.config.get('FRONTEND_URL', 'http://localhost:5173') + '/subscription?upgrade=cancelled',
+                        metadata={
+                            'user_id': str(current_user.id),
+                            'tier': normalized_plan,
+                            'current_plan': current_plan or 'free',
+                            'trial_days': '14',
+                        },
+                        billing_address_collection='auto',
+                        phone_number_collection={'enabled': True},
+                    )
+                else:
+                    raise
             
             return {
                 'message': 'Checkout session created',
@@ -599,8 +637,8 @@ def register_billing_routes(users_bp):
                     start_date = current_subscription.end_date
                 return _create_internal_subscription(normalized_plan, normalized_plan, start_date)
 
-            current_app.logger.error(f"Failed to create Stripe checkout session: {e}")
-            return {'error': f'Failed to initiate checkout: {str(e)}'}, 500
+            current_app.logger.exception('Failed to create Stripe checkout session')
+            return {'error': 'Failed to initiate checkout. Please try again or contact support.'}, 500
 
     @users_bp.route('/auth/billing/receipt/raw/<int:txn_id>', methods=['GET'])
     @login_required
