@@ -1,12 +1,31 @@
-from flask import request, current_app, url_for, send_file
+from flask import request, current_app, url_for, send_file, redirect
 from flask_login import current_user, login_user, logout_user, login_required
+from flask_mail import Message
 from werkzeug.security import generate_password_hash
 import re
+from app import mail
 
 
 def register_auth_privacy_routes(users_bp):
     from app.routes import users_routes as ur
     email_pattern = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+    def _send_verification_email(user):
+        serializer = ur.get_serializer(current_app.config['SECRET_KEY'], current_app.config['SECURITY_PASSWORD_SALT'])
+        token = serializer.dumps({'email': user.email})
+        verify_url = url_for('users.auth_verify_email', token=token, _external=True)
+        msg = Message(
+            'Verify your GueInsight account',
+            recipients=[user.email],
+        )
+        msg.body = (
+            f"Hello {user.first_name or 'there'},\n\n"
+            "Thanks for creating your GueInsight account. Please verify your email address to activate access.\n\n"
+            f"Verify your account: {verify_url}\n\n"
+            "If you did not request this account, you can ignore this email."
+        )
+        mail.send(msg)
+        return verify_url
 
     @users_bp.route('/auth/session', methods=['GET'])
     def auth_session():
@@ -70,6 +89,26 @@ def register_auth_privacy_routes(users_bp):
             ur.db.session.commit()
             return {'error': 'This account is deactivated.'}, 403
 
+        if not bool(getattr(user, 'email_verified_at', None)):
+            # Strict verification gate for all accounts, including legacy records.
+            if bool(getattr(user, 'is_active', True)):
+                user.is_active = False
+
+            ur._log_security_event(
+                event_type='auth.login.unverified_email',
+                severity='warning',
+                user_id=user.id,
+                details={'email': email},
+            )
+            ur.db.session.commit()
+
+            try:
+                _send_verification_email(user)
+                return {'error': 'Please verify your email before signing in. A new verification link has been sent.'}, 403
+            except Exception:
+                current_app.logger.exception('Failed to resend verification email during login for %s', email)
+                return {'error': 'Please verify your email before signing in.'}, 403
+
         user.last_login_at = ur._utc_now()
         ur._log_security_event(
             event_type='auth.login.success',
@@ -81,17 +120,58 @@ def register_auth_privacy_routes(users_bp):
         login_user(user)
         return {'message': 'Login successful.', 'auth_source': auth_source, 'user': ur._serialize_auth_user(user)}, 200
 
+    @users_bp.route('/auth/verify-email/<token>', methods=['GET'])
+    def auth_verify_email(token):
+        frontend_url = (current_app.config.get('FRONTEND_URL') or 'http://localhost:5173').rstrip('/')
+        try:
+            serializer = ur.get_serializer(current_app.config['SECRET_KEY'], current_app.config['SECURITY_PASSWORD_SALT'])
+            data = serializer.loads(token, salt=current_app.config['SECURITY_PASSWORD_SALT'], max_age=60 * 60 * 48)
+            email = (data.get('email') if isinstance(data, dict) else data) or ''
+        except Exception:
+            return redirect(f'{frontend_url}/login?verified=invalid')
+
+        user = ur.User.query.filter_by(email=str(email).strip().lower()).first()
+        if not user:
+            return redirect(f'{frontend_url}/login?verified=invalid')
+
+        if not getattr(user, 'email_verified_at', None):
+            user.email_verified_at = ur._utc_now()
+        user.is_active = True
+        ur.db.session.commit()
+
+        try:
+            ur._create_user_notification(
+                user.id,
+                'system',
+                'Email verified',
+                'Your email address has been verified and your account is now active.',
+                severity='info',
+                action_url='/dashboard',
+            )
+            ur.db.session.commit()
+        except Exception:
+            ur.db.session.rollback()
+
+        return redirect(f'{frontend_url}/login?verified=1')
+
     @users_bp.route('/auth/signup', methods=['POST'])
     def auth_signup():
         ur._sync_user_profile_columns()
         payload = request.get_json(silent=True) or request.form
         email = (payload.get('email') or '').strip().lower()
         password = payload.get('password') or ''
+        now = ur._utc_now()
+        policy_version = current_app.config.get('GDPR_POLICY_VERSION', '2026-04')
+        terms_version = current_app.config.get('TERMS_VERSION', policy_version)
         first_name = (payload.get('first_name') or '').strip() or 'New'
         last_name = (payload.get('last_name') or '').strip() or 'User'
         phone_number = (payload.get('phone_number') or '').strip() or '0000000000'
         company = (payload.get('company') or '').strip() or None
         job_title = (payload.get('job_title') or '').strip() or None
+        country_of_residence = (payload.get('country_of_residence') or '').strip() or None
+        address = (payload.get('address') or '').strip() or None
+        city = (payload.get('city') or '').strip() or None
+        postal_code = (payload.get('postal_code') or '').strip() or None
         team_size = (payload.get('team_size') or '').strip() or None
         primary_use_case = (payload.get('primary_use_case') or '').strip() or None
         newsletter_opt_in = ur._parse_bool(payload.get('newsletter') or payload.get('newsletter_opt_in'))
@@ -107,6 +187,9 @@ def register_auth_privacy_routes(users_bp):
         if not email_pattern.match(email):
             return {'error': 'A valid email address is required.'}, 400
 
+        if not country_of_residence or not address or not city or not postal_code:
+            return {'error': 'Country, address, city, and postal code are required for account verification and billing compliance.'}, 400
+
         if len(password) < 10:
             return {'error': 'Password must be at least 10 characters.'}, 400
 
@@ -115,12 +198,43 @@ def register_auth_privacy_routes(users_bp):
 
         existing_user = ur.User.query.filter_by(email=email).first()
         if existing_user:
+            if not getattr(existing_user, 'email_verified_at', None):
+                existing_user.first_name = first_name or existing_user.first_name
+                existing_user.last_name = last_name or existing_user.last_name
+                existing_user.phone_number = phone_number or existing_user.phone_number
+                existing_user.company = company
+                existing_user.job_title = job_title
+                existing_user.country_of_residence = country_of_residence
+                existing_user.address = address
+                existing_user.city = city
+                existing_user.postal_code = postal_code
+                existing_user.team_size = team_size
+                existing_user.primary_use_case = primary_use_case
+                existing_user.password = generate_password_hash(password, method='pbkdf2:sha256')
+                existing_user.newsletter_opt_in = newsletter_opt_in
+                existing_user.gdpr_consent_at = now
+                existing_user.gdpr_consent_version = policy_version
+                existing_user.privacy_policy_version = policy_version
+                existing_user.terms_accepted_at = now
+                existing_user.marketing_consent_at = now if newsletter_opt_in else None
+                existing_user.is_active = False
+                ur.db.session.add(existing_user)
+                ur.db.session.commit()
+
+                try:
+                    verification_url = _send_verification_email(existing_user)
+                except Exception:
+                    current_app.logger.exception('Failed to send verification email for existing pending account')
+                    return {'error': 'Account saved, but verification email could not be sent. Please try again later.'}, 503
+
+                return {
+                    'message': 'Verification email sent. Please check your inbox to activate your account.',
+                    'verification_url': verification_url,
+                }, 200
+
             return {'error': 'An account with this email already exists.'}, 400
 
         hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
-        now = ur._utc_now()
-        policy_version = current_app.config.get('GDPR_POLICY_VERSION', '2026-04')
-        terms_version = current_app.config.get('TERMS_VERSION', policy_version)
         new_user = ur.User(
             email=email,
             password=hashed_password,
@@ -129,6 +243,10 @@ def register_auth_privacy_routes(users_bp):
             phone_number=phone_number,
             company=company,
             job_title=job_title,
+            country_of_residence=country_of_residence,
+            address=address,
+            city=city,
+            postal_code=postal_code,
             team_size=team_size,
             primary_use_case=primary_use_case,
             newsletter_opt_in=newsletter_opt_in,
@@ -137,6 +255,8 @@ def register_auth_privacy_routes(users_bp):
             privacy_policy_version=policy_version,
             terms_accepted_at=now,
             marketing_consent_at=now if newsletter_opt_in else None,
+            email_verified_at=None,
+            is_active=False,
             role=ur.UserRole.USER,
         )
         ur.db.session.add(new_user)
@@ -177,8 +297,17 @@ def register_auth_privacy_routes(users_bp):
         )
         ur.db.session.commit()
 
-        login_user(new_user)
-        return {'message': 'Signup successful.', 'user': ur._serialize_auth_user(new_user)}, 201
+        try:
+            verification_url = _send_verification_email(new_user)
+        except Exception:
+            current_app.logger.exception('Failed to send verification email for new signup')
+            return {'error': 'Account created, but verification email could not be sent. Please try again later.'}, 503
+
+        return {
+            'message': 'Verification email sent. Please check your inbox to activate your account.',
+            'verification_url': verification_url,
+            'user': ur._serialize_auth_user(new_user),
+        }, 201
 
     @users_bp.route('/auth/logout', methods=['POST'])
     def auth_logout():

@@ -1,5 +1,5 @@
-import { useContext, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useContext, useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { AuthContext, normalizeRole } from '../context/AuthContext';
 import PublicHeader from '../components/PublicHeader';
@@ -8,18 +8,28 @@ import { useTranslation } from '../i18n/index';
 
 const Login = () => {
 	const navigate = useNavigate();
+	const location = useLocation();
 	const { setAuthResponse } = useContext(AuthContext);
 	const { t } = useTranslation();
 	const [email, setEmail] = useState('');
 	const [password, setPassword] = useState('');
 	const [error, setError] = useState('');
+	const [success, setSuccess] = useState('');
 	const [showResetPassword, setShowResetPassword] = useState(false);
 	const [loading, setLoading] = useState(false);
+
+	useEffect(() => {
+		const params = new URLSearchParams(location.search);
+		if (params.get('verified') === '1') {
+			setSuccess(t('login.verified_message'));
+		}
+	}, [location.search, t]);
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 		setLoading(true);
 		setError('');
+		setSuccess('');
 		try {
 			const response = await api.post('/auth/login', { email, password });
 			setAuthResponse(response.data || {});
@@ -71,6 +81,7 @@ const Login = () => {
 						{loading ? t('login.signing') : t('login.log_in')}
 					</button>
 
+					{success && <p className="auth-pricing-message auth-pricing-message--success">{success}</p>}
 					{error && <p className="auth-pricing-message auth-pricing-message--error">{error}</p>}
 
 					<div className="auth-pricing-links auth-pricing-links--login">

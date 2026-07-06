@@ -52,6 +52,14 @@
     "placeholder_last": "Doe",
     "placeholder_company": "Acme Security",
     "placeholder_job": "Beveiligingsanalist",
+    "country_of_residence": "Land van verblijf",
+    "address": "Adres",
+    "city": "Stad",
+    "postal_code": "Postcode",
+    "placeholder_country": "België",
+    "placeholder_address": "Straat en huisnummer",
+    "placeholder_city": "Brussel",
+    "placeholder_postal_code": "1000",
     "placeholder_phone": "+1 555 010 9999",
     "placeholder_password": "Maak een sterk wachtwoord aan",
     "use_case_threat": "Dreigingsmonitoring",
@@ -59,6 +67,8 @@
     "use_case_client": "Klantbeveiligingsoperaties",
     "use_case_compliance": "Nalevingsrapportage",
     "use_case_general": "Algemene beveiligingsanalyse",
+    "verification_note": "We vereisen e-mailverificatie vóór activatie en verzamelen adresgegevens voor compliance- en factuurcontroles.",
+    "verification_sent": "Je account wacht op verificatie. Controleer je inbox voor de activatielink.",
     "create_account": "Account aanmaken",
     "creating": "Account wordt aangemaakt...",
     "accept_terms_error": "Accepteer de juridische voorwaarden en GDPR-toestemming om door te gaan."
@@ -74,6 +84,7 @@
     "signing": "Je wordt aangemeld...",
     "log_in": "Inloggen",
     "sign_up": "Aanmelden",
+    "verified_message": "Je e-mail is geverifieerd. Je kunt nu inloggen.",
     "reset_password": "Wachtwoord opnieuw instellen"
   },
   "pricing": {

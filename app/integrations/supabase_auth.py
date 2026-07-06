@@ -211,6 +211,11 @@ def sync_local_user_from_supabase(supabase_user: Dict[str, Any], fallback_role: 
     user.job_title = (user_metadata.get('job_title') or user.job_title)
     user.team_size = (user_metadata.get('team_size') or user.team_size)
     user.primary_use_case = (user_metadata.get('primary_use_case') or user.primary_use_case)
+    user.country_of_residence = (user_metadata.get('country_of_residence') or user.country_of_residence)
+    user.address = (user_metadata.get('address') or user.address)
+    user.city = (user_metadata.get('city') or user.city)
+    user.postal_code = (user_metadata.get('postal_code') or user.postal_code)
+    user.email_verified_at = user.email_verified_at or _utc_now()
     user.last_login_at = _utc_now()
     user.is_active = True
 

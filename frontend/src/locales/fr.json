@@ -171,6 +171,10 @@
     "work_email": "E-mail professionnel",
     "company": "Entreprise",
     "job_title": "Poste",
+    "country_of_residence": "Pays de résidence",
+    "address": "Adresse",
+    "city": "Ville",
+    "postal_code": "Code postal",
     "phone_number": "Numéro de téléphone",
     "team_size": "Taille de l'équipe",
     "primary_use_case": "Cas d'utilisation principal",
@@ -182,6 +186,10 @@
     "placeholder_last": "Doe",
     "placeholder_company": "Acme Security",
     "placeholder_job": "Analyste sécurité",
+    "placeholder_country": "Belgique",
+    "placeholder_address": "Rue et numéro",
+    "placeholder_city": "Bruxelles",
+    "placeholder_postal_code": "1000",
     "placeholder_phone": "+1 555 010 9999",
     "placeholder_password": "Créez un mot de passe fort",
     "use_case_threat": "Surveillance des menaces",
@@ -189,6 +197,8 @@
     "use_case_client": "Opérations de sécurité client",
     "use_case_compliance": "Rapports de conformité",
     "use_case_general": "Analyse de sécurité générale",
+    "verification_note": "Nous exigeons une vérification par e-mail avant l'activation et collectons les coordonnées pour la conformité et les contrôles de facturation.",
+    "verification_sent": "Votre compte est en attente de vérification. Vérifiez votre boîte de réception pour le lien d'activation.",
     "create_account": "Créer un compte",
     "creating": "Création du compte...",
     "accept_terms_error": "Veuillez accepter les conditions légales et le consentement RGPD pour continuer."
@@ -204,6 +214,7 @@
     "signing": "Connexion en cours...",
     "log_in": "Connexion",
     "sign_up": "S'inscrire",
+    "verified_message": "Votre e-mail a été vérifié. Vous pouvez maintenant vous connecter.",
     "reset_password": "Réinitialiser le mot de passe"
   },
   "pricing": {

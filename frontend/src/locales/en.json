@@ -169,6 +169,10 @@
     "work_email": "Work email",
     "company": "Company",
     "job_title": "Job title",
+    "country_of_residence": "Country of residence",
+    "address": "Address",
+    "city": "City",
+    "postal_code": "Postal code",
     "phone_number": "Phone number",
     "team_size": "Team size",
     "primary_use_case": "Primary use case",
@@ -180,6 +184,10 @@
     "placeholder_last": "Doe",
     "placeholder_company": "Acme Security",
     "placeholder_job": "Security Analyst",
+    "placeholder_country": "Belgium",
+    "placeholder_address": "Street and house number",
+    "placeholder_city": "Brussels",
+    "placeholder_postal_code": "1000",
     "placeholder_phone": "+1 555 010 9999",
     "placeholder_password": "Create a strong password",
     "use_case_threat": "Threat monitoring",
@@ -187,6 +195,8 @@
     "use_case_client": "Client security operations",
     "use_case_compliance": "Compliance reporting",
     "use_case_general": "General security analytics",
+    "verification_note": "We require email verification before activation and collect address details for compliance and billing checks.",
+    "verification_sent": "Your account is pending verification. Check your inbox for the activation link.",
     "create_account": "Create account",
     "creating": "Creating account...",
     "accept_terms_error": "Please accept legal terms and GDPR consent to continue."
@@ -202,6 +212,7 @@
     "signing": "Signing you in...",
     "log_in": "Log in",
     "sign_up": "Sign up",
+    "verified_message": "Your email has been verified. You can sign in now.",
     "reset_password": "Reset password"
   },
   "pricing": {

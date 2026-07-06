@@ -1,5 +1,5 @@
 import { useContext, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { AuthContext } from '../context/AuthContext';
 import PublicHeader from '../components/PublicHeader';
@@ -23,7 +23,6 @@ const useCaseOptions = [
 ];
 
 const Signup = () => {
-	const navigate = useNavigate();
 	const { setUser } = useContext(AuthContext);
 	const { t } = useTranslation();
 	const [firstName, setFirstName] = useState('');
@@ -32,6 +31,10 @@ const Signup = () => {
 	const [phoneNumber, setPhoneNumber] = useState('');
 	const [company, setCompany] = useState('');
 	const [jobTitle, setJobTitle] = useState('');
+	const [countryOfResidence, setCountryOfResidence] = useState('');
+	const [address, setAddress] = useState('');
+	const [city, setCity] = useState('');
+	const [postalCode, setPostalCode] = useState('');
 	const [teamSize, setTeamSize] = useState(teamSizeOptions[0]);
 	const [primaryUseCase, setPrimaryUseCase] = useState(useCaseOptions[0]);
 	const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -63,6 +66,10 @@ const Signup = () => {
 				password,
 				company,
 				job_title: jobTitle,
+				country_of_residence: countryOfResidence,
+				address,
+				city,
+				postal_code: postalCode,
 				team_size: teamSize,
 				primary_use_case: primaryUseCase,
 				newsletter,
@@ -70,8 +77,7 @@ const Signup = () => {
 				gdpr_consent: gdprConsent,
 			});
 			setUser(response.data?.user || null);
-			setSuccess(t('signup.create_account'));
-			navigate('/dashboard');
+			setSuccess(response.data?.message || t('signup.verification_sent'));
 		} catch (err) {
 			setError(err?.response?.data?.error || 'Signup failed.');
 		}
@@ -152,6 +158,58 @@ const Signup = () => {
 								onChange={(e) => setJobTitle(e.target.value)}
 								required
 							/>
+						</div>
+					</div>
+
+					<div className="auth-pricing-grid">
+						<div>
+							<label htmlFor="signup-country">{t('signup.country_of_residence')}</label>
+							<input
+								id="signup-country"
+								type="text"
+								placeholder={t('signup.placeholder_country')}
+								value={countryOfResidence}
+								onChange={(e) => setCountryOfResidence(e.target.value)}
+								required
+							/>
+						</div>
+						<div>
+							<label htmlFor="signup-city">{t('signup.city')}</label>
+							<input
+								id="signup-city"
+								type="text"
+								placeholder={t('signup.placeholder_city')}
+								value={city}
+								onChange={(e) => setCity(e.target.value)}
+								required
+							/>
+						</div>
+					</div>
+
+					<label htmlFor="signup-address">{t('signup.address')}</label>
+					<input
+						id="signup-address"
+						type="text"
+						placeholder={t('signup.placeholder_address')}
+						value={address}
+						onChange={(e) => setAddress(e.target.value)}
+						required
+					/>
+
+					<div className="auth-pricing-grid">
+						<div>
+							<label htmlFor="signup-postal-code">{t('signup.postal_code')}</label>
+							<input
+								id="signup-postal-code"
+								type="text"
+								placeholder={t('signup.placeholder_postal_code')}
+								value={postalCode}
+								onChange={(e) => setPostalCode(e.target.value)}
+								required
+							/>
+						</div>
+						<div>
+							<p className="auth-pricing-card__note">{t('signup.verification_note')}</p>
 						</div>
 					</div>
 
