@@ -174,7 +174,15 @@ const Subscription = () => {
 
 	return (
 		<>
-			<PublicHeader featureTo="/#features" howTo="/docs#getting-started" whoTo="/#who" pricingTo="/subscription" />
+			<PublicHeader
+				featureTo="/#features"
+				howTo="/docs#getting-started"
+				whoTo="/#who"
+				pricingTo="/subscription"
+				showLogin={!user}
+				trialLabel={user ? 'Dashboard' : 'Start Free Trial'}
+				trialTo={user ? '/dashboard' : '/signup'}
+			/>
 			<main className="auth-pricing-page auth-pricing-page--pricing">
 			<section className="pricing-hero">
 				<p className="auth-pricing-card__eyebrow">{t('pricing.title')}</p>
