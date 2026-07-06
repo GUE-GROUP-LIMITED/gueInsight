@@ -489,10 +489,37 @@ def register_billing_routes(users_bp):
             ur.db.session.add(transaction)
             ur.db.session.commit()
 
+            receipt_url = f'/auth/billing/{transaction.id}/receipt'
+
+            try:
+                ur._create_user_notification(
+                    current_user.id,
+                    'billing',
+                    'Subscription confirmed',
+                    f'Your {resolved_tier.get("name", resolved_plan)} subscription is active. Receipt #{transaction.id:06d} is available in billing.',
+                    severity='info',
+                    action_url=receipt_url,
+                )
+                ur.db.session.commit()
+            except Exception:
+                ur.db.session.rollback()
+                current_app.logger.exception('Failed to create subscription notification')
+
+            try:
+                _send_upgrade_receipt_email(
+                    current_user,
+                    transaction,
+                    resolved_plan,
+                    resolved_tier,
+                    current_plan or 'free',
+                )
+            except Exception:
+                current_app.logger.exception('Failed to send subscription receipt email')
+
             return {
                 'message': 'Subscription created',
                 'transaction_id': transaction.id,
-                'receipt_url': f'/auth/billing/{transaction.id}/receipt',
+                'receipt_url': receipt_url,
             }, 200
 
         # Get tier configuration

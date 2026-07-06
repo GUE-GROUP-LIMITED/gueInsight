@@ -92,6 +92,37 @@ def stripe_webhook():
                     db.session.add(txn)
                     db.session.commit()
 
+                    receipt_url = f'/auth/billing/{txn.id}/receipt'
+
+                    try:
+                        from app.routes import users_routes as ur
+                        ur._create_user_notification(
+                            user.id,
+                            'billing',
+                            'Subscription confirmed',
+                            f'Your {tier} subscription is active. Receipt #{txn.id:06d} is available in billing.',
+                            severity='info',
+                            action_url=receipt_url,
+                        )
+                        db.session.commit()
+                    except Exception:
+                        db.session.rollback()
+                        current_app.logger.exception('Failed to create billing notification after Stripe checkout')
+
+                    try:
+                        from app.routes.users_billing_routes import _send_upgrade_receipt_email
+                        from app.subscription_service import COMPLIANCE_TIERS
+                        tier_config = COMPLIANCE_TIERS.get(tier, {'name': tier})
+                        _send_upgrade_receipt_email(
+                            user,
+                            txn,
+                            tier,
+                            tier_config,
+                            user.current_plan or 'free',
+                        )
+                    except Exception:
+                        current_app.logger.exception('Failed to send billing receipt email after Stripe checkout')
+
                     # log security event
                     se = SecurityEvent(user_id=user.id, event_type='subscription_created', severity='info', details=f"Subscription to {tier} created via Stripe checkout session {session.get('id')}")
                     db.session.add(se)
