@@ -84,7 +84,8 @@ def create_app():
         wants_json = request.path.startswith('/auth') or request.path.startswith('/api') or request.path.startswith('/admin')
         if wants_json:
             return {'error': 'Authentication required'}, 401
-        return redirect('/login')
+        frontend_url = (app.config.get('FRONTEND_URL') or 'http://localhost:5173').rstrip('/')
+        return redirect(f'{frontend_url}/login')
 
     @app.route('/')
     def index():
@@ -97,6 +98,16 @@ def create_app():
             'service': 'gueInsight backend',
             'environment': app.config.get('APP_ENV', 'development'),
         }, 200
+
+    @app.route('/login', methods=['GET'])
+    def frontend_login_redirect():
+        frontend_url = (app.config.get('FRONTEND_URL') or 'http://localhost:5173').rstrip('/')
+        return redirect(f'{frontend_url}/login')
+
+    @app.route('/signup', methods=['GET'])
+    def frontend_signup_redirect():
+        frontend_url = (app.config.get('FRONTEND_URL') or 'http://localhost:5173').rstrip('/')
+        return redirect(f'{frontend_url}/signup')
 
     @app.route('/<path:path>', methods=['OPTIONS'])
     def handle_options(path):
