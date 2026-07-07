@@ -86,7 +86,7 @@ const Signup = () => {
 
 	return (
 		<>
-			<PublicHeader featureTo="/#features" howTo="/docs#getting-started" whoTo="/#who" pricingTo="/#pricing" trialTo="/signup" />
+			<PublicHeader featureTo="/#features" howTo="/docs#getting-started" whoTo="/#who" pricingTo="/subscription" trialTo="/subscription" />
 			<main className="auth-pricing-page auth-pricing-page--auth">
 				<section className="auth-pricing-card auth-pricing-card--signup">
 				<div className="auth-pricing-card__head">

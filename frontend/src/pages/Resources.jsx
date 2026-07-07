@@ -59,7 +59,7 @@ export default function Resources() {
 
   return (
     <>
-      <PublicHeader featureTo="/#features" howTo="/docs#getting-started" whoTo="/#who" pricingTo="/subscription" resourcesTo="/resources" statusTo="/status" trialTo="/signup" />
+      <PublicHeader featureTo="/#features" howTo="/docs#getting-started" whoTo="/#who" pricingTo="/subscription" resourcesTo="/resources" statusTo="/status" trialTo="/subscription" />
       <main className="resources-page">
         <section className="resources-page__hero">
           <p className="resources-page__eyebrow">Growth & distribution</p>

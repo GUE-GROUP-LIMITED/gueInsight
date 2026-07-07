@@ -314,6 +314,28 @@ def test_subscription_upgrade_validation(client):
     assert invalid_upgrade.status_code == 400
 
 
+def test_free_user_can_start_paid_trial_checkout_session(client):
+    user = _create_user(email='trialstarter@example.com')
+    _set_subscription(user.id, plan='free', days=3650)
+
+    login_response = _login(client, email='trialstarter@example.com')
+    assert login_response.status_code == 200
+
+    response = client.post('/checkout/create-session', json={'tier_id': 'starter', 'trial_days': 14})
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert 'checkout_url' in payload
+
+    latest_subscription = (
+        Subscription.query
+        .filter_by(user_id=user.id)
+        .order_by(Subscription.end_date.desc())
+        .first()
+    )
+    assert latest_subscription.plan == 'starter'
+    assert latest_subscription.is_trial is True
+
+
 def test_admin_can_update_deletion_request_status(client):
     _create_user(email='admin2@example.com', role=UserRole.ADMIN)
     member = _create_user(email='delete-me@example.com')

@@ -460,6 +460,12 @@ def register_billing_routes(users_bp):
         if current_subscription and current_plan_normalized == normalized_plan and current_subscription.end_date and current_subscription.end_date >= now:
             return {'error': 'You are already on this active plan.'}, 400
 
+        def _expire_current_subscription_immediately():
+            if current_subscription and current_subscription.end_date and current_subscription.end_date > now:
+                current_subscription.end_date = now
+                ur.db.session.add(current_subscription)
+                ur.db.session.commit()
+
         def _create_internal_subscription(plan_to_store: str, resolved_plan: str, start_date):
             resolved_tier = COMPLIANCE_TIERS.get(resolved_plan, {})
             period_days = 365 if not resolved_tier.get('requires_payment', False) else 30
@@ -530,9 +536,8 @@ def register_billing_routes(users_bp):
         requires_payment = tier_config.get('requires_payment', False)
         
         if not requires_payment:
+            _expire_current_subscription_immediately()
             start_date = now
-            if current_subscription and current_subscription.end_date and current_subscription.end_date > now:
-                start_date = current_subscription.end_date
 
             return _create_internal_subscription(
                 normalized_plan,
@@ -545,9 +550,8 @@ def register_billing_routes(users_bp):
             plan_to_store = requested_plan if requested_plan in {
                 'premium_individual', 'premium_small_business', 'premium_large_business'
             } else normalized_plan
+            _expire_current_subscription_immediately()
             start_date = now
-            if current_subscription and current_subscription.end_date and current_subscription.end_date > now:
-                start_date = current_subscription.end_date
             return _create_internal_subscription(plan_to_store, normalized_plan, start_date)
         
         # Paid plan - redirect to Stripe Checkout
@@ -566,9 +570,8 @@ def register_billing_routes(users_bp):
 
             if not stripe.api_key and allow_nonprod_fallback:
                 # Local/staging fallback to keep non-production environments functional without Stripe secrets.
+                _expire_current_subscription_immediately()
                 start_date = now
-                if current_subscription and current_subscription.end_date and current_subscription.end_date > now:
-                    start_date = current_subscription.end_date
                 return _create_internal_subscription(normalized_plan, normalized_plan, start_date)
 
             if not stripe.api_key:

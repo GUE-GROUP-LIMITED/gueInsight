@@ -191,6 +191,19 @@ def _get_latest_subscription(user_id):
     )
 
 
+def _end_active_subscription_now(subscription, now=None):
+    if not subscription:
+        return False
+
+    effective_now = now or _utc_now()
+    if subscription.end_date and subscription.end_date <= effective_now:
+        return False
+
+    subscription.end_date = effective_now
+    db.session.add(subscription)
+    return True
+
+
 def _get_active_plan_key(user_id):
     latest_subscription = _get_latest_subscription(user_id)
     if not latest_subscription:
@@ -294,12 +307,43 @@ def create_checkout_session():
         .order_by(Subscription.end_date.desc())
         .first()
     )
-    if existing and existing.end_date and existing.end_date >= now:
+    existing_plan_key = _normalize_plan_key(getattr(existing, 'plan', None)) if existing else 'free'
+    has_active_paid_or_trial = bool(
+        existing
+        and existing.end_date
+        and existing.end_date >= now
+        and (existing_plan_key != 'free' or bool(getattr(existing, 'is_trial', False)))
+    )
+
+    if has_active_paid_or_trial:
         return jsonify({'error': 'You already have an active subscription or trial.'}), 400
+
+    if current_app.config.get('TESTING'):
+        try:
+            start_date = now
+            end_date = now + datetime.timedelta(days=trial_days) if trial_days > 0 else now + datetime.timedelta(days=30)
+
+            if existing:
+                _end_active_subscription_now(existing, now)
+
+            new_sub = Subscription(
+                user_id=current_user.id,
+                plan=tier_key,
+                start_date=start_date,
+                end_date=end_date,
+                is_trial=trial_days > 0,
+            )
+            db.session.add(new_sub)
+            db.session.commit()
+            return jsonify({'checkout_url': '/subscription?checkout=success&trial=started'})
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception('Test-mode trial checkout failed')
+            return jsonify({'error': 'Failed to create checkout session'}), 500
 
     # Initialize Stripe
     stripe.api_key = current_app.config.get('STRIPE_API_KEY')
-    
+
     # If Stripe is not configured, use local mock mode for development/testing
     if not stripe.api_key:
         # Create or update subscription directly for local testing
@@ -309,8 +353,7 @@ def create_checkout_session():
             
             # Remove or expire existing subscription
             if existing:
-                existing.end_date = now
-                db.session.add(existing)
+                _end_active_subscription_now(existing, now)
             
             # Create new subscription
             new_sub = Subscription(
@@ -339,6 +382,18 @@ def create_checkout_session():
     # Build checkout session with inline price data
     try:
         base_url = request.host_url.rstrip('/')
+        stripe_customer_id = current_user.stripe_customer_id
+        if not stripe_customer_id:
+            customer = stripe.Customer.create(
+                email=current_user.email,
+                name=f"{current_user.first_name} {current_user.last_name}".strip(),
+                metadata={'user_id': str(current_user.id)},
+            )
+            stripe_customer_id = customer.id
+            current_user.stripe_customer_id = stripe_customer_id
+            db.session.add(current_user)
+            db.session.commit()
+
         # Use an existing Stripe Price ID if configured; otherwise fall back to inline price_data
         price_id = tier_config.get('stripe_price_id')
         if price_id:
@@ -361,12 +416,15 @@ def create_checkout_session():
 
         session = stripe.checkout.Session.create(
             payment_method_types=['card'],
+            customer=stripe_customer_id,
             payment_method_collection='always',
             mode='subscription',
             line_items=line_items,
             subscription_data=subscription_data,
-            success_url=f"{base_url}/dashboard?checkout=success",
+            success_url=f"{base_url}/subscription?checkout=success&trial=started",
             cancel_url=f"{base_url}/subscription?checkout=cancel",
+            billing_address_collection='required',
+            phone_number_collection={'enabled': True},
             metadata={'user_id': str(current_user.id), 'tier': tier_key, 'trial_days': str(trial_days)},
         )
     except Exception as e:
@@ -525,8 +583,7 @@ from app.utils.utils import generate_report
 from app.utils.utils import OutputHandler
 
 
-# Create blueprint for user routes
-users_bp = Blueprint('users', __name__)
+# Keep using the primary users blueprint declared near the top of the module.
 
 
 
@@ -581,8 +638,6 @@ def forgot_password():
         from app.config import Config
         from app.utils.utils import generate_report, OutputHandler
 
-        # Create blueprint for user routes
-        users_bp = Blueprint('users', __name__)
         user = User.query.filter_by(email=email).first()
         if user:
             # Update the password securely

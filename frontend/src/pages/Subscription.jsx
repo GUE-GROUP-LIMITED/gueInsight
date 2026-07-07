@@ -1,5 +1,5 @@
 import { useContext, useEffect, useMemo, useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import PlanSelector from '../components/PlanSelector';
 import PublicHeader from '../components/PublicHeader';
@@ -41,6 +41,7 @@ const PLAN_RANK = {
 const Subscription = () => {
 	const { user } = useContext(AuthContext);
 	const { t } = useTranslation();
+	const location = useLocation();
 	const role = String(user?.role || '').toLowerCase();
 	const [showPlanSelector, setShowPlanSelector] = useState(false);
 	const plans = useMemo(() => ([
@@ -117,6 +118,10 @@ const Subscription = () => {
 	const [planSelectorTarget, setPlanSelectorTarget] = useState('starter');
 	const [actionLoadingPlan, setActionLoadingPlan] = useState(null);
 	const [actionError, setActionError] = useState('');
+	const selectedPlanFromQuery = useMemo(() => {
+		const queryPlan = new URLSearchParams(location.search).get('plan');
+		return queryPlan ? normalizePlan(queryPlan) : null;
+	}, [location.search]);
 
 	useEffect(() => {
 		if (!user) {
@@ -181,15 +186,19 @@ const Subscription = () => {
 				pricingTo="/subscription"
 				showLogin={!user}
 				trialLabel={user ? 'Dashboard' : 'Start Free Trial'}
-				trialTo={user ? '/dashboard' : '/signup'}
+				trialTo={user ? '/dashboard' : '/subscription'}
 			/>
 			<main className="auth-pricing-page auth-pricing-page--pricing">
 			<section className="pricing-hero">
 				<p className="auth-pricing-card__eyebrow">{t('pricing.title')}</p>
 				<h1>{t('pricing.hero_subtitle')}</h1>
 				<p>{t('pricing_page.hero_body')}</p>
+				<p><strong>Free trials require a valid payment method.</strong> Your card or bank payment method is saved at checkout, charged when the trial expires, and charged immediately if you upgrade to a new paid tier during or after the trial.</p>
 				{showCurrentPlan ? (
 				<p><strong>{t('pricing.current_plan')}</strong> {humanizePlan(currentPlan)}. {!isFreePlan ? 'You can upgrade or downgrade anytime.' : 'Upgrade to unlock advanced features.'}</p>
+				) : null}
+				{!user && selectedPlanFromQuery ? (
+					<p><strong>Selected plan:</strong> {humanizePlan(selectedPlanFromQuery)}. Sign in or create your account, then start the trial with payment details on file.</p>
 				) : null}
 			</section>
 
@@ -277,10 +286,10 @@ const Subscription = () => {
 									{getActionLabel(plan.key, plan.cta)}
 								</button>
 							)
-						) : plan.key === 'starter' ? (
+						) : plan.key === 'free' ? (
 							<Link to="/signup" className="pricing-card__cta">{plan.cta}</Link>
 						) : (
-							<Link to="/login" className="pricing-card__cta">{plan.cta}</Link>
+							<Link to={`/login?next=${encodeURIComponent(`/subscription?plan=${plan.key}&trial=1`)}`} className="pricing-card__cta">Start 14-day trial</Link>
 						)}
 					</article>
 				))}
@@ -294,6 +303,7 @@ const Subscription = () => {
 					initialSelected={planSelectorTarget}
 					currentPlan={currentPlan}
 					isPaidSubscriber={isPaidSubscriber}
+					trialMode={!isPaidSubscriber}
 				/>
 			)}
 		</main>

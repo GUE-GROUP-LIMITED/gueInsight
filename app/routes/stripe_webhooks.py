@@ -64,6 +64,19 @@ def stripe_webhook():
                     current_app.logger.info(f"Skipping duplicate webhook processing for session {session_id}")
                 else:
                     start = datetime.utcnow()
+                    active_subscriptions = (
+                        Subscription.query
+                        .filter(
+                            Subscription.user_id == user.id,
+                            Subscription.end_date != None,
+                            Subscription.end_date > start,
+                        )
+                        .all()
+                    )
+                    for active_subscription in active_subscriptions:
+                        active_subscription.end_date = start
+                        db.session.add(active_subscription)
+
                     end = None
                     if stripe_subscription and stripe_subscription.get('current_period_end'):
                         end = datetime.utcfromtimestamp(stripe_subscription['current_period_end'])

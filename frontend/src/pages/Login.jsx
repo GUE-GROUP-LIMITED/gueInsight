@@ -34,10 +34,11 @@ const Login = () => {
 			const response = await api.post('/auth/login', { email, password });
 			setAuthResponse(response.data || {});
 			setShowResetPassword(false);
+			const nextTarget = new URLSearchParams(location.search).get('next');
 			const role = normalizeRole(
 				response.data?.user?.role || response.data?.user?.app_metadata?.role || response.data?.user?.user_metadata?.role
 			);
-			navigate(role === 'admin' ? '/admin' : '/dashboard');
+			navigate(role === 'admin' ? '/admin' : (nextTarget || '/dashboard'));
 		} catch (err) {
 			setError(err?.response?.data?.error || 'Login failed.');
 			setShowResetPassword(true);
@@ -47,7 +48,7 @@ const Login = () => {
 
 	return (
 		<>
-			<PublicHeader featureTo="/#features" howTo="/docs#getting-started" whoTo="/#who" pricingTo="/#pricing" trialTo="/signup" />
+			<PublicHeader featureTo="/#features" howTo="/docs#getting-started" whoTo="/#who" pricingTo="/subscription" trialTo="/subscription" />
 			<main className="auth-pricing-page auth-pricing-page--auth">
 				<section className="auth-pricing-card">
 				<div className="auth-pricing-card__head">
@@ -85,7 +86,7 @@ const Login = () => {
 					{error && <p className="auth-pricing-message auth-pricing-message--error">{error}</p>}
 
 					<div className="auth-pricing-links auth-pricing-links--login">
-						<Link to="/signup">{t('login.sign_up')}</Link>
+						<Link to={`/signup${location.search || ''}`}>{t('login.sign_up')}</Link>
 						{showResetPassword ? <Link to="/reset-password">{t('login.reset_password')}</Link> : null}
 					</div>
 				</form>

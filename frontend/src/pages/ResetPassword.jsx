@@ -64,7 +64,7 @@ const ResetPassword = () => {
 
   return (
     <>
-      {!isAdminFlow ? <PublicHeader featureTo="/#features" howTo="/docs#getting-started" whoTo="/#who" pricingTo="/#pricing" trialTo="/signup" /> : null}
+      {!isAdminFlow ? <PublicHeader featureTo="/#features" howTo="/docs#getting-started" whoTo="/#who" pricingTo="/subscription" trialTo="/subscription" /> : null}
       <main className="auth-pricing-page auth-pricing-page--auth">
         <section className="auth-pricing-card">
         <div className="auth-pricing-card__head">

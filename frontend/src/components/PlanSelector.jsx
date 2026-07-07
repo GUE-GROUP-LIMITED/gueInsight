@@ -20,7 +20,7 @@ const PLAN_RANK = {
   enterprise_elite: 5,
 };
 
-const PlanSelector = ({ onClose, initialSelected, currentPlan = 'free', isPaidSubscriber = false }) => {
+const PlanSelector = ({ onClose, initialSelected, currentPlan = 'free', isPaidSubscriber = false, trialMode = false }) => {
   const { t } = useTranslation();
   const initial = PLANS.some((p) => p.key === initialSelected) ? initialSelected : PLANS[0].key;
   const [selected, setSelected] = useState(initial);
@@ -28,7 +28,7 @@ const PlanSelector = ({ onClose, initialSelected, currentPlan = 'free', isPaidSu
   const [error, setError] = useState(null);
 
   const actionLabel = useMemo(() => {
-    if (!isPaidSubscriber) return t('plan_selector.subscribe_now');
+    if (trialMode) return 'Start 14-day free trial';
     const targetRank = PLAN_RANK[selected] ?? 0;
     const currentRank = PLAN_RANK[currentPlan] ?? 0;
     if (targetRank > currentRank) return 'Upgrade plan';
@@ -41,7 +41,9 @@ const PlanSelector = ({ onClose, initialSelected, currentPlan = 'free', isPaidSu
     setError(null);
     try {
       const planToUse = initialSelected && PLANS.some((p) => p.key === initialSelected) ? initialSelected : selected;
-      const resp = await api.post('/auth/subscription/upgrade', { plan: planToUse });
+      const resp = trialMode
+        ? await api.post('/checkout/create-session', { tier_id: planToUse, trial_days: 14 })
+        : await api.post('/auth/subscription/upgrade', { plan: planToUse });
       if (resp.status === 200) {
         // Check if Stripe checkout URL is provided (for paid plans)
         if (resp.data?.checkout_url) {
@@ -75,11 +77,14 @@ const PlanSelector = ({ onClose, initialSelected, currentPlan = 'free', isPaidSu
             const selectedPlanObj = PLANS.find((p) => p.key === initialSelected);
             return (
               <>
-                <h3>Confirm your plan change</h3>
+                <h3>{trialMode ? 'Confirm your free trial' : 'Confirm your plan change'}</h3>
                 <div className="plan-selector__single">
                   <div className="plan-card__name" style={{fontSize: '1.3rem', marginBottom: '12px'}}>{selectedPlanObj.name}</div>
                   <div className="plan-card__price" style={{fontSize: '1.2rem', marginBottom: '8px'}}>€{(selectedPlanObj.price_cents/100).toFixed(2)}/month</div>
                   <div className="plan-card__desc" style={{marginBottom: '16px'}}>{selectedPlanObj.desc}</div>
+                  {trialMode ? (
+                    <p style={{margin: 0, color: '#39556e'}}>Your payment method will be validated and saved now. You will be charged automatically when the 14-day trial ends, or immediately if you switch to another paid plan during the trial.</p>
+                  ) : null}
                 </div>
                 {error ? <div className="plan-selector__error">{error}</div> : null}
                 <div className="plan-selector__actions">

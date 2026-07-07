@@ -17,7 +17,7 @@ const updates = [
 export default function Status() {
   return (
     <>
-      <PublicHeader featureTo="/#features" howTo="/docs#getting-started" whoTo="/#who" pricingTo="/subscription" resourcesTo="/resources" statusTo="/status" trialTo="/signup" />
+      <PublicHeader featureTo="/#features" howTo="/docs#getting-started" whoTo="/#who" pricingTo="/subscription" resourcesTo="/resources" statusTo="/status" trialTo="/subscription" />
       <main className="status-page">
         <section className="status-page__hero">
           <p className="status-page__eyebrow">Public status</p>

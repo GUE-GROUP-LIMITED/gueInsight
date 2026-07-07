@@ -71,7 +71,7 @@ const Documentation = () => {
 
   return (
     <>
-      <PublicHeader featureTo="/#features" howTo="#getting-started" whoTo="/#who" pricingTo="/#pricing" trialTo="/signup" />
+      <PublicHeader featureTo="/#features" howTo="#getting-started" whoTo="/#who" pricingTo="/subscription" trialTo="/subscription" />
       <main className="documentation-page">
         <section className="documentation-page__hero">
           <div className="documentation-page__hero-copy">
