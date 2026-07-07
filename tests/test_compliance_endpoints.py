@@ -209,7 +209,7 @@ def test_admin_can_invite_and_activate_admin_account(client):
         '/auth/admin-invite/accept',
         json={
             'token': token,
-            'password': 'StrongPass123',
+            'password': 'Aaaaaaaa11',
             'first_name': 'Activated',
             'last_name': 'Admin',
         },
