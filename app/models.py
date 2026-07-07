@@ -77,6 +77,13 @@ class User(db.Model, UserMixin):
     email_verified_at = Column(DateTime, nullable=True)
     last_login_at = Column(DateTime, nullable=True)
     role = Column(SQLAlchemyEnum(UserRole), nullable=False, default=UserRole.USER)
+    admin_role = Column(String(50), nullable=True)
+    admin_permissions = Column(String(4000), nullable=True)
+    invited_by_user_id = Column(Integer, nullable=True)
+    invited_at = Column(DateTime, nullable=True)
+    invitation_expires_at = Column(DateTime, nullable=True)
+    invitation_token_hash = Column(String(128), nullable=True)
+    invitation_accepted_at = Column(DateTime, nullable=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=_utc_now)
     

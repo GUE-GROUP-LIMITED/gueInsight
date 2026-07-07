@@ -9,7 +9,7 @@ import './UserManagement.css';
 const sidebarItems = [
   { label: 'nav.home', href: '/admin', icon: 'home' },
   { label: 'nav.subscribers', href: '/admin/users', active: true, icon: 'users' },
-  { label: 'admin_users.roles', href: '#roles', icon: 'roles' },
+  { label: 'admin_users.roles', href: '/admin/access', icon: 'roles' },
   { label: 'admin_users.tables', href: '#accounts', icon: 'table' },
   { label: 'admin_users.logs', href: '#logs', icon: 'logs' },
 ];

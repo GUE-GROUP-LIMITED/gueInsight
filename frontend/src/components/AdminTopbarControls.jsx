@@ -246,6 +246,9 @@ const AdminTopbarControls = ({
             <Link to="/admin/profile" className="admin-topbar-controls__menu-item" role="menuitem" onClick={closeMenus}>
               Settings
             </Link>
+            <Link to="/admin/access" className="admin-topbar-controls__menu-item" role="menuitem" onClick={closeMenus}>
+              Roles & access
+            </Link>
             <button type="button" className="admin-topbar-controls__menu-item" onClick={handleShare} role="menuitem">
               Share
             </button>

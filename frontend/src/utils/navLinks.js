@@ -6,6 +6,7 @@ export function getNavLinks(user, homePath = '/', t) {
       return [
         { to: '/admin',            label: t ? t('nav.admin_dashboard') : 'Admin Dashboard' },
         { to: '/admin/users',      label: t ? t('nav.subscribers')     : 'Subscribers' },
+        { to: '/admin/access',     label: 'Access Control' },
         { to: '/admin/compliance', label: 'Compliance' },
       ];
     }

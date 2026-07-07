@@ -181,6 +181,69 @@ def test_admin_can_view_compliance_endpoints(client):
     assert 'deletion_requests' in requests_response.get_json()
 
 
+def test_admin_can_invite_and_activate_admin_account(client):
+    _create_user(email='inviter-admin@example.com', role=UserRole.ADMIN)
+    login_response = _login(client, email='inviter-admin@example.com')
+    assert login_response.status_code == 200
+
+    invite_response = client.post(
+        '/api/admin/invitations',
+        json={
+            'email': 'new-staff-admin@example.com',
+            'first_name': 'New',
+            'last_name': 'Staff',
+            'phone_number': '1111111111',
+            'admin_role': 'billing_admin',
+            'permissions': ['billing:manage', 'reports:view_all', 'users:invite', 'users:activate', 'audit:read'],
+        },
+    )
+    assert invite_response.status_code == 201
+    invite_payload = invite_response.get_json()
+    assert 'activation_link' in invite_payload
+    assert invite_payload['invited_user']['is_active'] is False
+
+    activation_link = invite_payload['activation_link']
+    token = activation_link.split('token=', 1)[1]
+
+    accept_response = client.post(
+        '/auth/admin-invite/accept',
+        json={
+            'token': token,
+            'password': 'StrongPass123',
+            'first_name': 'Activated',
+            'last_name': 'Admin',
+        },
+    )
+    assert accept_response.status_code == 200
+    accept_payload = accept_response.get_json()
+    assert accept_payload['user']['is_active'] is True
+    assert accept_payload['user']['invitation_accepted_at'] is not None
+
+    activated_user = User.query.filter_by(email='new-staff-admin@example.com').first()
+    assert activated_user is not None
+    assert activated_user.email_verified_at is not None
+
+
+def test_admin_can_update_admin_role_and_permissions(client):
+    _create_user(email='access-admin@example.com', role=UserRole.ADMIN)
+    target_admin = _create_user(email='target-admin@example.com', role=UserRole.ADMIN)
+
+    login_response = _login(client, email='access-admin@example.com')
+    assert login_response.status_code == 200
+
+    update_response = client.patch(
+        f'/api/admin/users/{target_admin.id}/access',
+        json={
+            'admin_role': 'auditor',
+            'permissions': ['audit:read', 'reports:view_all'],
+        },
+    )
+    assert update_response.status_code == 200
+    payload = update_response.get_json()
+    assert payload['user']['admin_role'] == 'auditor'
+    assert payload['user']['admin_permissions'] == ['audit:read', 'reports:view_all']
+
+
 def test_auth_session_and_logout_flow(client):
     _create_user(email='session@example.com')
 

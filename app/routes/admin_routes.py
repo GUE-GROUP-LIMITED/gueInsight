@@ -1,14 +1,18 @@
 
+import hashlib
+import json
 import os
-from datetime import datetime, timezone
-from flask import Blueprint, request, redirect, url_for, flash, abort
+import secrets
+from datetime import datetime, timezone, timedelta
+from flask import Blueprint, request, redirect, url_for, flash, abort, current_app
 from flask_login import login_required, current_user, login_user, logout_user
+from flask_mail import Message
 from werkzeug.security import generate_password_hash
-from sqlalchemy import true
-from app import db
+from sqlalchemy import true, inspect, text
+from app import db, mail
 from app.models import User, Logs, FileUpload, UserRole, Alert, AlertRule, Subscription, SupportTicket, SupportTicketStatus, DataDeletionRequest, SecurityEvent, NIS2IncidentReport, VcisoUpdate
 from app.forms import AdminLoginForm, AdminSignupForm, AlertRuleForm
-from app.utils.utils import check_admin_role  
+from app.utils.utils import check_admin_role, get_serializer
 from app.admin_services import some_condition_for_critical_alert
 from app.utils.decorators import admin_required
 from app.routes.admin_security_routes import register_admin_security_routes
@@ -17,6 +21,75 @@ from app.routes.admin_operations_routes import register_operations_routes
 
 # Blueprint for admin routes
 admin_bp = Blueprint('admin', __name__)
+
+_ADMIN_SCHEMA_SYNCED = False
+
+ADMIN_PERMISSION_CATALOG = {
+    'users:invite': 'Invite new staff users.',
+    'users:activate': 'Activate invited staff users.',
+    'users:disable': 'Deactivate staff accounts.',
+    'users:role_assign': 'Assign staff roles and privileges.',
+    'roles:manage': 'Manage role templates and privilege sets.',
+    'security:policy_manage': 'Manage security and compliance policies.',
+    'security:incident_manage': 'Manage incidents and security events.',
+    'billing:manage': 'Manage billing and subscription settings.',
+    'integrations:manage': 'Manage enterprise integrations.',
+    'reports:view_all': 'View all enterprise reports.',
+    'audit:read': 'View audit trail and security logs.',
+    'org:settings_manage': 'Manage organization-level settings.',
+}
+
+ADMIN_ROLE_TEMPLATES = {
+    'owner': sorted(ADMIN_PERMISSION_CATALOG.keys()),
+    'super_admin': sorted(ADMIN_PERMISSION_CATALOG.keys()),
+    'admin': sorted(ADMIN_PERMISSION_CATALOG.keys()),
+    'security_admin': [
+        'audit:read',
+        'reports:view_all',
+        'security:incident_manage',
+        'security:policy_manage',
+        'users:invite',
+        'users:activate',
+        'users:role_assign',
+    ],
+    'billing_admin': [
+        'audit:read',
+        'billing:manage',
+        'reports:view_all',
+        'users:invite',
+        'users:activate',
+    ],
+    'auditor': [
+        'audit:read',
+        'reports:view_all',
+    ],
+}
+
+
+def _sync_admin_access_columns():
+    global _ADMIN_SCHEMA_SYNCED
+    if _ADMIN_SCHEMA_SYNCED:
+        return
+
+    inspector = inspect(db.engine)
+    existing_columns = {column['name'] for column in inspector.get_columns('user')}
+    missing_columns = {
+        'admin_role': 'VARCHAR(50) NULL',
+        'admin_permissions': 'VARCHAR(4000) NULL',
+        'invited_by_user_id': 'INTEGER NULL',
+        'invited_at': 'TIMESTAMP NULL',
+        'invitation_expires_at': 'TIMESTAMP NULL',
+        'invitation_token_hash': 'VARCHAR(128) NULL',
+        'invitation_accepted_at': 'TIMESTAMP NULL',
+    }
+
+    with db.engine.begin() as connection:
+        for column_name, ddl in missing_columns.items():
+            if column_name in existing_columns:
+                continue
+            connection.execute(text(f'ALTER TABLE "user" ADD COLUMN {column_name} {ddl}'))
+
+    _ADMIN_SCHEMA_SYNCED = True
 
 
 def _utc_now():
@@ -50,7 +123,115 @@ def _is_super_admin(user):
     return bool(first_admin and first_admin.id == user.id)
 
 
+def _normalize_admin_role(role_like, default='admin'):
+    role_text = str(role_like or default).strip().lower().replace(' ', '_')
+    if role_text not in ADMIN_ROLE_TEMPLATES:
+        return None
+    return role_text
+
+
+def _normalize_permissions(permissions_like):
+    if permissions_like is None:
+        return None
+
+    if isinstance(permissions_like, str):
+        raw_text = permissions_like.strip()
+        if not raw_text:
+            return []
+        try:
+            parsed = json.loads(raw_text)
+            if isinstance(parsed, list):
+                permissions_like = parsed
+            else:
+                permissions_like = [item.strip() for item in raw_text.split(',') if item.strip()]
+        except Exception:
+            permissions_like = [item.strip() for item in raw_text.split(',') if item.strip()]
+
+    if not isinstance(permissions_like, list):
+        return None
+
+    normalized = sorted({str(item).strip().lower() for item in permissions_like if str(item).strip()})
+    if any(item not in ADMIN_PERMISSION_CATALOG for item in normalized):
+        return None
+    return normalized
+
+
+def _effective_permissions(user):
+    if not user or not _is_admin(user):
+        return []
+
+    if _is_super_admin(user):
+        return sorted(ADMIN_PERMISSION_CATALOG.keys())
+
+    custom_permissions = _normalize_permissions(getattr(user, 'admin_permissions', None))
+    if custom_permissions is not None:
+        return custom_permissions
+
+    admin_role = _normalize_admin_role(getattr(user, 'admin_role', None), default='admin') or 'admin'
+    return sorted(ADMIN_ROLE_TEMPLATES.get(admin_role, ADMIN_ROLE_TEMPLATES['admin']))
+
+
+def _has_permission(user, permission):
+    return permission in _effective_permissions(user)
+
+
+def _safe_admin_role_for_user(user):
+    if not _is_admin(user):
+        return None
+    return _normalize_admin_role(getattr(user, 'admin_role', None), default='admin') or 'admin'
+
+
+def _hash_token(token):
+    return hashlib.sha256(str(token).encode('utf-8')).hexdigest()
+
+
+def _invite_serializer():
+    return get_serializer(current_app.config['SECRET_KEY'], current_app.config['SECURITY_PASSWORD_SALT'])
+
+
+def _build_admin_invite_link(token):
+    frontend_url = (current_app.config.get('FRONTEND_URL') or 'http://localhost:5173').rstrip('/')
+    return f'{frontend_url}/activate-admin?token={token}'
+
+
+def _send_admin_invite_email(user, activation_link, invited_by_user):
+    message = Message(
+        'You have been invited to GueInsight Admin',
+        recipients=[user.email],
+    )
+    inviter_name = f"{invited_by_user.first_name} {invited_by_user.last_name}".strip()
+    message.body = (
+        f"Hello {user.first_name or 'there'},\n\n"
+        f"{inviter_name or invited_by_user.email} invited you to join GueInsight administration.\n\n"
+        f"Activate your account: {activation_link}\n\n"
+        "This invitation link is single-use and expires automatically.\n"
+        "If you were not expecting this invitation, you can ignore this email."
+    )
+
+    if current_app.config.get('TESTING') or current_app.config.get('MAIL_SUPPRESS_SEND'):
+        return
+
+    mail.send(message)
+
+
+def _can_grant_role_or_permissions(actor, target_role, target_permissions):
+    if _is_super_admin(actor):
+        return True, None
+
+    actor_permissions = set(_effective_permissions(actor))
+    requested_permissions = set(target_permissions or [])
+
+    if target_role in {'owner', 'super_admin'}:
+        return False, 'Only super admin can assign owner or super_admin roles.'
+
+    if not requested_permissions.issubset(actor_permissions):
+        return False, 'You can only grant permissions that you already have.'
+
+    return True, None
+
+
 def _serialize_admin_user(user):
+    _sync_admin_access_columns()
     role = getattr(user, 'role', None)
     role_value = getattr(role, 'value', role)
     latest_subscription = (
@@ -72,7 +253,12 @@ def _serialize_admin_user(user):
         'primary_use_case': getattr(user, 'primary_use_case', None),
         'newsletter_opt_in': bool(getattr(user, 'newsletter_opt_in', False)),
         'role': role_value,
+        'admin_role': _safe_admin_role_for_user(user),
+        'admin_permissions': _effective_permissions(user) if _is_admin(user) else [],
         'is_active': bool(getattr(user, 'is_active', True)),
+        'invited_at': user.invited_at.isoformat() if getattr(user, 'invited_at', None) else None,
+        'invitation_expires_at': user.invitation_expires_at.isoformat() if getattr(user, 'invitation_expires_at', None) else None,
+        'invitation_accepted_at': user.invitation_accepted_at.isoformat() if getattr(user, 'invitation_accepted_at', None) else None,
         'created_at': user.created_at.isoformat() if getattr(user, 'created_at', None) else None,
         'current_plan': current_plan,
         'plan_expires_at': latest_subscription.end_date.isoformat() if latest_subscription and latest_subscription.end_date else None,
@@ -204,6 +390,7 @@ register_operations_routes(admin_bp)
 
 @admin_bp.route('/admin_login', methods=['GET', 'POST'])
 def admin_login():
+    _sync_admin_access_columns()
     # Redirect to admin dashboard if already logged in
     if current_user.is_authenticated:
         return redirect(url_for('admin.admin_dashboard'))
@@ -234,6 +421,7 @@ def admin_login():
 
 @admin_bp.route('/admin_signup', methods=['GET', 'POST'])
 def admin_signup():
+    _sync_admin_access_columns()
     bootstrap_token = os.getenv('ADMIN_BOOTSTRAP_TOKEN')
     provided_token = request.form.get('bootstrap_token') or request.headers.get('X-Admin-Bootstrap-Token')
     has_existing_admin = User.query.filter_by(role=UserRole.ADMIN).first() is not None
@@ -288,13 +476,252 @@ def admin_signup():
         first_name=first_name,
         last_name=last_name,
         phone_number=phone_number,
-        role=UserRole.ADMIN
+        role=UserRole.ADMIN,
+        admin_role='super_admin' if not has_existing_admin else 'admin',
+        invitation_accepted_at=_utc_now(),
+        email_verified_at=_utc_now(),
+        is_active=True,
     )
     db.session.add(new_user)
     db.session.commit()
 
     flash('Account created successfully. Please log in.', 'success')
     return {"message": "Admin account created."}, 201
+
+
+@admin_bp.route('/api/admin/access/metadata', methods=['GET'])
+@login_required
+def admin_access_metadata():
+    _sync_admin_access_columns()
+    check_admin_role(current_user)
+    return {
+        'roles': {
+            role_key: {
+                'permissions': sorted(permissions),
+            }
+            for role_key, permissions in ADMIN_ROLE_TEMPLATES.items()
+        },
+        'permissions': ADMIN_PERMISSION_CATALOG,
+        'current_user': {
+            'id': current_user.id,
+            'email': current_user.email,
+            'role': _safe_admin_role_for_user(current_user),
+            'permissions': _effective_permissions(current_user),
+            'is_super_admin': _is_super_admin(current_user),
+        },
+    }, 200
+
+
+@admin_bp.route('/api/admin/invitations', methods=['POST'])
+@login_required
+def admin_create_invitation():
+    _sync_admin_access_columns()
+    check_admin_role(current_user)
+
+    if not _has_permission(current_user, 'users:invite'):
+        return {'error': 'Missing permission: users:invite'}, 403
+
+    payload = request.get_json(silent=True) or {}
+    email = (payload.get('email') or '').strip().lower()
+    first_name = (payload.get('first_name') or '').strip() or 'Invited'
+    last_name = (payload.get('last_name') or '').strip() or 'Admin'
+    phone_number = (payload.get('phone_number') or '').strip() or '0000000000'
+    admin_role = _normalize_admin_role(payload.get('admin_role'), default='admin')
+    custom_permissions = _normalize_permissions(payload.get('permissions'))
+
+    if not email:
+        return {'error': 'email is required.'}, 400
+    if admin_role is None:
+        return {'error': f"admin_role must be one of: {', '.join(sorted(ADMIN_ROLE_TEMPLATES.keys()))}"}, 400
+
+    assigned_permissions = custom_permissions
+    if assigned_permissions is None:
+        assigned_permissions = sorted(ADMIN_ROLE_TEMPLATES[admin_role])
+
+    grant_allowed, grant_error = _can_grant_role_or_permissions(current_user, admin_role, assigned_permissions)
+    if not grant_allowed:
+        return {'error': grant_error}, 403
+
+    existing_user = User.query.filter_by(email=email).first()
+    if existing_user and getattr(existing_user, 'role', None) == UserRole.USER:
+        return {'error': 'A non-admin user with this email already exists. Promote that account instead.'}, 409
+
+    now = _utc_now()
+    expiry_hours = int(current_app.config.get('ADMIN_INVITE_EXPIRY_HOURS', 72))
+    expires_at = now + timedelta(hours=expiry_hours)
+
+    if not existing_user:
+        random_password = secrets.token_urlsafe(24)
+        existing_user = User(
+            email=email,
+            password=generate_password_hash(random_password, method='pbkdf2:sha256'),
+            first_name=first_name,
+            last_name=last_name,
+            phone_number=phone_number,
+            role=UserRole.ADMIN,
+            admin_role=admin_role,
+            admin_permissions=json.dumps(assigned_permissions),
+            invited_by_user_id=current_user.id,
+            invited_at=now,
+            invitation_expires_at=expires_at,
+            is_active=False,
+            email_verified_at=None,
+            invitation_accepted_at=None,
+        )
+        db.session.add(existing_user)
+        db.session.flush()
+    else:
+        if _is_admin(existing_user) and bool(getattr(existing_user, 'invitation_accepted_at', None)) and bool(getattr(existing_user, 'is_active', True)):
+            return {'error': 'An active admin account with this email already exists.'}, 409
+        existing_user.first_name = first_name
+        existing_user.last_name = last_name
+        existing_user.phone_number = phone_number
+        existing_user.role = UserRole.ADMIN
+        existing_user.admin_role = admin_role
+        existing_user.admin_permissions = json.dumps(assigned_permissions)
+        existing_user.invited_by_user_id = current_user.id
+        existing_user.invited_at = now
+        existing_user.invitation_expires_at = expires_at
+        existing_user.invitation_accepted_at = None
+        existing_user.email_verified_at = None
+        existing_user.is_active = False
+
+    invite_payload = {
+        'purpose': 'admin_invite_activation',
+        'email': existing_user.email,
+        'user_id': existing_user.id,
+        'nonce': secrets.token_urlsafe(12),
+    }
+    token = _invite_serializer().dumps(invite_payload)
+    existing_user.invitation_token_hash = _hash_token(token)
+
+    activation_link = _build_admin_invite_link(token)
+
+    try:
+        _send_admin_invite_email(existing_user, activation_link, current_user)
+    except Exception:
+        current_app.logger.exception('Failed to send admin invitation email for %s', existing_user.email)
+        db.session.rollback()
+        return {'error': 'Unable to send invitation email right now.'}, 503
+
+    db.session.commit()
+    Logs.log_action(current_user, f"Invited admin account {existing_user.email} with role {admin_role}")
+
+    response_payload = {
+        'message': 'Invitation sent.',
+        'invited_user': _serialize_admin_user(existing_user),
+        'expires_at': expires_at.isoformat(),
+    }
+    if current_app.config.get('TESTING') or current_app.config.get('MAIL_SUPPRESS_SEND'):
+        response_payload['activation_link'] = activation_link
+
+    return response_payload, 201
+
+
+@admin_bp.route('/auth/admin-invite/accept', methods=['POST'])
+def admin_accept_invitation():
+    _sync_admin_access_columns()
+    payload = request.get_json(silent=True) or request.form
+    token = (payload.get('token') or '').strip()
+    password = payload.get('password') or ''
+    first_name = (payload.get('first_name') or '').strip()
+    last_name = (payload.get('last_name') or '').strip()
+    phone_number = (payload.get('phone_number') or '').strip()
+
+    if not token or not password:
+        return {'error': 'token and password are required.'}, 400
+    if len(password) < 10:
+        return {'error': 'Password must be at least 10 characters.'}, 400
+    if not any(ch.isupper() for ch in password) or not any(ch.islower() for ch in password) or not any(ch.isdigit() for ch in password):
+        return {'error': 'Password must include uppercase, lowercase, and numeric characters.'}, 400
+
+    try:
+        max_age_seconds = int(current_app.config.get('ADMIN_INVITE_MAX_AGE_SECONDS', 72 * 3600))
+        invite_payload = _invite_serializer().loads(token, max_age=max_age_seconds)
+    except Exception:
+        return {'error': 'Invitation is invalid or expired.'}, 400
+
+    if not isinstance(invite_payload, dict) or invite_payload.get('purpose') != 'admin_invite_activation':
+        return {'error': 'Invitation is invalid or expired.'}, 400
+
+    user_id = int(invite_payload.get('user_id') or 0)
+    email = (invite_payload.get('email') or '').strip().lower()
+    invited_user = User.query.filter_by(id=user_id, email=email).first()
+    if not invited_user:
+        return {'error': 'Invitation is invalid or expired.'}, 400
+
+    if _hash_token(token) != (getattr(invited_user, 'invitation_token_hash', None) or ''):
+        return {'error': 'Invitation is invalid or expired.'}, 400
+
+    now = _utc_now()
+    if getattr(invited_user, 'invitation_accepted_at', None):
+        return {'error': 'Invitation has already been used.'}, 400
+    if getattr(invited_user, 'invitation_expires_at', None) and invited_user.invitation_expires_at < now:
+        return {'error': 'Invitation has expired.'}, 400
+
+    invited_user.password = generate_password_hash(password, method='pbkdf2:sha256')
+    if first_name:
+        invited_user.first_name = first_name
+    if last_name:
+        invited_user.last_name = last_name
+    if phone_number:
+        invited_user.phone_number = phone_number
+
+    invited_user.role = UserRole.ADMIN
+    invited_user.is_active = True
+    invited_user.email_verified_at = now
+    invited_user.invitation_accepted_at = now
+    invited_user.invitation_token_hash = None
+
+    db.session.commit()
+
+    return {
+        'message': 'Account activated successfully. You can now sign in.',
+        'user': _serialize_admin_user(invited_user),
+    }, 200
+
+
+@admin_bp.route('/api/admin/users/<int:user_id>/access', methods=['PATCH'])
+@login_required
+def admin_update_user_access(user_id):
+    _sync_admin_access_columns()
+    check_admin_role(current_user)
+
+    if not _has_permission(current_user, 'users:role_assign'):
+        return {'error': 'Missing permission: users:role_assign'}, 403
+
+    target_user = User.query.get_or_404(user_id)
+    if not _is_admin(target_user):
+        return {'error': 'Target account is not an admin user.'}, 400
+
+    payload = request.get_json(silent=True) or {}
+    next_admin_role = _normalize_admin_role(payload.get('admin_role'), default=_safe_admin_role_for_user(target_user) or 'admin')
+    next_permissions = _normalize_permissions(payload.get('permissions'))
+    if 'permissions' in payload and next_permissions is None:
+        return {'error': 'permissions must be an array of valid permission keys.'}, 400
+
+    if next_admin_role is None:
+        return {'error': f"admin_role must be one of: {', '.join(sorted(ADMIN_ROLE_TEMPLATES.keys()))}"}, 400
+
+    if next_permissions is None:
+        next_permissions = sorted(ADMIN_ROLE_TEMPLATES[next_admin_role])
+
+    grant_allowed, grant_error = _can_grant_role_or_permissions(current_user, next_admin_role, next_permissions)
+    if not grant_allowed:
+        return {'error': grant_error}, 403
+
+    if current_user.id == target_user.id and 'users:role_assign' not in next_permissions:
+        return {'error': 'You cannot remove your own users:role_assign permission.'}, 400
+
+    target_user.admin_role = next_admin_role
+    target_user.admin_permissions = json.dumps(next_permissions)
+    db.session.commit()
+
+    Logs.log_action(current_user, f"Updated access for admin #{target_user.id} ({target_user.email})")
+    return {
+        'message': 'Admin access updated.',
+        'user': _serialize_admin_user(target_user),
+    }, 200
 
 @admin_bp.route('/admin_dashboard', methods=['GET', 'POST'])
 @login_required

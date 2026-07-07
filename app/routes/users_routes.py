@@ -673,6 +673,15 @@ def _serialize_auth_user(user):
     _sync_user_profile_columns()
     role = getattr(user, 'role', None)
     role_value = getattr(role, 'value', role)
+    raw_admin_permissions = getattr(user, 'admin_permissions', None)
+    parsed_admin_permissions = []
+    if isinstance(raw_admin_permissions, str) and raw_admin_permissions.strip():
+        try:
+            loaded_permissions = json.loads(raw_admin_permissions)
+            if isinstance(loaded_permissions, list):
+                parsed_admin_permissions = [str(item) for item in loaded_permissions if str(item).strip()]
+        except Exception:
+            parsed_admin_permissions = []
     latest_subscription = _get_latest_subscription(user.id)
     active_plan_key = _get_active_plan_key(user.id)
     current_plan = active_plan_key if active_plan_key != 'free' else 'Free'
@@ -702,6 +711,8 @@ def _serialize_auth_user(user):
         'email_verified_at': user.email_verified_at.isoformat() if getattr(user, 'email_verified_at', None) else None,
         'is_active': bool(getattr(user, 'is_active', True)),
         'role': role_value,
+        'admin_role': getattr(user, 'admin_role', None),
+        'admin_permissions': parsed_admin_permissions,
         'current_plan': current_plan,
         'analysis_limits': analysis_limits,
         'avatar_url': getattr(preference, 'avatar_url', None),

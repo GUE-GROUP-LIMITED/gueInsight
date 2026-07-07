@@ -23,6 +23,8 @@ import Status from './pages/Status';
 import UserManagement from './pages/UserManagement';
 import Support from './pages/Support';
 import AdminSupport from './pages/AdminSupport';
+import AdminAccessControl from './pages/AdminAccessControl';
+import ActivateAdmin from './pages/ActivateAdmin';
 import NotFound from './pages/NotFound';
 
 const ScrollToTop = () => {
@@ -37,7 +39,7 @@ const ScrollToTop = () => {
 
 const AppShell = () => {
   const location = useLocation();
-  const publicHeaderRoutes = ['/', '/login', '/signup', '/reset-password', '/docs', '/subscription'];
+  const publicHeaderRoutes = ['/', '/login', '/signup', '/reset-password', '/docs', '/subscription', '/activate-admin'];
   const showNavbar = !publicHeaderRoutes.includes(location.pathname) && !location.pathname.startsWith('/admin');
   const showFooter = !location.pathname.startsWith('/admin');
 
@@ -50,6 +52,7 @@ const AppShell = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/activate-admin" element={<ActivateAdmin />} />
         <Route path="/dashboard" element={<ProtectedRoute userOnly={true}><DashboardShell /></ProtectedRoute>} />
         <Route path="/dashboard/workspace" element={<ProtectedRoute userOnly={true}><Navigate to="/threatintel" replace /></ProtectedRoute>} />
         <Route path="/threatintel" element={<ProtectedRoute userOnly={true}><DashboardShell /></ProtectedRoute>} />
@@ -74,6 +77,7 @@ const AppShell = () => {
         <Route path="/admin/change-password" element={<ProtectedRoute adminOnly={true}><ResetPassword /></ProtectedRoute>} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/users" element={<ProtectedRoute adminOnly={true}><UserManagement /></ProtectedRoute>} />
+        <Route path="/admin/access" element={<ProtectedRoute adminOnly={true}><AdminAccessControl /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       {showFooter && <Footer />}

@@ -9,6 +9,7 @@ import './AdminDashboard.css';
 const sidebarItems = [
   { label: 'nav.home', href: '#dashboard', active: true, icon: 'home' },
   { label: 'admin_dashboard.compliance', href: '/admin/compliance', icon: 'shield' },
+  { label: 'Access Control', href: '/admin/access', icon: 'shield' },
   { label: 'vCISO Publisher', href: '#vciso-publisher', icon: 'shield' },
   { label: 'admin_dashboard.widgets', href: '#widgets', icon: 'widgets' },
   { label: 'admin_dashboard.tables', href: '#tables', icon: 'table' },
