@@ -218,8 +218,15 @@ def process_alert_async(self, alert_id, processor_type='webhook'):
                 
                 if slack_integration and slack_integration.is_active:
                     try:
+                        from app.security import decrypt_sensitive_value
+
+                        try:
+                            webhook_url = decrypt_sensitive_value(slack_integration.api_key_encrypted)
+                        except ValueError:
+                            webhook_url = slack_integration.api_key_encrypted
+
                         resp = requests.post(
-                            slack_integration.api_key_encrypted,  # Store webhook URL as "API key"
+                            webhook_url,
                             json={
                                 'text': f"🚨 Security Alert: {alert.description}",
                                 'attachments': [

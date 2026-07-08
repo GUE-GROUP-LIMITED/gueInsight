@@ -2,8 +2,32 @@ from flask import Blueprint, request, current_app, jsonify
 import stripe
 from app.models import Subscription, User, BillingTransaction, BillingStatus, db, SecurityEvent
 from datetime import datetime, timedelta
+from collections import deque
+from time import time
+
+from app.notifications.production_alerts import alerts_enabled, emit_operational_alert
 
 stripe_bp = Blueprint('stripe', __name__)
+_webhook_failures = deque(maxlen=2048)
+
+
+def _record_webhook_failure(reason, details=None):
+    now = int(time())
+    window_seconds = 600
+    min_allowed = now - window_seconds
+
+    while _webhook_failures and _webhook_failures[0] < min_allowed:
+        _webhook_failures.popleft()
+    _webhook_failures.append(now)
+
+    threshold = int(current_app.config.get('WEBHOOK_FAILURE_ALERT_THRESHOLD', 2))
+    if len(_webhook_failures) >= threshold and alerts_enabled(current_app):
+        emit_operational_alert(
+            category='stripe_webhook_failure',
+            message=f"{len(_webhook_failures)} Stripe webhook failures in {window_seconds // 60} minutes.",
+            details={'reason': reason, 'details': details, 'threshold': threshold},
+            min_interval_seconds=300,
+        )
 
 @stripe_bp.route('/webhook/stripe', methods=['POST'])
 def stripe_webhook():
@@ -16,11 +40,13 @@ def stripe_webhook():
             event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
         except Exception as e:
             current_app.logger.exception('Stripe webhook signature verification failed')
+            _record_webhook_failure('invalid_signature', {'error': str(e)})
             return jsonify({'error': 'invalid signature'}), 400
     else:
         try:
             event = request.get_json()
         except Exception:
+            _record_webhook_failure('invalid_payload')
             return jsonify({'error': 'invalid payload'}), 400
 
     # Handle checkout.session.completed
@@ -142,5 +168,6 @@ def stripe_webhook():
                     db.session.commit()
         except Exception:
             current_app.logger.exception('Failed to persist stripe checkout subscription')
+            _record_webhook_failure('subscription_persistence_failed', {'event_type': event.get('type')})
 
     return jsonify({'status': 'received'}), 200

@@ -30,6 +30,7 @@ from app.models import (
     VcisoUpdate,
 )
 from app.subscription_service import COMPLIANCE_TIERS
+from app.security import encrypt_sensitive_value, decrypt_sensitive_value
 
 logger = logging.getLogger(__name__)
 
@@ -998,11 +999,16 @@ def register_enterprise_routes(users_bp):
         if existing:
             return jsonify({'error': f'{tool_name} already configured'}), 409
         
-        # TODO: Encrypt API key before storing
+        try:
+            encrypted_api_key = encrypt_sensitive_value(api_key)
+        except Exception:
+            logger.exception('Failed to encrypt integration API key for user_id=%s', current_user.id)
+            return jsonify({'error': 'Unable to securely store integration key at this time.'}), 500
+
         integration = SecurityToolIntegration(
             user_id=current_user.id,
             tool_name=tool_name,
-            api_key_encrypted=api_key  # Should be encrypted!
+            api_key_encrypted=encrypted_api_key
         )
         
         db.session.add(integration)
@@ -1047,12 +1053,18 @@ def register_enterprise_routes(users_bp):
         
         # Test based on tool type
         try:
+            # Backwards-compatible: if legacy plaintext records exist, use as-is.
+            try:
+                api_key = decrypt_sensitive_value(integration.api_key_encrypted)
+            except ValueError:
+                api_key = integration.api_key_encrypted
+
             if integration.tool_name == 'virustotal':
                 from app.integrations.virustotal_integration import test_connection
-                result = test_connection(integration.api_key_encrypted)
+                result = test_connection(api_key)
             elif integration.tool_name == 'abuseipdb':
                 from app.integrations.abuseipdb_integration import test_connection
-                result = test_connection(integration.api_key_encrypted)
+                result = test_connection(api_key)
             else:
                 return jsonify({'error': f'Test not available for {integration.tool_name}'}), 400
             

@@ -25,6 +25,8 @@ import Support from './pages/Support';
 import AdminSupport from './pages/AdminSupport';
 import AdminAccessControl from './pages/AdminAccessControl';
 import ActivateAdmin from './pages/ActivateAdmin';
+import Privacy from './pages/Privacy';
+import Terms from './pages/Terms';
 import NotFound from './pages/NotFound';
 
 const ScrollToTop = () => {
@@ -39,7 +41,7 @@ const ScrollToTop = () => {
 
 const AppShell = () => {
   const location = useLocation();
-  const publicHeaderRoutes = ['/', '/login', '/signup', '/reset-password', '/docs', '/subscription', '/activate-admin'];
+  const publicHeaderRoutes = ['/', '/login', '/signup', '/reset-password', '/docs', '/subscription', '/activate-admin', '/privacy', '/terms'];
   const showNavbar = !publicHeaderRoutes.includes(location.pathname) && !location.pathname.startsWith('/admin');
   const showFooter = !location.pathname.startsWith('/admin');
 
@@ -69,6 +71,8 @@ const AppShell = () => {
         <Route path="/docs" element={<Documentation />} />
         <Route path="/resources" element={<Resources />} />
         <Route path="/status" element={<Status />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/terms" element={<Terms />} />
         <Route path="/payment" element={<ProtectedRoute><Payment /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute adminOnly={true}><AdminDashboard /></ProtectedRoute>} />
         <Route path="/admin/compliance" element={<ProtectedRoute adminOnly={true}><AdminCompliance /></ProtectedRoute>} />

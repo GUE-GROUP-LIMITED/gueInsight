@@ -6,10 +6,55 @@ stack traces or sensitive information to end users.
 """
 
 import logging
+from collections import deque
+
 from flask import jsonify, render_template, request
 from werkzeug.exceptions import HTTPException
 
+from app.notifications.production_alerts import alerts_enabled, emit_operational_alert
+
 logger = logging.getLogger(__name__)
+
+_ERROR_WINDOW_SECONDS = 300
+_ERROR_RATE_THRESHOLD = 5
+_recent_api_500_events = deque(maxlen=2048)
+
+
+def _normalize_sender_email(sender):
+    if isinstance(sender, (list, tuple)) and len(sender) > 1:
+        sender = sender[1]
+    value = (sender or '').strip().lower()
+    if '<' in value and '>' in value:
+        value = value.split('<', 1)[1].split('>', 1)[0].strip().lower()
+    return value
+
+
+def _maybe_alert_error_rate_spike(app):
+    """Emit an alert if API 500 volume crosses the configured threshold within the window."""
+    from time import time
+
+    now = int(time())
+    min_allowed = now - _ERROR_WINDOW_SECONDS
+
+    while _recent_api_500_events and _recent_api_500_events[0] < min_allowed:
+        _recent_api_500_events.popleft()
+
+    _recent_api_500_events.append(now)
+
+    threshold = int(app.config.get('ERROR_RATE_SPIKE_THRESHOLD', _ERROR_RATE_THRESHOLD))
+    if len(_recent_api_500_events) < threshold:
+        return
+
+    if alerts_enabled(app):
+        emit_operational_alert(
+            category='error_rate_spike',
+            message=f"{len(_recent_api_500_events)} API 500 errors detected in {_ERROR_WINDOW_SECONDS // 60} minutes.",
+            details={
+                'window_seconds': _ERROR_WINDOW_SECONDS,
+                'threshold': threshold,
+            },
+            min_interval_seconds=300,
+        )
 
 
 def init_production_errors(app):
@@ -115,6 +160,9 @@ def init_production_errors(app):
                 'method': request.method,
             }
         )
+
+        if request.path.startswith('/api/'):
+            _maybe_alert_error_rate_spike(app)
         
         if request.path.startswith('/api/'):
             return jsonify({
@@ -166,6 +214,7 @@ def init_production_errors(app):
             return error
         
         if request.path.startswith('/api/'):
+            _maybe_alert_error_rate_spike(app)
             return jsonify({
                 'error': 'Internal server error',
                 'message': 'An unexpected error occurred. The team has been notified.',
@@ -234,6 +283,27 @@ def validate_production_config(app):
 
         if app.config.get('SECURITY_PASSWORD_SALT') in {'dev-security-salt', 'change-me', 'salt', 'test-salt'}:
             errors.append('SECURITY_PASSWORD_SALT must be a strong, unique production secret.')
+
+        mail_username = (app.config.get('MAIL_USERNAME') or '').strip()
+        mail_password = (app.config.get('MAIL_PASSWORD') or '').strip()
+        sender_email = _normalize_sender_email(app.config.get('MAIL_DEFAULT_SENDER'))
+
+        if not mail_username:
+            errors.append('MAIL_USERNAME is required in production for account verification emails.')
+        if not mail_password:
+            errors.append('MAIL_PASSWORD is required in production for account verification emails.')
+        if '@' not in sender_email:
+            errors.append('MAIL_DEFAULT_SENDER must contain a valid sender email address in production.')
+
+        enforce_sender_match = bool(app.config.get('MAIL_ENFORCE_SENDER_MATCH', True))
+        if enforce_sender_match and '@' in mail_username and '@' in sender_email:
+            username_domain = mail_username.rsplit('@', 1)[-1].lower()
+            sender_domain = sender_email.rsplit('@', 1)[-1].lower()
+            if username_domain != sender_domain:
+                errors.append(
+                    'MAIL_DEFAULT_SENDER domain must match MAIL_USERNAME domain in production '
+                    f'(got {sender_domain} vs {username_domain}).'
+                )
     
     if errors:
         error_msg = '\n'.join([f'  - {e}' for e in errors])

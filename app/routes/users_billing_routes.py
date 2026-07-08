@@ -3,6 +3,7 @@ import logging
 
 from flask import request, current_app, Response
 from flask_login import current_user, login_required
+from app.notifications.alerts import send_email
 
 logger = logging.getLogger(__name__)
 
@@ -10,8 +11,6 @@ logger = logging.getLogger(__name__)
 def _send_upgrade_receipt_email(user, transaction, new_plan, tier_config, previous_plan):
     """Send customized receipt email when user upgrades or downgrades subscription."""
     try:
-        from app.notifications.alerts import send_email
-        
         plan_names = {
             'free': 'Free',
             'starter': 'Starter',
@@ -89,7 +88,7 @@ Best regards,
 The gueInsight Team
         """
         
-        send_email(user.email, subject, body)
+        send_email(user.email, subject, body, sender_profile='billing')
         logger.info(f"Sent upgrade receipt email to {user.email} for upgrade to {new_plan}")
     except Exception as e:
         logger.error(f"Failed to send upgrade receipt email: {e}")

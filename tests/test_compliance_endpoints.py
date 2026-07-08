@@ -6,6 +6,7 @@ from werkzeug.security import generate_password_hash
 from app import create_app, db
 from app.config import Config
 from app.models import DataDeletionRequest, SecurityEvent, User, UserRole, AlertRule, Subscription, VcisoUpdate
+import app.routes.users_support_routes as users_support_routes
 
 
 @pytest.fixture()
@@ -361,23 +362,40 @@ def test_user_can_create_and_list_support_tickets(client):
     _create_user(email='tickets@example.com')
     _login(client, email='tickets@example.com')
 
-    empty = client.get('/support_tickets')
-    assert empty.status_code == 200
-    assert empty.get_json()['tickets'] == []
+    sent_emails = []
 
-    create_response = client.post('/support_tickets', json={
-        'subject': 'Bug in dashboard',
-        'description': 'The dashboard is not loading.',
-        'category': 'bug',
-        'priority': 'high',
-    })
-    assert create_response.status_code == 201
-    payload = create_response.get_json()
-    assert payload['ticket']['subject'] == 'Bug in dashboard'
+    def _capture_send_email(*args, **kwargs):
+        sent_emails.append({'args': args, 'kwargs': kwargs})
+        return {'status': 'captured'}
 
-    list_response = client.get('/support_tickets')
-    assert list_response.status_code == 200
-    assert len(list_response.get_json()['tickets']) == 1
+    original_send_email = users_support_routes.send_email
+    users_support_routes.send_email = _capture_send_email
+
+    try:
+        empty = client.get('/support_tickets')
+        assert empty.status_code == 200
+        assert empty.get_json()['tickets'] == []
+
+        create_response = client.post('/support_tickets', json={
+            'subject': 'Bug in dashboard',
+            'description': 'The dashboard is not loading.',
+            'category': 'bug',
+            'priority': 'high',
+        })
+        assert create_response.status_code == 201
+        payload = create_response.get_json()
+        assert payload['ticket']['subject'] == 'Bug in dashboard'
+
+        list_response = client.get('/support_tickets')
+        assert list_response.status_code == 200
+        assert len(list_response.get_json()['tickets']) == 1
+
+        assert len(sent_emails) == 2
+        assert sent_emails[0]['args'][0] == 'tickets@example.com'
+        assert sent_emails[0]['kwargs']['sender_profile'] == 'support'
+        assert sent_emails[1]['kwargs']['sender_profile'] == 'support'
+    finally:
+        users_support_routes.send_email = original_send_email
 
 
 def test_support_ticket_validation(client):

@@ -29,6 +29,19 @@ Track these signals during rollout:
 - Disk usage above 80%
 - Database connection errors or migration failures
 
+## Alerting Configuration
+- `ENABLE_PRODUCTION_ALERTS=true`
+- `ERROR_RATE_SPIKE_THRESHOLD=5`
+- `AUTH_ANOMALY_ALERT_THRESHOLD=5`
+- `WEBHOOK_FAILURE_ALERT_THRESHOLD=2`
+
+## Operational Validation Commands
+- Run focused reliability tests:
+	- `.\\.venv\\Scripts\\python.exe -m pytest tests/test_security_module.py tests/test_production_hardening.py tests/test_auth_signup_verification.py tests/test_stripe_webhooks.py --cov=app.security --cov=app.routes.stripe_webhooks --cov=app.production_errors --cov-report=term-missing`
+- Run backup/restore drill:
+	- `.\\.venv\\Scripts\\python.exe scripts\\backup_restore_drill.py`
+- Store resulting evidence in a dated report file before launch approval.
+
 ## Rollback Procedure
 1. Stop the app service.
 2. Restore the previous deployment bundle.

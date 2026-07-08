@@ -1,4 +1,5 @@
 from flask import Flask
+import pytest
 
 from app import security
 
@@ -68,3 +69,40 @@ def test_rate_limit_blocks_after_threshold(monkeypatch):
     assert first.status_code == 200
     assert second.status_code == 200
     assert third.status_code == 429
+
+
+def test_encrypt_and_decrypt_sensitive_value_round_trip():
+    app = Flask(__name__)
+    app.config.update(SECRET_KEY='test-secret', SECURITY_PASSWORD_SALT='test-salt')
+
+    with app.app_context():
+        encrypted = security.encrypt_sensitive_value('my-api-token')
+        assert encrypted != 'my-api-token'
+        assert security.decrypt_sensitive_value(encrypted) == 'my-api-token'
+
+
+def test_encrypt_sensitive_value_requires_non_empty_input():
+    app = Flask(__name__)
+    app.config.update(SECRET_KEY='test-secret', SECURITY_PASSWORD_SALT='test-salt')
+
+    with app.app_context():
+        with pytest.raises(ValueError):
+            security.encrypt_sensitive_value('')
+
+
+def test_decrypt_sensitive_value_rejects_plaintext():
+    app = Flask(__name__)
+    app.config.update(SECRET_KEY='test-secret', SECURITY_PASSWORD_SALT='test-salt')
+
+    with app.app_context():
+        with pytest.raises(ValueError):
+            security.decrypt_sensitive_value('not-encrypted')
+
+
+def test_encrypt_sensitive_value_requires_configured_secrets():
+    app = Flask(__name__)
+    app.config.update(SECRET_KEY='', SECURITY_PASSWORD_SALT='')
+
+    with app.app_context():
+        with pytest.raises(RuntimeError):
+            security.encrypt_sensitive_value('my-api-token')

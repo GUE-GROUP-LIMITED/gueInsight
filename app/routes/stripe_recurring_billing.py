@@ -11,6 +11,7 @@ from flask import Blueprint, request, current_app, jsonify
 import stripe
 from datetime import datetime, timedelta
 from app.models import Subscription, User, BillingTransaction, BillingStatus, db, SecurityEvent
+from app.notifications.alerts import send_email
 import logging
 
 logger = logging.getLogger(__name__)
@@ -344,8 +345,6 @@ def _handle_invoice_finalized(event):
 def _send_payment_confirmation_email(user, amount_minor, currency):
     """Send confirmation email when payment succeeds."""
     try:
-        from app.notifications.alerts import send_email
-        
         subject = f"✓ Payment Received - {amount_minor / 100:.2f} {currency}"
         body = f"""
 Hello {user.first_name or 'User'},
@@ -360,7 +359,7 @@ Thank you for using gueInsight!
 Best regards,
 The gueInsight Team
         """
-        send_email(user.email, subject, body)
+        send_email(user.email, subject, body, sender_profile='billing')
     except Exception as e:
         logger.error(f"Failed to send payment confirmation email to {user.email}: {e}")
 
@@ -368,8 +367,6 @@ The gueInsight Team
 def _send_payment_failed_alert_email(user, amount_due, currency, next_attempt_timestamp):
     """Send alert email when payment fails."""
     try:
-        from app.notifications.alerts import send_email
-        
         retry_date = datetime.utcfromtimestamp(next_attempt_timestamp) if next_attempt_timestamp else "shortly"
         
         subject = "⚠ Payment Failed - Action Required"
@@ -389,7 +386,7 @@ If the problem persists, please contact support@gueinsight.com
 Best regards,
 The gueInsight Team
         """
-        send_email(user.email, subject, body)
+        send_email(user.email, subject, body, sender_profile='billing')
     except Exception as e:
         logger.error(f"Failed to send payment failed alert to {user.email}: {e}")
 
@@ -397,8 +394,6 @@ The gueInsight Team
 def _send_payment_reminder_email(user):
     """Send reminder when subscription is past due."""
     try:
-        from app.notifications.alerts import send_email
-        
         subject = "Payment Reminder - Subscription Past Due"
         body = f"""
 Hello {user.first_name or 'User'},
@@ -413,7 +408,7 @@ If you have questions, please contact support@gueinsight.com
 Best regards,
 The gueInsight Team
         """
-        send_email(user.email, subject, body)
+        send_email(user.email, subject, body, sender_profile='billing')
     except Exception as e:
         logger.error(f"Failed to send payment reminder to {user.email}: {e}")
 
@@ -421,8 +416,6 @@ The gueInsight Team
 def _send_subscription_canceled_email(user):
     """Send confirmation when subscription is canceled."""
     try:
-        from app.notifications.alerts import send_email
-        
         subject = "Subscription Canceled"
         body = f"""
 Hello {user.first_name or 'User'},
@@ -438,6 +431,6 @@ support@gueinsight.com
 Best regards,
 The gueInsight Team
         """
-        send_email(user.email, subject, body)
+        send_email(user.email, subject, body, sender_profile='support')
     except Exception as e:
         logger.error(f"Failed to send subscription canceled email to {user.email}: {e}")

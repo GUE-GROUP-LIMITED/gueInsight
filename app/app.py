@@ -1,4 +1,5 @@
 import os
+import datetime
 
 from flask import render_template, send_from_directory, request, jsonify
 from flask_login import LoginManager
@@ -127,8 +128,21 @@ def ingest_event():
     """
     if not request.is_json:
         return jsonify({'status': 'error', 'message': 'Request must be JSON.'}), 400
-    event = request.get_json()
-    # TODO: Validate event structure as needed
+    if request.content_length and request.content_length > 1024 * 1024:
+        return jsonify({'status': 'error', 'message': 'Payload too large. Max size is 1MB.'}), 413
+
+    event = request.get_json(silent=True)
+    if not isinstance(event, dict):
+        return jsonify({'status': 'error', 'message': 'Event payload must be a JSON object.'}), 400
+
+    allowed_types = {'alert', 'log', 'event', 'ioc', 'threat', 'generic'}
+    event_type = str(event.get('type', 'generic')).strip().lower()
+    if event_type not in allowed_types:
+        return jsonify({'status': 'error', 'message': f'Unsupported event type. Allowed: {", ".join(sorted(allowed_types))}'}), 400
+
+    source = str(event.get('source', 'api')).strip()
+    if not source:
+        return jsonify({'status': 'error', 'message': 'source is required.'}), 400
 
     # --- Enrichment & Analysis ---
     try:
@@ -136,6 +150,9 @@ def ingest_event():
         enrichment = enrich_event(event)
     except Exception as e:
         enrichment = {'error': str(e)}
+
+    if not isinstance(enrichment, dict):
+        enrichment = {'result': enrichment}
 
 
     # --- Store event in DB for live dashboard ---
@@ -145,7 +162,7 @@ def ingest_event():
         db_event = Event(
             timestamp=datetime.datetime.utcnow(),
             source='api',
-            event_type=event.get('type', 'generic'),
+            event_type=event_type,
             raw_data=json.dumps(event),
             enrichment=json.dumps(enrichment),
             threat_detected=any(isinstance(v, dict) and v.get('malicious') for v in enrichment.values())

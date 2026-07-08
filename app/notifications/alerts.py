@@ -1,7 +1,82 @@
-import requests
 import os
+import logging
+
+import requests
+from flask import current_app
+from flask_mail import Message
+
+from app import mail
 
 REQUEST_TIMEOUT_SECONDS = 10
+logger = logging.getLogger(__name__)
+
+
+def _resolve_profile_sender(profile):
+    """Resolve a sender identity for transactional categories."""
+    profile_name = (profile or '').strip().lower()
+    if not profile_name:
+        return current_app.config.get('MAIL_DEFAULT_SENDER')
+
+    mapping = {
+        'support': current_app.config.get('MAIL_SUPPORT_SENDER') or os.getenv('MAIL_SUPPORT_SENDER'),
+        'billing': current_app.config.get('MAIL_BILLING_SENDER') or os.getenv('MAIL_BILLING_SENDER'),
+        'privacy': current_app.config.get('MAIL_PRIVACY_SENDER') or os.getenv('MAIL_PRIVACY_SENDER'),
+        'security': current_app.config.get('MAIL_SECURITY_SENDER') or os.getenv('MAIL_SECURITY_SENDER'),
+        'alerts': current_app.config.get('MAIL_ALERTS_SENDER') or os.getenv('MAIL_ALERTS_SENDER'),
+    }
+    return mapping.get(profile_name) or current_app.config.get('MAIL_DEFAULT_SENDER')
+
+
+def _normalize_reply_to(reply_to, sender_profile=None):
+    if reply_to:
+        return reply_to
+
+    reply_map = {
+        'support': current_app.config.get('MAIL_SUPPORT_REPLY_TO') or os.getenv('MAIL_SUPPORT_REPLY_TO'),
+        'billing': current_app.config.get('MAIL_BILLING_REPLY_TO') or os.getenv('MAIL_BILLING_REPLY_TO'),
+        'privacy': current_app.config.get('MAIL_PRIVACY_REPLY_TO') or os.getenv('MAIL_PRIVACY_REPLY_TO'),
+        'security': current_app.config.get('MAIL_SECURITY_REPLY_TO') or os.getenv('MAIL_SECURITY_REPLY_TO'),
+    }
+    profile_name = (sender_profile or '').strip().lower()
+    if profile_name in reply_map and reply_map[profile_name]:
+        return reply_map[profile_name]
+
+    return current_app.config.get('MAIL_DEFAULT_SENDER')
+
+
+def send_email(to_email, subject, body, sender=None, reply_to=None, sender_profile=None):
+    """Send plain text transactional email with optional sender profile routing."""
+    recipient = (to_email or '').strip()
+    if not recipient:
+        raise ValueError('Recipient email is required.')
+
+    chosen_sender = sender or _resolve_profile_sender(sender_profile)
+    chosen_reply_to = _normalize_reply_to(reply_to, sender_profile=sender_profile)
+
+    msg = Message(
+        subject,
+        recipients=[recipient],
+        sender=chosen_sender,
+        reply_to=chosen_reply_to,
+        body=body,
+    )
+
+    if current_app.config.get('TESTING') or current_app.config.get('MAIL_SUPPRESS_SEND'):
+        logger.info('MAIL_SUPPRESS_SEND enabled: email suppressed for %s (%s)', recipient, subject)
+        return {
+            'status': 'suppressed',
+            'to': recipient,
+            'sender': chosen_sender,
+            'reply_to': chosen_reply_to,
+        }
+
+    mail.send(msg)
+    return {
+        'status': 'sent',
+        'to': recipient,
+        'sender': chosen_sender,
+        'reply_to': chosen_reply_to,
+    }
 
 # --- Slack Notification ---
 def send_slack_alert(message, webhook_url=None):

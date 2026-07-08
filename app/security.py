@@ -4,6 +4,10 @@ import os
 from time import time
 from hmac import compare_digest
 from threading import Lock
+import base64
+import hashlib
+
+from cryptography.fernet import Fernet, InvalidToken
 
 # Simple in-memory rate limiter (per IP)
 RATE_LIMIT = 100  # requests
@@ -16,6 +20,35 @@ def _normalize_api_key(value):
     if value is None:
         return None
     return str(value).strip()
+
+
+def _get_fernet():
+    """Build a deterministic Fernet key from app secrets for at-rest encryption."""
+    secret = _normalize_api_key(current_app.config.get('SECRET_KEY'))
+    salt = _normalize_api_key(current_app.config.get('SECURITY_PASSWORD_SALT'))
+    if not secret or not salt:
+        raise RuntimeError('Encryption secrets are not configured.')
+
+    digest = hashlib.sha256(f"{secret}:{salt}".encode('utf-8')).digest()
+    key = base64.urlsafe_b64encode(digest)
+    return Fernet(key)
+
+
+def encrypt_sensitive_value(value):
+    normalized = _normalize_api_key(value)
+    if not normalized:
+        raise ValueError('Cannot encrypt empty value.')
+    return _get_fernet().encrypt(normalized.encode('utf-8')).decode('utf-8')
+
+
+def decrypt_sensitive_value(value):
+    normalized = _normalize_api_key(value)
+    if not normalized:
+        raise ValueError('Cannot decrypt empty value.')
+    try:
+        return _get_fernet().decrypt(normalized.encode('utf-8')).decode('utf-8')
+    except InvalidToken as exc:
+        raise ValueError('Stored value is not decryptable with active secrets.') from exc
 
 
 def _prune_expired_rate_limit_windows(current_window):

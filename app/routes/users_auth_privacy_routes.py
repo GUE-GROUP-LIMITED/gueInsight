@@ -2,21 +2,55 @@ from flask import request, current_app, url_for, send_file, redirect
 from flask_login import current_user, login_user, logout_user, login_required
 from flask_mail import Message
 from werkzeug.security import generate_password_hash
+from collections import deque
+from time import time
 import re
 from app import mail
+from app.notifications.production_alerts import alerts_enabled, emit_operational_alert
 
 
 def register_auth_privacy_routes(users_bp):
     from app.routes import users_routes as ur
     email_pattern = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    auth_anomaly_events = deque(maxlen=2048)
+
+    def _record_auth_anomaly(event_type, severity='warning', user_id=None, details=None):
+        ur._log_security_event(
+            event_type=event_type,
+            severity=severity,
+            user_id=user_id,
+            details=details,
+        )
+
+        now = int(time())
+        window_seconds = 600
+        window_start = now - window_seconds
+        while auth_anomaly_events and auth_anomaly_events[0] < window_start:
+            auth_anomaly_events.popleft()
+        auth_anomaly_events.append(now)
+
+        threshold = int(current_app.config.get('AUTH_ANOMALY_ALERT_THRESHOLD', 5))
+        if len(auth_anomaly_events) >= threshold and alerts_enabled(current_app):
+            emit_operational_alert(
+                category='auth_anomaly',
+                message=f"{len(auth_anomaly_events)} auth anomalies observed in {window_seconds // 60} minutes.",
+                details={
+                    'latest_event_type': event_type,
+                    'threshold': threshold,
+                    'window_seconds': window_seconds,
+                },
+                min_interval_seconds=300,
+            )
 
     def _send_verification_email(user):
         serializer = ur.get_serializer(current_app.config['SECRET_KEY'], current_app.config['SECURITY_PASSWORD_SALT'])
         token = serializer.dumps({'email': user.email})
         verify_url = url_for('users.auth_verify_email', token=token, _external=True)
+        sender = current_app.config.get('MAIL_DEFAULT_SENDER')
         msg = Message(
             'Verify your GueInsight account',
             recipients=[user.email],
+            sender=sender,
         )
         msg.body = (
             f"Hello {user.first_name or 'there'},\n\n"
@@ -50,7 +84,7 @@ def register_auth_privacy_routes(users_bp):
             return {'error': 'Email and password are required.'}, 400
 
         if ur._is_login_rate_limited(rate_key):
-            ur._log_security_event(
+            _record_auth_anomaly(
                 event_type='auth.login.rate_limited',
                 severity='warning',
                 details={'email': email},
@@ -74,7 +108,7 @@ def register_auth_privacy_routes(users_bp):
                     current_app.logger.info('Supabase auth fallback failed for %s: %s', email, supabase_error)
 
         if not user or not (authenticated_via_supabase or user.check_password(password)):
-            ur._log_security_event(
+            _record_auth_anomaly(
                 event_type='auth.login.failed',
                 severity='warning',
                 user_id=getattr(user, 'id', None),
@@ -98,7 +132,7 @@ def register_auth_privacy_routes(users_bp):
             if bool(getattr(user, 'is_active', True)):
                 user.is_active = False
 
-            ur._log_security_event(
+            _record_auth_anomaly(
                 event_type='auth.login.unverified_email',
                 severity='warning',
                 user_id=user.id,
@@ -157,6 +191,31 @@ def register_auth_privacy_routes(users_bp):
             ur.db.session.rollback()
 
         return redirect(f'{frontend_url}/login?verified=1')
+
+    @users_bp.route('/auth/verify-email/resend', methods=['POST'])
+    def auth_verify_email_resend():
+        payload = request.get_json(silent=True) or request.form
+        email = (payload.get('email') or '').strip().lower()
+
+        if not email or not email_pattern.match(email):
+            return {'error': 'A valid email address is required.'}, 400
+
+        user = ur.User.query.filter_by(email=email).first()
+        if not user:
+            return {'message': 'If that account exists and is pending verification, a new verification link has been sent.'}, 200
+
+        if getattr(user, 'email_verified_at', None):
+            return {'message': 'This account is already verified.'}, 200
+
+        try:
+            verification_url = _send_verification_email(user)
+            return {
+                'message': 'Verification email sent. Please check your inbox to activate your account.',
+                'verification_url': verification_url,
+            }, 200
+        except Exception:
+            current_app.logger.exception('Failed to resend verification email for %s', email)
+            return {'error': 'Unable to send verification email right now. Please try again shortly.'}, 503
 
     @users_bp.route('/auth/signup', methods=['POST'])
     def auth_signup():
@@ -229,7 +288,10 @@ def register_auth_privacy_routes(users_bp):
                     verification_url = _send_verification_email(existing_user)
                 except Exception:
                     current_app.logger.exception('Failed to send verification email for existing pending account')
-                    return {'error': 'Account saved, but verification email could not be sent. Please try again later.'}, 503
+                    return {
+                        'message': 'Account updated, but verification email could not be sent automatically. Use resend verification to retry.',
+                        'verification_email_sent': False,
+                    }, 202
 
                 return {
                     'message': 'Verification email sent. Please check your inbox to activate your account.',
@@ -305,7 +367,11 @@ def register_auth_privacy_routes(users_bp):
             verification_url = _send_verification_email(new_user)
         except Exception:
             current_app.logger.exception('Failed to send verification email for new signup')
-            return {'error': 'Account created, but verification email could not be sent. Please try again later.'}, 503
+            return {
+                'message': 'Account created, but verification email could not be sent automatically. Use resend verification to retry.',
+                'verification_email_sent': False,
+                'user': ur._serialize_auth_user(new_user),
+            }, 202
 
         return {
             'message': 'Verification email sent. Please check your inbox to activate your account.',
