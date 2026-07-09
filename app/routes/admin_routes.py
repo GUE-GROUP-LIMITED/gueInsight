@@ -391,9 +391,18 @@ register_operations_routes(admin_bp)
 @admin_bp.route('/admin_login', methods=['GET', 'POST'])
 def admin_login():
     _sync_admin_access_columns()
-    # Redirect to admin dashboard if already logged in
     if current_user.is_authenticated:
-        return redirect(url_for('admin.admin_dashboard'))
+        if request.method == 'POST':
+            if _is_admin(current_user):
+                session['auth_context'] = 'admin'
+                if request.is_json:
+                    return {"message": "Login successful."}, 200
+                return redirect(url_for('admin.admin_dashboard'))
+
+            logout_user()
+            session.pop('auth_context', None)
+        else:
+            return redirect(url_for('admin.admin_dashboard'))
 
     if request.method != 'POST':
         return {"message": "Login required"}, 401

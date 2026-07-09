@@ -295,6 +295,30 @@ def test_admin_session_isolated_from_user_context(client):
     assert payload['user']['email'] == 'isolated-admin@example.com'
 
 
+def test_admin_login_replaces_existing_user_session(client):
+    _create_user(email='signed-in-user@example.com')
+    _create_user(email='switch-admin@example.com', role=UserRole.ADMIN)
+
+    user_login = _login(client, email='signed-in-user@example.com')
+    assert user_login.status_code == 200
+
+    admin_login = client.post(
+        '/admin_login',
+        json={'email': 'switch-admin@example.com', 'password': 'Password123!'},
+    )
+    assert admin_login.status_code == 200
+
+    default_session = client.get('/auth/session')
+    assert default_session.status_code == 200
+    assert default_session.get_json()['authenticated'] is False
+
+    admin_context_session = client.get('/auth/session', headers={'X-Auth-Context': 'admin'})
+    assert admin_context_session.status_code == 200
+    payload = admin_context_session.get_json()
+    assert payload['authenticated'] is True
+    assert payload['user']['email'] == 'switch-admin@example.com'
+
+
 def test_privacy_consent_patch_updates_profile(client):
     _create_user(email='consent@example.com')
     login_response = _login(client, email='consent@example.com')
