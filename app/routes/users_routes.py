@@ -731,6 +731,7 @@ def _serialize_auth_user(user):
     _sync_user_profile_columns()
     role = getattr(user, 'role', None)
     role_value = getattr(role, 'value', role)
+    is_admin = str(role_value).lower() == 'admin'
     raw_admin_permissions = getattr(user, 'admin_permissions', None)
     parsed_admin_permissions = []
     if isinstance(raw_admin_permissions, str) and raw_admin_permissions.strip():
@@ -742,7 +743,7 @@ def _serialize_auth_user(user):
             parsed_admin_permissions = []
     latest_subscription = _get_latest_subscription(user.id)
     active_plan_key = _get_active_plan_key(user.id)
-    current_plan = active_plan_key if active_plan_key != 'free' else 'Free'
+    current_plan = 'Admin' if is_admin else (active_plan_key if active_plan_key != 'free' else 'Free')
     analysis_limits = _get_analysis_limits_for_plan(active_plan_key)
     preference = UserPreference.query.filter_by(user_id=user.id).first()
     unread_notification_count = UserNotification.query.filter_by(user_id=user.id, is_read=False).count()
@@ -776,7 +777,7 @@ def _serialize_auth_user(user):
         'avatar_url': getattr(preference, 'avatar_url', None),
         'preferences': preference.to_dict() if preference else None,
         'unread_notifications': unread_notification_count,
-        'plan_expires_at': latest_subscription.end_date.isoformat() if latest_subscription and latest_subscription.end_date else None,
+        'plan_expires_at': None if is_admin else (latest_subscription.end_date.isoformat() if latest_subscription and latest_subscription.end_date else None),
     }
 
 

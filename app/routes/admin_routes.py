@@ -893,6 +893,7 @@ def admin_user_detail(user_id):
 
     if request.method == 'PATCH':
         payload = request.get_json(silent=True) or {}
+        previous_role = user.role
 
         requested_role = _normalize_user_role(payload.get('role')) if 'role' in payload else None
         if 'role' in payload and requested_role is None:
@@ -915,6 +916,24 @@ def admin_user_detail(user_id):
 
         if requested_role:
             user.role = requested_role
+
+        promoted_to_admin = (
+            requested_role == UserRole.ADMIN and previous_role != UserRole.ADMIN
+        )
+        if promoted_to_admin:
+            now = _utc_now()
+            subscriptions = Subscription.query.filter_by(user_id=user.id).all()
+            for subscription in subscriptions:
+                if not subscription.end_date or subscription.end_date > now:
+                    subscription.end_date = now
+                if hasattr(subscription, 'is_trial'):
+                    subscription.is_trial = False
+
+            # Keep admin accounts out of subscriber-plan UX/state.
+            if hasattr(user, 'current_plan'):
+                user.current_plan = 'admin'
+            if hasattr(user, 'plan_expires_at'):
+                user.plan_expires_at = None
 
         editable_fields = [
             'first_name',
