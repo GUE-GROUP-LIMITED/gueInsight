@@ -34,6 +34,7 @@ class Config:
     MAIL_USE_TLS = _is_truthy(os.getenv('MAIL_USE_TLS', 'true'))
     MAIL_USERNAME = os.getenv('MAIL_USERNAME', '')
     MAIL_PASSWORD = os.getenv('MAIL_PASSWORD', '')
+    MAIL_SENDER_NAME = os.getenv('MAIL_SENDER_NAME', 'GueInsight')
     MAIL_DEFAULT_SENDER = os.getenv('MAIL_DEFAULT_SENDER', 'noreply@guecyber.com')
     MAIL_SUPPORT_SENDER = os.getenv('MAIL_SUPPORT_SENDER', MAIL_DEFAULT_SENDER)
     MAIL_BILLING_SENDER = os.getenv('MAIL_BILLING_SENDER', MAIL_DEFAULT_SENDER)

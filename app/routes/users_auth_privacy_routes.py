@@ -45,8 +45,10 @@ def register_auth_privacy_routes(users_bp):
     def _send_verification_email(user):
         serializer = ur.get_serializer(current_app.config['SECRET_KEY'], current_app.config['SECURITY_PASSWORD_SALT'])
         token = serializer.dumps({'email': user.email})
-        verify_url = url_for('users.auth_verify_email', token=token, _external=True)
-        sender = current_app.config.get('MAIL_DEFAULT_SENDER')
+        verify_url = url_for('users.public_verify_email', token=token, _external=True)
+        sender_email = current_app.config.get('MAIL_DEFAULT_SENDER')
+        sender_name = current_app.config.get('MAIL_SENDER_NAME', 'GueInsight')
+        sender = (sender_name, sender_email) if sender_email else sender_name
         msg = Message(
             'Verify your GueInsight account',
             recipients=[user.email],
@@ -55,7 +57,15 @@ def register_auth_privacy_routes(users_bp):
         msg.body = (
             f"Hello {user.first_name or 'there'},\n\n"
             "Thanks for creating your GueInsight account. Please verify your email address to activate access.\n\n"
-            f"Verify your account: {verify_url}\n\n"
+            "Open this email in an HTML-capable client and click the Verify your account button.\n\n"
+            "If you did not request this account, you can ignore this email."
+        )
+        msg.html = (
+            f"<p>Hello {user.first_name or 'there'},</p>"
+            "<p>Thanks for creating your GueInsight account. Please verify your email address to activate access.</p>"
+            f"<p><a href=\"{verify_url}\" "
+            "style=\"display:inline-block;padding:10px 16px;background:#0f766e;color:#ffffff;"
+            "text-decoration:none;border-radius:6px;font-weight:600;\">Verify your account</a></p>"
             "If you did not request this account, you can ignore this email."
         )
 
@@ -158,8 +168,7 @@ def register_auth_privacy_routes(users_bp):
         login_user(user)
         return {'message': 'Login successful.', 'auth_source': auth_source, 'user': ur._serialize_auth_user(user)}, 200
 
-    @users_bp.route('/auth/verify-email/<token>', methods=['GET'])
-    def auth_verify_email(token):
+    def _complete_email_verification(token):
         frontend_url = (current_app.config.get('FRONTEND_URL') or 'http://localhost:5173').rstrip('/')
         try:
             serializer = ur.get_serializer(current_app.config['SECRET_KEY'], current_app.config['SECURITY_PASSWORD_SALT'])
@@ -191,6 +200,14 @@ def register_auth_privacy_routes(users_bp):
             ur.db.session.rollback()
 
         return redirect(f'{frontend_url}/login?verified=1')
+
+    @users_bp.route('/auth/verify-email/<token>', methods=['GET'])
+    def auth_verify_email(token):
+        return _complete_email_verification(token)
+
+    @users_bp.route('/verify-email/<token>', methods=['GET'])
+    def public_verify_email(token):
+        return _complete_email_verification(token)
 
     @users_bp.route('/auth/verify-email/resend', methods=['POST'])
     def auth_verify_email_resend():
