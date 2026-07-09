@@ -7,11 +7,11 @@ import { useTranslation } from '../i18n/index';
 import './UserManagement.css';
 
 const sidebarItems = [
-  { label: 'nav.home', href: '/admin', icon: 'home' },
-  { label: 'nav.subscribers', href: '/admin/users', active: true, icon: 'users' },
-  { label: 'admin_users.roles', href: '/admin/access', icon: 'roles' },
-  { label: 'admin_users.tables', href: '#accounts', icon: 'table' },
-  { label: 'admin_users.logs', href: '#logs', icon: 'logs' },
+  { label: 'nav.home', fallbackLabel: 'Home', href: '/admin', icon: 'home' },
+  { label: 'nav.subscribers', fallbackLabel: 'Subscribers', href: '/admin/users', active: true, icon: 'users' },
+  { label: 'admin_users.roles', fallbackLabel: 'Roles', href: '/admin/access', icon: 'roles' },
+  { label: 'admin_users.tables', fallbackLabel: 'Accounts', href: '#accounts', icon: 'table' },
+  { label: 'admin_users.logs', fallbackLabel: 'Activity logs', href: '#logs', icon: 'logs' },
 ];
 
 const SidebarIcon = ({ type }) => {
@@ -501,6 +501,11 @@ const UserManagement = () => {
     ];
   }, [activeUsers, filteredUsers.length, inactiveUsers, totalUsers, t, ui]);
 
+  const getSidebarLabel = useCallback((item) => {
+    const translated = t(item.label);
+    return translated === item.label ? item.fallbackLabel : translated;
+  }, [t]);
+
   return (
     <div className={`user-shell ${sidebarCollapsed ? 'user-shell--collapsed' : ''}`} id="roles">
       <aside className="user-shell__sidebar">
@@ -518,21 +523,21 @@ const UserManagement = () => {
               <Link
                 key={item.label}
                 to={item.href}
-                aria-label={t(item.label)}
+                aria-label={getSidebarLabel(item)}
                 className={`user-shell__nav-link ${item.active ? 'is-active' : ''}`}
               >
                 <span className="user-shell__nav-icon" aria-hidden="true"><SidebarIcon type={item.icon} /></span>
-                <span className="user-shell__nav-label">{t(item.label)}</span>
+                <span className="user-shell__nav-label">{getSidebarLabel(item)}</span>
               </Link>
             ) : (
               <a
                 key={item.label}
                 href={item.href}
-                aria-label={t(item.label)}
+                aria-label={getSidebarLabel(item)}
                 className={`user-shell__nav-link ${item.active ? 'is-active' : ''}`}
               >
                 <span className="user-shell__nav-icon" aria-hidden="true"><SidebarIcon type={item.icon} /></span>
-                <span className="user-shell__nav-label">{t(item.label)}</span>
+                <span className="user-shell__nav-label">{getSidebarLabel(item)}</span>
               </a>
             )
           ))}
