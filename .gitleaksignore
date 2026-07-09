@@ -6,3 +6,4 @@ b8096871aacc25710fbfa453f8dade05f7798c27:test_report.py:generic-api-key:138
 7651ce93d476566febc4b6b6f04b164d71008aa9:test_report.py:generic-api-key:138
 6f737b3220641bd6546214f82979c7e69333d2d0:app/config.py:stripe-access-token:39
 0d8d5307b3e2885ce9507f84e254e104afb3ab7d:tests/test_compliance_endpoints.py:generic-api-key:212
+65a44c5403052d6db5689d8a104479c4eb50be3c:tests/test_auth_signup_verification.py:generic-api-key:10

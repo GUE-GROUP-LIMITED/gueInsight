@@ -7,7 +7,7 @@ import app.routes.users_auth_privacy_routes as auth_privacy_routes
 def _signup_payload(email):
     return {
         'email': email,
-        'password': 'StrongPass123',
+        'password': 'Password123!',
         'first_name': 'Test',
         'last_name': 'User',
         'phone_number': '0123456789',
