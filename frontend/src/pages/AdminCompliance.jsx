@@ -393,7 +393,7 @@ const AdminCompliance = () => {
       <section className="admin-compliance-page__feature-area">
         <article className="admin-compliance-card admin-compliance-card--tiers">
           <h2>{t('admin_compliance.tiers')}</h2>
-          <ComplianceTierMatrix currentTier="compliance_pro" onUpgrade={handleUpgrade} />
+          <ComplianceTierMatrix currentTier="compliance_pro" readOnly={true} />
         </article>
 
         <article className="admin-compliance-card admin-compliance-card--incident">

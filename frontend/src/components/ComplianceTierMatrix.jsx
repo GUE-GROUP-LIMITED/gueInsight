@@ -7,7 +7,7 @@ import './ComplianceTierMatrix.css';
  * Integrates with Stripe for subscription upgrades
  */
 
-const ComplianceTierMatrix = ({ currentTier, onUpgrade }) => {
+const ComplianceTierMatrix = ({ currentTier, onUpgrade, readOnly = false }) => {
   const tiers = [
     {
       id: 'starter',
@@ -188,11 +188,13 @@ const ComplianceTierMatrix = ({ currentTier, onUpgrade }) => {
             </div>
 
             <button
-              className={`tier-cta ${tier.ctaDisabled ? 'disabled' : ''}`}
+              className={`tier-cta ${tier.ctaDisabled || readOnly ? 'disabled' : ''}`}
               onClick={() => handleUpgrade(tier.id)}
-              disabled={tier.ctaDisabled}
+              disabled={tier.ctaDisabled || readOnly}
             >
-              {tier.cta}
+              {readOnly
+                ? (currentTier === tier.id ? 'Current tier' : 'Tier details')
+                : tier.cta}
             </button>
           </div>
         ))}
