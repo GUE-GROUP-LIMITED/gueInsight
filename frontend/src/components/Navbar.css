@@ -63,6 +63,7 @@
   min-width: 0;
   margin-left: auto;
   justify-content: flex-end;
+  overflow: hidden;
 }
 
 .app-navbar__meta {
@@ -113,7 +114,15 @@
   gap: 10px;
   /* Prevent wrapping so badge and account controls stay aligned across locales */
   flex-wrap: nowrap;
+  flex: 1 1 auto;
   min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.app-navbar__links::-webkit-scrollbar {
+  display: none;
 }
 
 /* Prevent individual header controls from shrinking unexpectedly */
@@ -170,6 +179,14 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  margin-left: 8px;
+  flex: 0 0 auto;
+}
+
+.app-navbar__language {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
 }
 
 .app-navbar__group {
@@ -285,6 +302,7 @@
   background: rgba(15, 23, 42, 0.6);
   color: #dbeafe;
   padding: 0.45rem 0.75rem;
+  min-width: 64px;
   font: inherit;
 }
 
