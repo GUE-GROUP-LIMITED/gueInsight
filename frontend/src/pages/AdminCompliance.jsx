@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
-import ComplianceTierMatrix from '../components/ComplianceTierMatrix';
 import NIS2IncidentReport from '../components/NIS2IncidentReport';
 import { useTranslation } from '../i18n/index';
 import './AdminCompliance.css';
@@ -89,23 +88,6 @@ const AdminCompliance = () => {
       setError(requestError?.response?.data?.error || t('admin_compliance.load_failed'));
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleUpgrade = async (tierId) => {
-    setError('');
-    try {
-      const res = await api.post('/auth/subscription/upgrade', { plan: tierId });
-      const checkoutUrl = res?.data?.checkout_url;
-      if (checkoutUrl) {
-        window.location.href = checkoutUrl;
-      } else if (res?.data?.receipt_url) {
-        window.location.href = '/subscription?upgrade=success';
-      } else {
-        setError(t('admin_compliance.checkout_session_failed'));
-      }
-    } catch (err) {
-      setError(err?.response?.data?.error || t('admin_compliance.checkout_failed'));
     }
   };
 
@@ -392,8 +374,22 @@ const AdminCompliance = () => {
 
       <section className="admin-compliance-page__feature-area">
         <article className="admin-compliance-card admin-compliance-card--tiers">
-          <h2>{t('admin_compliance.tiers')}</h2>
-          <ComplianceTierMatrix currentTier="compliance_pro" readOnly={true} />
+          <h2>Admin Oversight Workspace</h2>
+          <p className="admin-compliance-card__muted">
+            This area is for staff operations, not customer subscription management.
+            Use it to monitor platform risk posture, triage user incidents, and coordinate governance actions.
+          </p>
+          <ul>
+            <li>Review security events and investigate suspicious login activity.</li>
+            <li>Process GDPR deletion/export requests for end users.</li>
+            <li>Handle support tickets and follow up with affected users.</li>
+            <li>Publish vCISO recommendations and operational guidance.</li>
+          </ul>
+          <div className="admin-compliance-actions">
+            <Link to="/admin/support" className="admin-compliance-page__link">Open Support Queue</Link>
+            <Link to="/admin/users" className="admin-compliance-page__link">Manage Users</Link>
+            <Link to="/admin#vciso-publisher" className="admin-compliance-page__link">Open vCISO Publisher</Link>
+          </div>
         </article>
 
         <article className="admin-compliance-card admin-compliance-card--incident">
