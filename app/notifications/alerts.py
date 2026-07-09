@@ -27,6 +27,39 @@ def _resolve_profile_sender(profile):
     return mapping.get(profile_name) or current_app.config.get('MAIL_DEFAULT_SENDER')
 
 
+def _resolve_profile_sender_name(profile):
+    profile_name = (profile or '').strip().lower()
+    default_name = current_app.config.get('MAIL_SENDER_NAME', 'GueInsight')
+    mapping = {
+        'support': current_app.config.get('MAIL_SUPPORT_SENDER_NAME') or default_name,
+        'billing': current_app.config.get('MAIL_BILLING_SENDER_NAME') or default_name,
+        'privacy': current_app.config.get('MAIL_PRIVACY_SENDER_NAME') or default_name,
+        'security': current_app.config.get('MAIL_SECURITY_SENDER_NAME') or default_name,
+        'alerts': current_app.config.get('MAIL_ALERTS_SENDER_NAME') or default_name,
+    }
+    return mapping.get(profile_name) or default_name
+
+
+def _format_sender_identity(sender_value, sender_profile=None):
+    if isinstance(sender_value, (tuple, list)) and len(sender_value) > 1:
+        display_name = str(sender_value[0] or _resolve_profile_sender_name(sender_profile)).strip()
+        sender_email = str(sender_value[1] or '').strip()
+        return (display_name, sender_email) if sender_email else sender_value
+
+    raw_sender = str(sender_value or '').strip()
+    if not raw_sender:
+        return raw_sender
+
+    # If caller already provided a formatted mailbox (e.g. Name <email>), preserve it.
+    if '<' in raw_sender and '>' in raw_sender:
+        return raw_sender
+
+    if '@' in raw_sender:
+        return (_resolve_profile_sender_name(sender_profile), raw_sender)
+
+    return raw_sender
+
+
 def _normalize_reply_to(reply_to, sender_profile=None):
     if reply_to:
         return reply_to
@@ -50,7 +83,10 @@ def send_email(to_email, subject, body, sender=None, reply_to=None, sender_profi
     if not recipient:
         raise ValueError('Recipient email is required.')
 
-    chosen_sender = sender or _resolve_profile_sender(sender_profile)
+    chosen_sender = _format_sender_identity(
+        sender or _resolve_profile_sender(sender_profile),
+        sender_profile=sender_profile,
+    )
     chosen_reply_to = _normalize_reply_to(reply_to, sender_profile=sender_profile)
 
     msg = Message(

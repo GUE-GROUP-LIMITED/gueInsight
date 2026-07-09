@@ -15,6 +15,7 @@ def _build_app():
     app.config.update(
         TESTING=False,
         MAIL_SUPPRESS_SEND=False,
+        MAIL_SENDER_NAME='GueInsight',
         MAIL_DEFAULT_SENDER='no-reply@guecyber.com',
         MAIL_SUPPORT_SENDER='support@guecyber.com',
         MAIL_BILLING_SENDER='billing@guecyber.com',
@@ -43,7 +44,7 @@ def test_send_email_uses_support_sender_profile(monkeypatch):
 
     assert result['status'] == 'sent'
     msg = captured['message']
-    assert msg.sender == 'support@guecyber.com'
+    assert msg.sender == 'GueInsight <support@guecyber.com>'
     assert msg.reply_to == 'support@guecyber.com'
 
 
@@ -67,5 +68,5 @@ def test_send_email_uses_billing_sender_profile(monkeypatch):
 
     assert result['status'] == 'sent'
     msg = captured['message']
-    assert msg.sender == 'billing@guecyber.com'
+    assert msg.sender == 'GueInsight <billing@guecyber.com>'
     assert msg.reply_to == 'billing@guecyber.com'
