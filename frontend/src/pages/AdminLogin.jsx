@@ -4,6 +4,32 @@ import { api } from '../services/api';
 import { AuthContext, normalizeRole } from '../context/AuthContext';
 import './AdminLogin.css';
 
+const getAdminLoginErrorMessage = (loginError) => {
+  const status = loginError?.response?.status;
+  const responseData = loginError?.response?.data;
+
+  const backendMessage =
+    (responseData && typeof responseData === 'object' && (responseData.error || responseData.message)) ||
+    (typeof responseData === 'string' ? responseData : '');
+
+  const looksLikeHtml = typeof backendMessage === 'string' && /<\s*!doctype\s+html|<\s*html|<\s*head|<\s*body|<\s*title/i.test(backendMessage);
+
+  if (backendMessage && !looksLikeHtml) {
+    return backendMessage;
+  }
+
+  if (status === 401 || status === 403) {
+    return 'Invalid credentials or insufficient permissions. Use a staff admin account.';
+  }
+
+  if (status >= 500) {
+    return 'Server error while signing in. Please try again shortly.';
+  }
+
+  const baseUrl = api?.defaults?.baseURL || 'configured backend endpoint';
+  return `Cannot reach staff auth service. Confirm backend is running at ${baseUrl}.`;
+};
+
 const AdminLogin = () => {
   const navigate = useNavigate();
   const { setUser } = useContext(AuthContext);
@@ -28,24 +54,7 @@ const AdminLogin = () => {
       const role = normalizeRole(authenticatedUser?.role);
       navigate(role === 'admin' ? '/admin' : '/dashboard');
     } catch (loginError) {
-      const status = loginError?.response?.status;
-      const responseData = loginError?.response?.data;
-      const backendMessage =
-        (responseData && typeof responseData === 'object' && (responseData.error || responseData.message)) ||
-        (typeof responseData === 'string' ? responseData : '');
-
-      let message = backendMessage;
-      if (!message && (status === 401 || status === 403)) {
-        message = 'Invalid credentials or insufficient permissions. Use a staff admin account.';
-      }
-      if (!message && status >= 500) {
-        message = 'Server error while signing in. Please try again shortly.';
-      }
-      if (!message) {
-        const baseUrl = api?.defaults?.baseURL || 'configured backend endpoint';
-        message = `Cannot reach staff auth service. Confirm backend is running at ${baseUrl}.`;
-      }
-      setError(message);
+      setError(getAdminLoginErrorMessage(loginError));
     } finally {
       setLoading(false);
     }
