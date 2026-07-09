@@ -41,9 +41,19 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     let isMounted = true;
 
+    const resolveAuthContext = () => {
+      if (typeof window === 'undefined') {
+        return 'user';
+      }
+      return window.location.pathname.startsWith('/admin') ? 'admin' : 'user';
+    };
+
     const fetchSession = async () => {
       try {
-        const response = await api.get('/auth/session', { validateStatus: () => true });
+        const response = await api.get('/auth/session', {
+          validateStatus: () => true,
+          headers: { 'X-Auth-Context': resolveAuthContext() },
+        });
         if (!isMounted) return;
         if (response.status >= 200 && response.status < 300) {
           setAuthResponse(response.data || {});

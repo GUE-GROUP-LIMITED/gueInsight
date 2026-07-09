@@ -1,4 +1,4 @@
-from flask import request, current_app, url_for, send_file, redirect
+from flask import request, current_app, url_for, send_file, redirect, session
 from flask_login import current_user, login_user, logout_user, login_required
 from flask_mail import Message
 from werkzeug.security import generate_password_hash
@@ -13,6 +13,14 @@ def register_auth_privacy_routes(users_bp):
     from app.routes import users_routes as ur
     email_pattern = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
     auth_anomaly_events = deque(maxlen=2048)
+
+    def _requested_auth_context():
+        requested = (
+            request.headers.get('X-Auth-Context')
+            or request.args.get('context')
+            or 'user'
+        )
+        return str(requested).strip().lower()
 
     def _record_auth_anomaly(event_type, severity='warning', user_id=None, details=None):
         ur._log_security_event(
@@ -79,6 +87,18 @@ def register_auth_privacy_routes(users_bp):
     def auth_session():
         if not current_user.is_authenticated:
             return {'authenticated': False, 'user': None}, 200
+        requested_context = _requested_auth_context()
+        active_context = str(session.get('auth_context') or 'user').strip().lower()
+        role = getattr(getattr(current_user, 'role', None), 'value', getattr(current_user, 'role', None))
+        is_admin = str(role).lower() == 'admin'
+
+        if requested_context == 'admin':
+            if not is_admin or active_context != 'admin':
+                return {'authenticated': False, 'user': None}, 200
+        else:
+            if is_admin and active_context == 'admin':
+                return {'authenticated': False, 'user': None}, 200
+
         return {'authenticated': True, 'user': ur._serialize_auth_user(current_user)}, 200
 
     @users_bp.route('/auth/login', methods=['POST'])
@@ -166,6 +186,7 @@ def register_auth_privacy_routes(users_bp):
         )
         ur.db.session.commit()
         login_user(user)
+        session['auth_context'] = 'user'
         return {'message': 'Login successful.', 'auth_source': auth_source, 'user': ur._serialize_auth_user(user)}, 200
 
     def _complete_email_verification(token):
@@ -398,6 +419,7 @@ def register_auth_privacy_routes(users_bp):
 
     @users_bp.route('/auth/logout', methods=['POST'])
     def auth_logout():
+        session.pop('auth_context', None)
         if current_user.is_authenticated:
             ur._log_security_event(
                 event_type='auth.logout',

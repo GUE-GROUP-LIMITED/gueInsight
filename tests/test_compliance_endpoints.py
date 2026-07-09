@@ -271,6 +271,30 @@ def test_auth_session_and_logout_flow(client):
     assert after_logout.get_json()['authenticated'] is False
 
 
+def test_admin_session_isolated_from_user_context(client):
+    _create_user(email='isolated-admin@example.com', role=UserRole.ADMIN)
+
+    admin_login = client.post(
+        '/admin_login',
+        json={'email': 'isolated-admin@example.com', 'password': 'Password123!'},
+    )
+    assert admin_login.status_code == 200
+
+    default_session = client.get('/auth/session')
+    assert default_session.status_code == 200
+    assert default_session.get_json()['authenticated'] is False
+
+    user_context_session = client.get('/auth/session', headers={'X-Auth-Context': 'user'})
+    assert user_context_session.status_code == 200
+    assert user_context_session.get_json()['authenticated'] is False
+
+    admin_context_session = client.get('/auth/session', headers={'X-Auth-Context': 'admin'})
+    assert admin_context_session.status_code == 200
+    payload = admin_context_session.get_json()
+    assert payload['authenticated'] is True
+    assert payload['user']['email'] == 'isolated-admin@example.com'
+
+
 def test_privacy_consent_patch_updates_profile(client):
     _create_user(email='consent@example.com')
     login_response = _login(client, email='consent@example.com')

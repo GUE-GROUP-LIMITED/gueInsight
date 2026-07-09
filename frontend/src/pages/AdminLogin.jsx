@@ -19,7 +19,10 @@ const AdminLogin = () => {
 
     try {
       await api.post('/admin_login', { email, password }, { withCredentials: true });
-      const sessionResponse = await api.get('/auth/session', { validateStatus: () => true });
+      const sessionResponse = await api.get('/auth/session', {
+        validateStatus: () => true,
+        headers: { 'X-Auth-Context': 'admin' },
+      });
       const authenticatedUser = sessionResponse.data?.user || null;
       setUser(authenticatedUser);
       const role = normalizeRole(authenticatedUser?.role);

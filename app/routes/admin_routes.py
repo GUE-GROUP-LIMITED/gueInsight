@@ -4,7 +4,7 @@ import json
 import os
 import secrets
 from datetime import datetime, timezone, timedelta
-from flask import Blueprint, request, redirect, url_for, flash, abort, current_app
+from flask import Blueprint, request, redirect, url_for, flash, abort, current_app, session
 from flask_login import login_required, current_user, login_user, logout_user
 from flask_mail import Message
 from werkzeug.security import generate_password_hash
@@ -409,6 +409,7 @@ def admin_login():
 
     if user and _is_admin(user) and user.check_password(password):
         login_user(user)
+        session['auth_context'] = 'admin'
         flash('Login successful!', 'success')
         if request.is_json:
             return {"message": "Login successful."}, 200
@@ -1283,5 +1284,6 @@ def admin_update_vciso_update(update_id):
 @admin_bp.route('/logout')
 @login_required
 def logout():
+    session.pop('auth_context', None)
     logout_user()
     return redirect(url_for('index'))
