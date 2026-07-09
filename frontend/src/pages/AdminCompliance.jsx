@@ -1,14 +1,25 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import AdminTopbarControls from '../components/AdminTopbarControls';
 import { api } from '../services/api';
 import NIS2IncidentReport from '../components/NIS2IncidentReport';
 import { useTranslation } from '../i18n/index';
+import './AdminDashboard.css';
 import './AdminCompliance.css';
 
 const severityOrder = { critical: 3, warning: 2, info: 1 };
 
+const sidebarItems = [
+  { label: 'Home', href: '/admin', icon: 'H' },
+  { label: 'Compliance', href: '/admin/compliance', icon: 'C', active: true },
+  { label: 'Access Control', href: '/admin/access', icon: 'A' },
+  { label: 'Support', href: '/admin/support', icon: 'S' },
+  { label: 'Subscribers', href: '/admin/users', icon: 'U' },
+];
+
 const AdminCompliance = () => {
   const { t } = useTranslation();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [securityEvents, setSecurityEvents] = useState([]);
@@ -343,17 +354,65 @@ const AdminCompliance = () => {
   const soc2Overview = complianceReadiness?.compliance_overview?.soc2;
 
   return (
-    <main className="admin-compliance-page">
-      <header className="admin-compliance-page__header">
-        <div>
-          <p className="admin-compliance-page__eyebrow">{t('admin_compliance.eyebrow')}</p>
-          <h1>{t('admin_compliance.heading')}</h1>
-          <p>{t('admin_compliance.lead')}</p>
+    <div className={`admin-shell ${sidebarCollapsed ? 'admin-shell--collapsed' : ''}`}>
+      <aside className="admin-shell__sidebar">
+        <div className="admin-shell__brand">
+          <div className="admin-shell__brand-mark">GI</div>
+          <div className="admin-shell__brand-copy">
+            <strong>GueInsight</strong>
+            <span>Admin Panel</span>
+          </div>
         </div>
-        <Link to="/admin" className="admin-compliance-page__link">{t('admin_compliance.back_to_dashboard')}</Link>
-      </header>
 
-      <section className="admin-compliance-page__stats">
+        <nav className="admin-shell__nav" aria-label="Admin sidebar">
+          {sidebarItems.map((item) => (
+            <Link
+              key={item.href}
+              to={item.href}
+              aria-label={item.label}
+              className={`admin-shell__nav-link ${item.active ? 'is-active' : ''}`}
+            >
+              <span className="admin-shell__nav-icon" aria-hidden="true">{item.icon}</span>
+              <span className="admin-shell__nav-label">{item.label}</span>
+            </Link>
+          ))}
+        </nav>
+
+        <div className="admin-shell__sidebar-card">
+          <p className="admin-shell__sidebar-label">Operations</p>
+          <h3>Need help?</h3>
+          <p>Review incidents, support requests, and compliance controls from this workspace.</p>
+          <Link to="/admin/support" className="admin-shell__sidebar-action">Open support queue</Link>
+        </div>
+      </aside>
+
+      <main className="admin-shell__content">
+        <header className="admin-shell__topbar">
+          <div>
+            <p className="admin-shell__eyebrow">Governance</p>
+            <h1>{t('admin_compliance.heading')}</h1>
+          </div>
+
+          <AdminTopbarControls
+            searchPlaceholder="Search compliance workspace"
+            searchAriaLabel="Search compliance workspace"
+            primaryActionHref="/admin/users"
+            primaryActionLabel="Manage users"
+            sidebarCollapsed={sidebarCollapsed}
+            onToggleSidebar={() => setSidebarCollapsed((current) => !current)}
+          />
+        </header>
+
+        <div className="admin-compliance-page">
+          <header className="admin-compliance-page__header">
+            <div>
+              <p className="admin-compliance-page__eyebrow">{t('admin_compliance.eyebrow')}</p>
+              <p>{t('admin_compliance.lead')}</p>
+            </div>
+            <Link to="/admin" className="admin-compliance-page__link">{t('admin_compliance.back_to_dashboard')}</Link>
+          </header>
+
+          <section className="admin-compliance-page__stats">
         <article>
           <span>{t('admin_compliance.security_events')}</span>
           <strong>{securityEvents.length}</strong>
@@ -370,9 +429,9 @@ const AdminCompliance = () => {
           <span>{t('admin_compliance.pending_deletions')}</span>
           <strong>{pendingRequests}</strong>
         </article>
-      </section>
+          </section>
 
-      <section className="admin-compliance-page__feature-area">
+          <section className="admin-compliance-page__feature-area">
         <article className="admin-compliance-card admin-compliance-card--tiers">
           <h2>Admin Oversight Workspace</h2>
           <p className="admin-compliance-card__muted">
@@ -443,12 +502,12 @@ const AdminCompliance = () => {
           ) : null}
           {soc2Message ? <p className="admin-compliance-success">{soc2Message}</p> : null}
         </article>
-      </section>
+          </section>
 
-      {loading ? <p className="admin-compliance-page__feedback">{t('admin_compliance.loading')}</p> : null}
-      {error ? <p className="admin-compliance-page__feedback admin-compliance-page__feedback--error">{error}</p> : null}
+          {loading ? <p className="admin-compliance-page__feedback">{t('admin_compliance.loading')}</p> : null}
+          {error ? <p className="admin-compliance-page__feedback admin-compliance-page__feedback--error">{error}</p> : null}
 
-      <section className="admin-compliance-page__grid">
+          <section className="admin-compliance-page__grid">
         <article className="admin-compliance-card">
           <h2>SOC2 Control Mapping</h2>
           <div className="admin-compliance-table-wrap">
@@ -712,8 +771,10 @@ const AdminCompliance = () => {
             </table>
           </div>
         </article>
-      </section>
-    </main>
+          </section>
+        </div>
+      </main>
+    </div>
   );
 };
 
