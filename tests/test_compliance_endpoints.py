@@ -349,7 +349,7 @@ def test_checkout_uses_stripe_secret_key_fallback_when_api_key_missing(client):
     app = client.application
     app.config['TESTING'] = False
     app.config['STRIPE_API_KEY'] = ''
-    app.config['STRIPE_SECRET_KEY'] = 'sk_test_fallback_secret'
+    app.config['STRIPE_SECRET_KEY'] = 'stripe_secret_fallback_placeholder'
 
     original_customer_create = users_routes.stripe.Customer.create
     original_checkout = users_routes.stripe.checkout
@@ -370,7 +370,7 @@ def test_checkout_uses_stripe_secret_key_fallback_when_api_key_missing(client):
         assert response.status_code == 200
         payload = response.get_json()
         assert payload['checkout_url'] == 'https://checkout.stripe.test/session_123'
-        assert users_routes.stripe.api_key == 'sk_test_fallback_secret'
+        assert users_routes.stripe.api_key == 'stripe_secret_fallback_placeholder'
     finally:
         users_routes.stripe.Customer.create = original_customer_create
         users_routes.stripe.checkout = original_checkout
