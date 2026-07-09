@@ -2,11 +2,13 @@ import pytest
 from datetime import datetime, timedelta
 from flask_login import LoginManager
 from werkzeug.security import generate_password_hash
+from types import SimpleNamespace
 
 from app import create_app, db
 from app.config import Config
 from app.models import DataDeletionRequest, SecurityEvent, User, UserRole, AlertRule, Subscription, VcisoUpdate
 import app.routes.users_support_routes as users_support_routes
+import app.routes.users_routes as users_routes
 
 
 @pytest.fixture()
@@ -335,6 +337,44 @@ def test_free_user_can_start_paid_trial_checkout_session(client):
     )
     assert latest_subscription.plan == 'starter'
     assert latest_subscription.is_trial is True
+
+
+def test_checkout_uses_stripe_secret_key_fallback_when_api_key_missing(client):
+    user = _create_user(email='stripe-secret-fallback@example.com')
+    _set_subscription(user.id, plan='free', days=3650)
+
+    login_response = _login(client, email='stripe-secret-fallback@example.com')
+    assert login_response.status_code == 200
+
+    app = client.application
+    app.config['TESTING'] = False
+    app.config['STRIPE_API_KEY'] = ''
+    app.config['STRIPE_SECRET_KEY'] = 'sk_test_fallback_secret'
+
+    original_customer_create = users_routes.stripe.Customer.create
+    original_checkout = users_routes.stripe.checkout
+
+    def _fake_customer_create(**kwargs):
+        return SimpleNamespace(id='cus_test_123')
+
+    def _fake_session_create(**kwargs):
+        return SimpleNamespace(url='https://checkout.stripe.test/session_123')
+
+    users_routes.stripe.Customer.create = _fake_customer_create
+    users_routes.stripe.checkout = SimpleNamespace(
+        Session=SimpleNamespace(create=_fake_session_create)
+    )
+
+    try:
+        response = client.post('/checkout/create-session', json={'tier_id': 'starter', 'trial_days': 14})
+        assert response.status_code == 200
+        payload = response.get_json()
+        assert payload['checkout_url'] == 'https://checkout.stripe.test/session_123'
+        assert users_routes.stripe.api_key == 'sk_test_fallback_secret'
+    finally:
+        users_routes.stripe.Customer.create = original_customer_create
+        users_routes.stripe.checkout = original_checkout
+        app.config['TESTING'] = True
 
 
 def test_admin_can_update_deletion_request_status(client):

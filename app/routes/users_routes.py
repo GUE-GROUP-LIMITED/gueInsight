@@ -342,7 +342,10 @@ def create_checkout_session():
             return jsonify({'error': 'Failed to create checkout session'}), 500
 
     # Initialize Stripe
-    stripe.api_key = current_app.config.get('STRIPE_API_KEY')
+    stripe.api_key = (
+        current_app.config.get('STRIPE_SECRET_KEY')
+        or current_app.config.get('STRIPE_API_KEY')
+    )
 
     # If Stripe is not configured, use local mock mode for development/testing
     if not stripe.api_key:
