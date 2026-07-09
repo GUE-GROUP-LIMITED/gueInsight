@@ -38,6 +38,7 @@ const PublicHeader = ({
 }) => {
 	const { user, logout, loading } = useContext(AuthContext);
 	const isAuthenticated = Boolean(user);
+	const displayName = `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || user?.email || '';
 
 	const TrialAction = onTrialClick ? 'button' : trialTo.startsWith('http') ? 'a' : Link;
 	const trialProps = onTrialClick
@@ -75,7 +76,10 @@ const PublicHeader = ({
 				</ul>
 				{showLogin && !loading ? (
 					isAuthenticated ? (
-						<button type="button" className="gi-nav-login" onClick={handleLogout}>Log Out</button>
+						<div className="gi-nav-auth">
+							<span className="gi-nav-user" title={displayName}>{displayName}</span>
+							<button type="button" className="gi-nav-login" onClick={handleLogout}>Log Out</button>
+						</div>
 					) : (
 						<Link to={loginTo} className="gi-nav-login">Log In</Link>
 					)

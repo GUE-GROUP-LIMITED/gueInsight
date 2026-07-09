@@ -127,6 +127,23 @@
 	color: var(--ph-cyan);
 }
 
+.gi-nav-auth {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	margin-left: auto;
+	min-width: 0;
+}
+
+.gi-nav-user {
+	color: var(--ph-gray);
+	font-size: 0.8rem;
+	max-width: 220px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
 @media (max-width: 1080px) {
 	.gi-nav-inner {
 		width: min(100vw - 18px, 1240px);
@@ -153,6 +170,13 @@
 	.gi-nav-login {
 		order: 2;
 		margin-left: 0;
+	}
+
+	.gi-nav-auth {
+		order: 2;
+		margin-left: 0;
+		width: 100%;
+		justify-content: space-between;
 	}
 
 	.gi-nav-cta {
