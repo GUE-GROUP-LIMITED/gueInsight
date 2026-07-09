@@ -8,14 +8,12 @@ import { normalizePlan } from '../utils/planTier';
 import './DashboardShell.css';
 
 const TABS = [
-  { id: 'dashboard', label: '🏠 Dashboard',    desc: 'Overview' },
   { id: 'threat',    label: '⚡ Threat Intel', desc: 'Analysis workspace' },
   { id: 'compliance', label: '📋 Compliance',     desc: 'NIS2 & GDPR posture' },
   { id: 'vciso',      label: '🛡️ vCISO Portal',  desc: 'Expert guidance' },
 ];
 
 const TAB_ROUTES = {
-  dashboard: '/dashboard',
   threat: '/threatintel',
   compliance: '/dashboard/compliance',
   vciso: '/dashboard/vciso',
@@ -50,8 +48,7 @@ export default function DashboardShell({ defaultTab = 'threat' }) {
     const path = location.pathname;
     if (path.startsWith('/dashboard/compliance')) return 'compliance';
     if (path.startsWith('/dashboard/vciso')) return 'vciso';
-    if (path.startsWith('/threatintel')) return 'threat';
-    return 'dashboard';
+    return 'threat';
   })();
 
   return (
@@ -69,7 +66,7 @@ export default function DashboardShell({ defaultTab = 'threat' }) {
                 disabled={locked}
                 onClick={() => {
                   const route = TAB_ROUTES[tab.id];
-                  setActiveTab(tab.id === 'dashboard' ? 'threat' : tab.id);
+                  setActiveTab(tab.id);
                   if (route) navigate(route);
                 }}
               >
