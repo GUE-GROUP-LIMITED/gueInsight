@@ -1352,14 +1352,14 @@ export default function Landing() {
           </p>
           <div className="lp__about-cta">
             <a
-              href="https://github.com/GUE-GROUP-LIMITED"
+              href="https://www.gabrielaloho.com/"
               target="_blank"
               rel="noreferrer"
               className="lp__btn lp__btn--ghost"
-              style={{ display: 'inline-flex' }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
             >
-              <IconGitHub size={16} />
-              Star on GitHub
+              <IconUser size={16} />
+              Visit CEO Portfolio
             </a>
           </div>
         </div>
