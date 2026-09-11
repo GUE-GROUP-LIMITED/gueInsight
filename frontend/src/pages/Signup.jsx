@@ -15,6 +15,7 @@ import {
   IconChevronLeft,
   IconPhone,
   IconMail,
+  IconArrowUpRight,
 } from '../components/Icons';
 import './AuthPricing.css';
 import { useTranslation } from '../i18n/index';
@@ -227,20 +228,31 @@ const Signup = () => {
       <div className="auth-split__right">
         {/* Top bar */}
         <div className="auth-split__right-topbar">
-          <Link to="/" className="auth-split__right-back">
-            <IconChevronLeft size={16} />
-            Back to home
-          </Link>
+          <div className="auth-split__topbar-left">
+            <Link to="/" className="auth-split__right-back" title="Back to home">
+              <IconChevronLeft size={16} />
+              <span className="auth-split__back-label">Back to home</span>
+              <span className="auth-split__back-label-mobile">Back</span>
+            </Link>
+          </div>
 
           {/* Mobile brand (shown only on mobile/tablet when left panel is hidden) */}
-          <Link to="/" className="auth-split__mobile-brand" aria-label="GueInsight Home">
-            <img src="/img/logo.png" alt="GueInsight" width="26" height="26" style={{ borderRadius: 6 }} />
-            <span>GueInsight<span>.</span></span>
-          </Link>
+          <div className="auth-split__topbar-center">
+            <Link to="/" className="auth-split__mobile-brand" aria-label="GueInsight Home">
+              <img src="/img/logo.png" alt="GueInsight" width="24" height="24" style={{ borderRadius: 6, objectFit: 'cover' }} />
+              <span>GueInsight<span className="auth-split__left-name-dot">.</span></span>
+            </Link>
+          </div>
 
-          <span className="auth-split__right-join">
-            {t('signup.note') || 'Already have an account?'} <Link to={`/login${location.search || ''}`}>Log in ↗</Link>
-          </span>
+          <div className="auth-split__topbar-right">
+            <span className="auth-split__right-join">
+              <span className="auth-split__join-prompt">{t('signup.note') || 'Already have an account?'}</span>
+              <Link to={`/login${location.search || ''}`} className="auth-split__join-link">
+                <span>Log in</span>
+                <IconArrowUpRight size={13} />
+              </Link>
+            </span>
+          </div>
         </div>
 
         {/* Form area */}
