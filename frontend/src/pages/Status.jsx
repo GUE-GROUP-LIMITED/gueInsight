@@ -368,7 +368,7 @@ export default function Status() {
         </div>
 
       </main>
-      <Footer />
+      {/* <Footer /> */}
     </div>
   );
 }

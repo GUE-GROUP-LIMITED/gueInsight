@@ -466,7 +466,7 @@ export default function Resources() {
         </div>
 
       </main>
-      <Footer />
+      {/* <Footer /> */}
     </div>
   );
 }
