@@ -108,45 +108,16 @@ const FAQS = [
 ];
 
 const CAPABILITIES = [
-  {
-    title: 'Analyze threats fast',
-    desc: 'Upload files, paste indicators, or scan URLs to extract IoCs, score risk, and enrich findings in seconds.',
-  },
-  {
-    title: 'Stay GDPR and NIS2 ready',
-    desc: 'Use built-in export, deletion, incident reporting, and audit evidence workflows designed for Belgian and EU teams.',
-  },
-  {
-    title: 'Connect your cloud stack',
-    desc: 'Link Microsoft 365 or Google Workspace to discover users, devices, policies, and compliance gaps across the tenant.',
-  },
-  {
-    title: 'Get vCISO guidance',
-    desc: 'Enterprise Elite adds expert recommendations, action items, and monthly advisory notes directly in the dashboard.',
-  },
-  {
-    title: 'Use AI for triage and next steps',
-    desc: 'Summarize security events, cluster related alerts, and turn signals into practical remediation guidance faster.',
-  },
+  { title: 'Analyze threats fast', desc: 'Upload files, paste indicators, or scan URLs to extract IoCs, score risk, and enrich findings in seconds.' },
+  { title: 'Stay GDPR and NIS2 ready', desc: 'Use built-in export, deletion, incident reporting, and audit evidence workflows designed for Belgian and EU teams.' },
+  { title: 'Connect your cloud stack', desc: 'Link Microsoft 365 or Google Workspace to discover users, devices, policies, and compliance gaps across the tenant.' },
+  { title: 'Get vCISO guidance', desc: 'Enterprise Elite adds expert recommendations, action items, and monthly advisory notes directly in the dashboard.' },
+  { title: 'Use AI for triage and next steps', desc: 'Summarize security events, cluster related alerts, and turn signals into practical remediation guidance faster.' },
 ];
 
-const LIVE_ALERT_CLASS_MAP = {
-  HIGH: 'lp__mock-alert--high',
-  MED: 'lp__mock-alert--med',
-  OK: 'lp__mock-alert--ok',
-};
-
-const LIVE_DOT_CLASS_MAP = {
-  HIGH: 'lp__mock-adot',
-  MED: 'lp__mock-adot lp__mock-adot--med',
-  OK: 'lp__mock-adot lp__mock-adot--ok',
-};
-
-const LIVE_BADGE_CLASS_MAP = {
-  HIGH: 'lp__mock-badge lp__mock-badge--high',
-  MED: 'lp__mock-badge lp__mock-badge--med',
-  OK: 'lp__mock-badge lp__mock-badge--ok',
-};
+const LIVE_ALERT_CLASS_MAP = { HIGH: 'lp__mock-alert--high', MED: 'lp__mock-alert--med', OK: 'lp__mock-alert--ok' };
+const LIVE_DOT_CLASS_MAP   = { HIGH: 'lp__mock-adot', MED: 'lp__mock-adot lp__mock-adot--med', OK: 'lp__mock-adot lp__mock-adot--ok' };
+const LIVE_BADGE_CLASS_MAP = { HIGH: 'lp__mock-badge lp__mock-badge--high', MED: 'lp__mock-badge lp__mock-badge--med', OK: 'lp__mock-badge lp__mock-badge--ok' };
 
 const FALLBACK_HERO_STATE = {
   securityScore: 78,
@@ -165,29 +136,20 @@ const FALLBACK_HERO_STATE = {
 };
 
 function getRelativeUpdateLabel(isoDate) {
-  if (!isoDate) {
-    return 'Updated now';
-  }
+  if (!isoDate) return 'Updated now';
   const date = new Date(isoDate);
-  if (Number.isNaN(date.getTime())) {
-    return 'Updated now';
-  }
-
+  if (Number.isNaN(date.getTime())) return 'Updated now';
   const elapsedMs = Date.now() - date.getTime();
-  if (elapsedMs < 60_000) {
-    return 'Updated just now';
-  }
+  if (elapsedMs < 60_000) return 'Updated just now';
   const minutes = Math.floor(elapsedMs / 60_000);
-  if (minutes < 60) {
-    return `Updated ${minutes}m ago`;
-  }
+  if (minutes < 60) return `Updated ${minutes}m ago`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) {
-    return `Updated ${hours}h ago`;
-  }
-  const days = Math.floor(hours / 24);
-  return `Updated ${days}d ago`;
+  if (hours < 24) return `Updated ${hours}h ago`;
+  return `Updated ${Math.floor(hours / 24)}d ago`;
 }
+
+// Avatar blobs for the about/feature section
+const AVATAR_BLOBS = ['🛡️', '🔍', '📊', '🔗', '🚨', '📋', '⚡', '🏢', '🇪🇺', '💬', '🔐', '✅'];
 
 export default function Landing() {
   const [showTrialModal, setShowTrialModal] = useState(false);
@@ -229,77 +191,47 @@ export default function Landing() {
     const loadLandingSnapshot = async () => {
       try {
         const response = await api.get('/api/public/landing-snapshot');
-        if (isMounted) {
-          setHeroSnapshot(applySnapshot(response?.data || {}));
-        }
+        if (isMounted) setHeroSnapshot(applySnapshot(response?.data || {}));
       } catch {
-        if (isMounted) {
-          setHeroSnapshot((prev) => prev || FALLBACK_HERO_STATE);
-        }
+        if (isMounted) setHeroSnapshot((prev) => prev || FALLBACK_HERO_STATE);
       }
     };
 
     const startFallbackPolling = () => {
-      if (fallbackPollingStarted) {
-        return;
-      }
+      if (fallbackPollingStarted) return;
       fallbackPollingStarted = true;
       loadLandingSnapshot();
       pollIntervalId = setInterval(loadLandingSnapshot, 30_000);
     };
 
     const sseBase = (api?.defaults?.baseURL || '').replace(/\/$/, '');
-    const sseUrl = sseBase
-      ? `${sseBase}/api/public/landing-snapshot/stream`
-      : '/api/public/landing-snapshot/stream';
+    const sseUrl = sseBase ? `${sseBase}/api/public/landing-snapshot/stream` : '/api/public/landing-snapshot/stream';
 
     try {
       eventSource = new EventSource(sseUrl, { withCredentials: true });
       eventSource.addEventListener('snapshot', (event) => {
-        if (!isMounted) {
-          return;
-        }
-        try {
-          const payload = JSON.parse(event.data);
-          setHeroSnapshot(applySnapshot(payload));
-        } catch {
-          // Ignore malformed stream events and keep the latest valid snapshot.
-        }
+        if (!isMounted) return;
+        try { setHeroSnapshot(applySnapshot(JSON.parse(event.data))); } catch { /* ignore */ }
       });
       eventSource.onerror = () => {
-        if (eventSource) {
-          eventSource.close();
-          eventSource = null;
-        }
+        if (eventSource) { eventSource.close(); eventSource = null; }
         startFallbackPolling();
       };
-    } catch {
-      startFallbackPolling();
-    }
+    } catch { startFallbackPolling(); }
 
-    // Keep a quick baseline value in case stream connection is delayed.
     loadLandingSnapshot();
 
     return () => {
       isMounted = false;
-      if (eventSource) {
-        eventSource.close();
-      }
-      if (pollIntervalId) {
-        clearInterval(pollIntervalId);
-      }
+      if (eventSource) eventSource.close();
+      if (pollIntervalId) clearInterval(pollIntervalId);
     };
   }, []);
 
-  const scoreUpdateLabel = useMemo(
-    () => getRelativeUpdateLabel(heroSnapshot.updatedAt),
-    [heroSnapshot.updatedAt]
-  );
+  const scoreUpdateLabel = useMemo(() => getRelativeUpdateLabel(heroSnapshot.updatedAt), [heroSnapshot.updatedAt]);
 
   return (
     <div className="lp">
-      <div className="lp__ambient" aria-hidden="true" />
-
       {/* UTILITY BAR */}
       <div className="lp__utility">
         <span>🇧🇪 A <a href="https://www.guecyber.com" target="_blank" rel="noreferrer">Gue Cyber</a> product · Registered Belgian Enterprise</span>
@@ -316,14 +248,42 @@ export default function Landing() {
         trialTo="/subscription"
       />
 
-      {/* HERO */}
+      {/* ══════════ HERO ══════════ */}
       <section className="lp__hero">
-        <div className="lp__hero-left">
-          <p className="lp__eyebrow">GueInsight — Threat Intelligence, Compliance &amp; vCISO in one platform</p>
-          <h1>Your Security Dashboard.<br /><em>Expert-Backed.</em></h1>
+        <div className="lp__hero-top">
+
+          {/* Floating decorative avatars */}
+          <div className="lp__hero-deco lp__hero-deco--tl">
+            <div className="lp__float-avatar lp__float-avatar--sm">🛡️</div>
+          </div>
+          <div className="lp__hero-deco lp__hero-deco--tr">
+            <span className="lp__sparkle">✳</span>
+          </div>
+          <div className="lp__hero-deco lp__hero-deco--ml" style={{ left: '5%' }}>
+            <div className="lp__float-avatar">🔍</div>
+          </div>
+          <div className="lp__hero-deco lp__hero-deco--mr" style={{ right: '5%' }}>
+            <div className="lp__float-avatar lp__float-avatar--lg">🏢</div>
+          </div>
+
+          {/* Eyebrow pill */}
+          <p className="lp__eyebrow">
+            <span>🇧🇪</span>
+            GueInsight — Threat Intelligence, Compliance &amp; vCISO in one platform
+          </p>
+
+          {/* Main headline */}
+          <h1>
+            Your Security Dashboard.
+            <span className="lp__hero-h1-line2"><em>Expert-Backed.</em></span>
+          </h1>
+
+          {/* Lead paragraph */}
           <p className="lp__lead">
             GueInsight gives Belgian and European organisations real-time threat intelligence, AI-assisted triage, NIS2 &amp; GDPR compliance tools, and — on Enterprise Elite — a <strong>virtual CISO portal</strong> where Gue Cyber experts post recommendations directly to your dashboard.
           </p>
+
+          {/* Capability summary pills */}
           <div className="lp__capability-summary" aria-label="Platform capabilities">
             <span>Analyze threats</span>
             <span>Manage compliance</span>
@@ -331,10 +291,14 @@ export default function Landing() {
             <span>Work with a vCISO</span>
             <span>Use AI-assisted triage</span>
           </div>
+
+          {/* CTA buttons */}
           <div className="lp__hero-actions">
-            <Link to="/subscription" className="lp__btn lp__btn--primary">View Plans</Link>
-            <Link to="/subscription" className="lp__btn lp__btn--ghost">View Plans →</Link>
+            <Link to="/subscription" className="lp__btn lp__btn--primary">View Plans →</Link>
+            <Link to="/subscription" className="lp__btn lp__btn--ghost">See all features</Link>
           </div>
+
+          {/* Trust indicators */}
           <div className="lp__trust-row">
             <span>⚡ Fast IoC extraction</span>
             <span>📋 NIS2 &amp; GDPR ready</span>
@@ -343,55 +307,98 @@ export default function Landing() {
           </div>
         </div>
 
-        <div className="lp__hero-panel">
-          {/* live-style dashboard mockup */}
-          <div className="lp__mock-bar">
-            <span className="lp__mock-dot" style={{background:'#FF5F57'}}/>
-            <span className="lp__mock-dot" style={{background:'#FFBD2E'}}/>
-            <span className="lp__mock-dot" style={{background:'#28CA41'}}/>
-            <span className="lp__mock-url">insights.guecyber.com · Dashboard</span>
-          </div>
-          <div className="lp__mock-body">
-            <div className="lp__mock-tabs">
-              <span className="lp__mock-tab lp__mock-tab--active">Threat Intel</span>
-              <span className="lp__mock-tab">Compliance</span>
-              <span className="lp__mock-tab">vCISO</span>
+        {/* HERO DASHBOARD MOCKUP */}
+        <div className="lp__hero-panel-wrap">
+          <div className="lp__hero-panel">
+            {/* Window chrome */}
+            <div className="lp__mock-bar">
+              <span className="lp__mock-dot" style={{ background: '#FF5F57' }} />
+              <span className="lp__mock-dot" style={{ background: '#FFBD2E' }} />
+              <span className="lp__mock-dot" style={{ background: '#28CA41' }} />
+              <span className="lp__mock-url">insights.guecyber.com · Dashboard</span>
             </div>
-            <div className="lp__mock-score-row">
-              <div className="lp__mock-ring" style={{ '--ring-fill': heroSnapshot.securityScore }}>
-                <span>{heroSnapshot.securityScore}</span>
-              </div>
-              <div>
-                <p className="lp__mock-score-label">Security Score</p>
-                <p className="lp__mock-score-sub">{heroSnapshot.activeAlerts} active alerts · {scoreUpdateLabel}</p>
-              </div>
-            </div>
-            <div className="lp__mock-alerts">
-              {heroSnapshot.alerts.map((alert) => (
-                <div
-                  className={`lp__mock-alert ${LIVE_ALERT_CLASS_MAP[alert.severity] || LIVE_ALERT_CLASS_MAP.OK}`}
-                  key={alert.id}
-                >
-                  <span className={LIVE_DOT_CLASS_MAP[alert.severity] || LIVE_DOT_CLASS_MAP.OK} />
-                  <span>{alert.title}</span>
-                  <span className={LIVE_BADGE_CLASS_MAP[alert.severity] || LIVE_BADGE_CLASS_MAP.OK}>{alert.severity}</span>
+
+            {/* Main body — sidebar + content */}
+            <div className="lp__mock-body">
+              {/* Sidebar */}
+              <div className="lp__mock-sidebar">
+                <div className="lp__mock-server-icon">🛡️</div>
+                <div className="lp__mock-channel-group">THREAT INTEL</div>
+                <div className="lp__mock-channel lp__mock-channel--active">
+                  <span>#</span> overview
                 </div>
-              ))}
-            </div>
-            <div className="lp__mock-vciso">
-              <p className="lp__mock-vciso-label">💬 vCISO Note — {heroSnapshot.vcisoNote.authorName}</p>
-              <p className="lp__mock-vciso-text">"{heroSnapshot.vcisoNote.note}"</p>
+                <div className="lp__mock-channel"><span>#</span> alerts</div>
+                <div className="lp__mock-channel"><span>#</span> ioc-feed</div>
+                <div className="lp__mock-channel"><span>#</span> off-topic</div>
+                <div className="lp__mock-channel-group" style={{ marginTop: 8 }}>COMPLIANCE</div>
+                <div className="lp__mock-channel"><span>#</span> nis2</div>
+                <div className="lp__mock-channel"><span>#</span> vciso</div>
+              </div>
+
+              {/* Main content */}
+              <div className="lp__mock-main">
+                <div className="lp__mock-channel-header">
+                  <span>#</span> overview
+                </div>
+
+                {/* Tabs */}
+                <div className="lp__mock-tabs">
+                  <span className="lp__mock-tab lp__mock-tab--active">Threat Intel</span>
+                  <span className="lp__mock-tab">Compliance</span>
+                  <span className="lp__mock-tab">vCISO</span>
+                </div>
+
+                {/* Score ring */}
+                <div className="lp__mock-score-row">
+                  <div className="lp__mock-ring" style={{ '--ring-fill': heroSnapshot.securityScore }}>
+                    <span>{heroSnapshot.securityScore}</span>
+                  </div>
+                  <div>
+                    <p className="lp__mock-score-label">Security Score</p>
+                    <p className="lp__mock-score-sub">{heroSnapshot.activeAlerts} active alerts · {scoreUpdateLabel}</p>
+                  </div>
+                </div>
+
+                {/* Alerts */}
+                <div className="lp__mock-alerts">
+                  {heroSnapshot.alerts.map((alert) => (
+                    <div
+                      className={`lp__mock-alert ${LIVE_ALERT_CLASS_MAP[alert.severity] || LIVE_ALERT_CLASS_MAP.OK}`}
+                      key={alert.id}
+                    >
+                      <span className={LIVE_DOT_CLASS_MAP[alert.severity] || LIVE_DOT_CLASS_MAP.OK} />
+                      <span>{alert.title}</span>
+                      <span className={LIVE_BADGE_CLASS_MAP[alert.severity] || LIVE_BADGE_CLASS_MAP.OK}>{alert.severity}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* vCISO note */}
+                <div className="lp__mock-vciso">
+                  <p className="lp__mock-vciso-label">💬 vCISO Note — {heroSnapshot.vcisoNote.authorName}</p>
+                  <p className="lp__mock-vciso-text">"{heroSnapshot.vcisoNote.note}"</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* CORE CAPABILITIES */}
+      {/* ══════════ TAGLINE BAR ══════════ */}
+      <div className="lp__tagline-bar">
+        <div className="lp__container">
+          <p className="lp__tagline">
+            For the <strong>security teams</strong>. The <strong>compliance officers</strong>. The <em>"are we NIS2 ready?"</em> people.
+          </p>
+        </div>
+      </div>
+
+      {/* ══════════ CORE CAPABILITIES ══════════ */}
       <section className="lp__section lp__section--capabilities" id="capabilities">
         <div className="lp__section-head lp__section-head--compact">
-          <p className="lp__eyebrow">// Core capabilities</p>
+          <span className="lp__section-eyebrow">// Core capabilities</span>
           <h2>What the platform lets you do</h2>
-          <p className="lp__section-sub">Five actions cover most teams’ day-to-day needs: detect, comply, connect, get expert guidance, and accelerate triage with AI-assisted security ops.</p>
+          <p className="lp__section-sub">Five actions cover most teams' day-to-day needs: detect, comply, connect, get expert guidance, and accelerate triage with AI-assisted security ops.</p>
         </div>
         <div className="lp__capabilities-grid">
           {CAPABILITIES.map((capability, index) => (
@@ -404,7 +411,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* NIS2 BANNER */}
+      {/* ══════════ NIS2 BANNER ══════════ */}
       <div className="lp__nis2-banner">
         <div>
           <strong>⚠️ NIS2 is now enforced in Belgium.</strong>{' '}
@@ -413,54 +420,99 @@ export default function Landing() {
         <Link to="/subscription" className="lp__btn lp__btn--nis2">See NIS2 Plans →</Link>
       </div>
 
-      {/* FEATURES GRID */}
-      <section className="lp__section" id="features">
-        <div className="lp__section-head">
-          <p className="lp__eyebrow">// What you get</p>
-          <h2>Everything Your Organisation Needs<br />In One Dashboard</h2>
-          <p className="lp__section-sub">From real-time threat intelligence to NIS2 compliance and virtual CISO guidance — all subscription-gated and ready to use.</p>
-        </div>
-        <div className="lp__features-grid">
-          {FEATURES.map(f => (
-            <article className="lp__feature-card" key={f.title}>
-              <div className="lp__feature-icon">{f.icon}</div>
-              <h3>{f.title}</h3>
-              <p>{f.desc}</p>
-            </article>
-          ))}
-        </div>
-      </section>
+      {/* ══════════ FEATURES GRID ══════════ */}
+      <div className="lp__section--alt">
+        <section className="lp__section-inner" id="features">
+          <div className="lp__section-head">
+            <span className="lp__section-eyebrow">// What you get</span>
+            <h2>Everything Your Organisation Needs<br />In One Dashboard</h2>
+            <p className="lp__section-sub">From real-time threat intelligence to NIS2 compliance and virtual CISO guidance — all subscription-gated and ready to use.</p>
+          </div>
+          <div className="lp__features-grid">
+            {FEATURES.map(f => (
+              <article className="lp__feature-card" key={f.title}>
+                <span className="lp__feature-icon">{f.icon}</span>
+                <h3>{f.title}</h3>
+                <p>{f.desc}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      </div>
 
-      <section className="lp__section lp__section--alt" id="proof">
-        <div className="lp__section-head">
-          <p className="lp__eyebrow">// Trust pack</p>
-          <h2>What buyers should verify before they buy</h2>
-          <p className="lp__section-sub">This section keeps the public page honest: it highlights what is verified, what is a readiness claim, and where the product already shows measurable output.</p>
+      {/* ══════════ ABOUT / OPEN SOURCE SECTION ══════════ */}
+      <div className="lp__about-section">
+        {/* Left text */}
+        <div className="lp__about-left">
+          <span className="lp__about-eyebrow">✳ About GueInsight</span>
+          <h2>A little less enterprise.<br />A lot more intelligence.</h2>
+          <p>
+            We believe cybersecurity shouldn't require a full SOC budget. So we're building focused, affordable tools for organisations who want real security insight — not just dashboards. No big pitch. Just good security.
+          </p>
+          <p>
+            GueInsight is built by <strong>Gabriel Aloho</strong> — founder of <a href="https://www.guecyber.com" target="_blank" rel="noreferrer" style={{ color: 'var(--orange)', fontWeight: 600 }}>Gue Cyber</a>, MSc in Information Security &amp; Digital Forensics, registered enterprise in Belgium.
+          </p>
+          <div className="lp__about-cta">
+            <a
+              href="https://github.com/GUE-GROUP-LIMITED"
+              target="_blank"
+              rel="noreferrer"
+              className="lp__btn lp__btn--ghost"
+              style={{ display: 'inline-flex' }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2Z" /></svg>
+              Star on GitHub
+            </a>
+          </div>
         </div>
-        <div className="lp__features-grid">
-          {TRUST_PACK.map((item) => (
-            <article className="lp__feature-card" key={item.title}>
-              <div className="lp__feature-icon">✓</div>
-              <h3>{item.title}</h3>
-              <p>{item.body}</p>
-            </article>
-          ))}
-        </div>
-        <div className="lp__features-grid" style={{ marginTop: '16px' }}>
-          {USE_CASE_NOTES.map((item) => (
-            <article className="lp__feature-card" key={item.title}>
-              <div className="lp__feature-icon">▣</div>
-              <h3>{item.title}</h3>
-              <p>{item.body}</p>
-            </article>
-          ))}
-        </div>
-      </section>
 
-      {/* HOW IT WORKS */}
-      <section className="lp__section lp__section--alt" id="how">
+        {/* Right — floating avatar grid */}
+        <div className="lp__avatar-grid" aria-hidden="true">
+          {AVATAR_BLOBS.map((emoji, i) => (
+            <div
+              key={i}
+              className="lp__avatar-blob"
+              style={{ animationDelay: `${i * 0.28}s` }}
+            >
+              {emoji}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ══════════ TRUST PACK ══════════ */}
+      <div className="lp__section--alt" id="proof">
+        <section className="lp__section-inner">
+          <div className="lp__section-head">
+            <span className="lp__section-eyebrow">// Trust pack</span>
+            <h2>What buyers should verify before they buy</h2>
+            <p className="lp__section-sub">This section keeps the public page honest: it highlights what is verified, what is a readiness claim, and where the product already shows measurable output.</p>
+          </div>
+          <div className="lp__features-grid">
+            {TRUST_PACK.map((item) => (
+              <article className="lp__feature-card" key={item.title}>
+                <span className="lp__feature-icon">✓</span>
+                <h3>{item.title}</h3>
+                <p>{item.body}</p>
+              </article>
+            ))}
+          </div>
+          <div className="lp__features-grid" style={{ marginTop: '16px' }}>
+            {USE_CASE_NOTES.map((item) => (
+              <article className="lp__feature-card" key={item.title}>
+                <span className="lp__feature-icon">▣</span>
+                <h3>{item.title}</h3>
+                <p>{item.body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      {/* ══════════ HOW IT WORKS ══════════ */}
+      <section className="lp__section" id="how">
         <div className="lp__section-head">
-          <p className="lp__eyebrow">// Getting started</p>
+          <span className="lp__section-eyebrow">// Getting started</span>
           <h2>Up and Running in Minutes</h2>
         </div>
         <div className="lp__steps">
@@ -474,52 +526,104 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* VCISO HIGHLIGHT */}
-      <section className="lp__vciso-section">
-        <div className="lp__vciso-left">
-          <p className="lp__eyebrow">// Enterprise Elite exclusive</p>
-          <h2>Your Virtual CISO.<br />Right Inside Your Dashboard.</h2>
-          <p>Most cybersecurity tools give you data. GueInsight Enterprise Elite gives you an <strong>expert</strong>. Gabriel Aloho — founder of Gue Cyber, MSc in Information Security &amp; Digital Forensics — posts personalised security recommendations, action items, and advisory notes directly to your dashboard.</p>
-          <ul className="lp__vciso-list">
-            <li>✦ Personalised security recommendations</li>
-            <li>✦ Action items with priority and deadlines</li>
-            <li>✦ NIS2 remediation checklists</li>
-            <li>✦ Monthly vCISO review summaries</li>
-            <li>✦ Direct line to Gue Cyber expertise</li>
-          </ul>
-          <div className="lp__hero-actions" style={{marginTop:'28px'}}>
-            <Link to="/subscription" className="lp__btn lp__btn--primary">View Plans</Link>
+      {/* ══════════ vCISO HIGHLIGHT ══════════ */}
+      <div className="lp__section--alt">
+        <div className="lp__vciso-section">
+          <div className="lp__vciso-left">
+            <p className="lp__eyebrow" style={{ display: 'inline-flex', gap: 8, alignItems: 'center', background: 'rgba(232,73,10,0.08)', color: 'var(--orange)', borderRadius: '100px', padding: '5px 14px', fontSize: '0.78rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 16 }}>// Enterprise Elite exclusive</p>
+            <h2>Your Virtual CISO.<br />Right Inside Your Dashboard.</h2>
+            <p>Most cybersecurity tools give you data. GueInsight Enterprise Elite gives you an <strong>expert</strong>. Gabriel Aloho — founder of Gue Cyber, MSc in Information Security &amp; Digital Forensics — posts personalised security recommendations, action items, and advisory notes directly to your dashboard.</p>
+            <ul className="lp__vciso-list">
+              <li>Personalised security recommendations</li>
+              <li>Action items with priority and deadlines</li>
+              <li>NIS2 remediation checklists</li>
+              <li>Monthly vCISO review summaries</li>
+              <li>Direct line to Gue Cyber expertise</li>
+            </ul>
+            <div className="lp__hero-actions" style={{ marginTop: 28 }}>
+              <Link to="/subscription" className="lp__btn lp__btn--primary">View Plans</Link>
+            </div>
+          </div>
+
+          <div className="lp__vciso-right">
+            <div className="lp__vciso-card">
+              <div className="lp__vciso-card-head">
+                <div className="lp__vciso-avatar">GA</div>
+                <div>
+                  <p className="lp__vciso-name">Gabriel Aloho</p>
+                  <p className="lp__vciso-role">vCISO · Gue Cyber · MSc InfoSec</p>
+                </div>
+                <span className="lp__vciso-live">LIVE</span>
+              </div>
+              <div className="lp__vciso-note">
+                <p className="lp__vciso-note-label">🔴 Action Required</p>
+                <p className="lp__vciso-note-title">Patch CVE-2025-4421 — Critical</p>
+                <p className="lp__vciso-note-body">This vulnerability affects your current .NET runtime. I've added a full remediation checklist. Patch before Friday to stay within your NIS2 72-hour window.</p>
+                <div className="lp__vciso-note-meta">Due: Friday · Priority: Critical</div>
+              </div>
+              <div className="lp__vciso-note" style={{ opacity: 0.7 }}>
+                <p className="lp__vciso-note-label">📋 Compliance Update</p>
+                <p className="lp__vciso-note-title">NIS2 Article 21 — Monthly Check</p>
+                <p className="lp__vciso-note-body">Your incident response plan needs one update — see Compliance tab for the specific gap I've flagged this month.</p>
+              </div>
+            </div>
           </div>
         </div>
-        <div className="lp__vciso-right">
-          <div className="lp__vciso-card">
-            <div className="lp__vciso-card-head">
-              <div className="lp__vciso-avatar">GA</div>
-              <div>
-                <p className="lp__vciso-name">Gabriel Aloho</p>
-                <p className="lp__vciso-role">vCISO · Gue Cyber · MSc InfoSec</p>
+      </div>
+
+      {/* ══════════ APP TEASER (dark card) ══════════ */}
+      <section className="lp__section" style={{ paddingBottom: 0 }}>
+        <div className="lp__app-teaser">
+          <div className="lp__app-teaser-left">
+            <h2>Take your security with you.</h2>
+            <p>Native GueInsight apps for mobile and desktop are coming soon. The same intelligence, with a home on every screen.</p>
+            <div className="lp__app-platform-badges">
+              <div className="lp__platform-badge">
+                <span className="lp__platform-badge-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.7 9.05 7.4c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.39-1.32 2.76-2.54 3.99zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>
+                  Mobile
+                </span>
+                <span className="lp__platform-badge-sub">iOS &amp; Android</span>
               </div>
-              <span className="lp__vciso-live">LIVE</span>
+              <div className="lp__platform-badge">
+                <span className="lp__platform-badge-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6zm-2 15a1 1 0 0 1 1-1h18a1 1 0 0 1 0 2H3a1 1 0 0 1-1-1zm5-4h10v1H7v-1z"/></svg>
+                  Desktop
+                </span>
+                <span className="lp__platform-badge-sub">macOS, Windows &amp; Linux</span>
+              </div>
             </div>
-            <div className="lp__vciso-note">
-              <p className="lp__vciso-note-label">🔴 Action Required</p>
-              <p className="lp__vciso-note-title">Patch CVE-2025-4421 — Critical</p>
-              <p className="lp__vciso-note-body">This vulnerability affects your current .NET runtime. I've added a full remediation checklist. Patch before Friday to stay within your NIS2 72-hour window.</p>
-              <div className="lp__vciso-note-meta">Due: Friday · Priority: Critical</div>
-            </div>
-            <div className="lp__vciso-note" style={{marginTop:'10px', opacity:0.7}}>
-              <p className="lp__vciso-note-label">📋 Compliance Update</p>
-              <p className="lp__vciso-note-title">NIS2 Article 21 — Monthly Check</p>
-              <p className="lp__vciso-note-body">Your incident response plan needs one update — see Compliance tab for the specific gap I've flagged this month.</p>
+          </div>
+
+          {/* Device mockup */}
+          <div className="lp__app-teaser-right">
+            <div className="lp__device-mockup">
+              <div className="lp__device-mockup-bar">
+                <span className="lp__device-mockup-bar-dot" style={{ background: '#FF5F57' }} />
+                <span className="lp__device-mockup-bar-dot" style={{ background: '#FFBD2E' }} />
+                <span className="lp__device-mockup-bar-dot" style={{ background: '#28CA41' }} />
+              </div>
+              {[
+                { color: '#E8490A', line: 0.6, badge: '#FF5050' },
+                { color: '#FFB432', line: 0.45, badge: '#FFB432' },
+                { color: '#50DC82', line: 0.7, badge: '#50DC82' },
+                { color: '#6B7AFF', line: 0.5, badge: '#6B7AFF' },
+              ].map((row, i) => (
+                <div className="lp__device-screen-row" key={i}>
+                  <div className="lp__device-avatar-sm" style={{ background: row.color }}>{['A','B','C','D'][i]}</div>
+                  <div className="lp__device-line" style={{ maxWidth: `${row.line * 100}%` }} />
+                  <div className="lp__device-badge-sm" style={{ background: `${row.badge}22` }} />
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </section>
 
-      {/* PRICING */}
+      {/* ══════════ PRICING ══════════ */}
       <section className="lp__section" id="pricing">
         <div className="lp__section-head">
-          <p className="lp__eyebrow">// Plans & pricing</p>
+          <span className="lp__section-eyebrow">// Plans &amp; pricing</span>
           <h2>Simple, Transparent Pricing</h2>
           <p className="lp__section-sub">Start free. Upgrade when ready. No long-term contracts on monthly plans.</p>
         </div>
@@ -537,7 +641,9 @@ export default function Landing() {
                 </div>
                 {tier.badges.length > 0 && (
                   <div className="lp__tier-badges">
-                    {tier.badges.map(b => <span key={b} className={`lp__cbadge lp__cbadge--${b.toLowerCase().replace('-','')}`}>{b}</span>)}
+                    {tier.badges.map(b => (
+                      <span key={b} className={`lp__cbadge lp__cbadge--${b.toLowerCase().replace('-', '')}`}>{b}</span>
+                    ))}
                   </div>
                 )}
               </div>
@@ -548,7 +654,7 @@ export default function Landing() {
               </ul>
               <Link
                 to={tier.ctaPath}
-                className={`lp__btn lp__tier-cta ${tier.ghost ? 'lp__btn--ghost' : tier.elite ? 'lp__btn--elite' : 'lp__btn--primary'}`}
+                className={`lp__btn lp__tier-cta ${tier.ghost ? 'lp__btn--ghost' : tier.elite ? 'lp__btn--dark' : 'lp__btn--primary'}`}
               >
                 {tier.cta}
               </Link>
@@ -558,46 +664,48 @@ export default function Landing() {
         <p className="lp__pricing-note">* Trials are 14 days. Payment method is required for paid-plan trials — not charged until the trial ends. Cancel anytime.</p>
       </section>
 
-      {/* COMPLIANCE TABLE */}
-      <section className="lp__section lp__section--alt">
-        <div className="lp__section-head">
-          <p className="lp__eyebrow">// Compliance coverage</p>
-          <h2>What Each Plan Covers</h2>
-        </div>
-        <div className="lp__table-wrap">
-          <table className="lp__compare">
-            <thead>
-              <tr><th>Feature</th><th>Starter</th><th>Compliance Pro</th><th>Enterprise Risk</th><th>Enterprise Elite</th></tr>
-            </thead>
-            <tbody>
-              <tr><td>Threat intelligence feed</td><td>Basic</td><td>Full</td><td>Full</td><td>Full</td></tr>
-              <tr><td>GDPR export &amp; deletion</td><td>—</td><td>✓</td><td>✓</td><td>✓</td></tr>
-              <tr><td>Audit logging</td><td>—</td><td>90 days</td><td>1 year</td><td>Unlimited</td></tr>
-              <tr><td>NIS2 incident reporting</td><td>—</td><td>—</td><td>✓</td><td>✓</td></tr>
-              <tr><td>M365 integration</td><td>—</td><td>Basic</td><td>Full</td><td>Full</td></tr>
-              <tr><td>Google Workspace</td><td>—</td><td>—</td><td>✓</td><td>✓</td></tr>
-              <tr><td>EU-only data residency</td><td>—</td><td>—</td><td>—</td><td>✓</td></tr>
-              <tr className="lp__compare-star"><td>vCISO Portal</td><td>—</td><td>—</td><td>—</td><td>✦ Included</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
+      {/* ══════════ COMPLIANCE TABLE ══════════ */}
+      <div className="lp__section--alt">
+        <section className="lp__section-inner">
+          <div className="lp__section-head">
+            <span className="lp__section-eyebrow">// Compliance coverage</span>
+            <h2>What Each Plan Covers</h2>
+          </div>
+          <div className="lp__table-wrap">
+            <table className="lp__compare">
+              <thead>
+                <tr><th>Feature</th><th>Starter</th><th>Compliance Pro</th><th>Enterprise Risk</th><th>Enterprise Elite</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Threat intelligence feed</td><td>Basic</td><td>Full</td><td>Full</td><td>Full</td></tr>
+                <tr><td>GDPR export &amp; deletion</td><td>—</td><td>✓</td><td>✓</td><td>✓</td></tr>
+                <tr><td>Audit logging</td><td>—</td><td>90 days</td><td>1 year</td><td>Unlimited</td></tr>
+                <tr><td>NIS2 incident reporting</td><td>—</td><td>—</td><td>✓</td><td>✓</td></tr>
+                <tr><td>M365 integration</td><td>—</td><td>Basic</td><td>Full</td><td>Full</td></tr>
+                <tr><td>Google Workspace</td><td>—</td><td>—</td><td>✓</td><td>✓</td></tr>
+                <tr><td>EU-only data residency</td><td>—</td><td>—</td><td>—</td><td>✓</td></tr>
+                <tr className="lp__compare-star"><td>vCISO Portal</td><td>—</td><td>—</td><td>—</td><td>✦ Included</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
 
-      {/* WHO IT'S FOR */}
+      {/* ══════════ WHO IT'S FOR ══════════ */}
       <section className="lp__section" id="who">
         <div className="lp__section-head">
-          <p className="lp__eyebrow">// Who should use GueInsight</p>
+          <span className="lp__section-eyebrow">// Who should use GueInsight</span>
           <h2>Built for Teams Without a Full SOC</h2>
         </div>
         <div className="lp__who-grid">
           {[
-            { icon:'🏢', title:'SMEs & Mid-Market', desc:'Professional-grade threat intelligence and NIS2 compliance without enterprise pricing or complexity.' },
-            { icon:'🛡️', title:'IT & Security Teams', desc:'Lightweight investigation layer to supplement SIEM/EDR — fast IoC extraction, enrichment and alerting.' },
-            { icon:'📋', title:'Compliance Teams', desc:'GDPR and NIS2-ready workflows, audit logging, evidence packs and incident reporting built in.' },
-            { icon:'🏦', title:'Public Sector & Finance', desc:'EU-only residency, audit-first design and traceable evidence for regulators and auditors.' },
+            { icon: '🏢', title: 'SMEs & Mid-Market', desc: 'Professional-grade threat intelligence and NIS2 compliance without enterprise pricing or complexity.' },
+            { icon: '🛡️', title: 'IT & Security Teams', desc: 'Lightweight investigation layer to supplement SIEM/EDR — fast IoC extraction, enrichment and alerting.' },
+            { icon: '📋', title: 'Compliance Teams', desc: 'GDPR and NIS2-ready workflows, audit logging, evidence packs and incident reporting built in.' },
+            { icon: '🏦', title: 'Public Sector & Finance', desc: 'EU-only residency, audit-first design and traceable evidence for regulators and auditors.' },
           ].map(w => (
             <article className="lp__who-card" key={w.title}>
-              <div className="lp__who-icon">{w.icon}</div>
+              <span className="lp__who-icon">{w.icon}</span>
               <h3>{w.title}</h3>
               <p>{w.desc}</p>
             </article>
@@ -605,11 +713,11 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* BUILT BY */}
-      <section className="lp__built-by">
+      {/* ══════════ BUILT BY ══════════ */}
+      <div className="lp__built-by">
         <div className="lp__built-avatar">GA</div>
         <div className="lp__built-text">
-          <p className="lp__eyebrow">// Built &amp; operated by</p>
+          <p className="lp__section-eyebrow" style={{ textAlign: 'left', display: 'inline-block', marginBottom: 8 }}>// Built &amp; operated by</p>
           <h3>Gabriel Aloho · Founder, Gue Cyber</h3>
           <p>GueInsight isn't a white-labelled tool — it was designed and built from scratch by a cybersecurity professional with 15+ years of experience. MSc in Information Security &amp; Digital Forensics (University of East London). VDAB Cybersecurity certified. Registered enterprise in Belgium. When you subscribe to Enterprise Elite, you get Gabriel directly as your vCISO.</p>
         </div>
@@ -617,36 +725,39 @@ export default function Landing() {
           <a href="https://www.guecyber.com" target="_blank" rel="noreferrer" className="lp__btn lp__btn--ghost">🛡️ Visit Gue Cyber</a>
           <a href="https://www.gabrielaloho.com" target="_blank" rel="noreferrer" className="lp__btn lp__btn--ghost">👤 gabrielaloho.com</a>
         </div>
-      </section>
+      </div>
 
-      {/* FAQ */}
-      <section className="lp__section lp__section--alt">
-        <div className="lp__section-head">
-          <p className="lp__eyebrow">// FAQ</p>
-          <h2>Common Questions</h2>
-        </div>
-        <div className="lp__faq">
-          {FAQS.map((faq, i) => (
-            <div className={`lp__faq-item ${openFaq === i ? 'lp__faq-item--open' : ''}`} key={i}>
-              <button className="lp__faq-q" onClick={() => setOpenFaq(openFaq === i ? null : i)}>
-                <span>{faq.q}</span>
-                <span className="lp__faq-chevron">{openFaq === i ? '▲' : '▼'}</span>
-              </button>
-              {openFaq === i && <p className="lp__faq-a">{faq.a}</p>}
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* ══════════ FAQ ══════════ */}
+      <div className="lp__section--alt">
+        <section className="lp__section-inner">
+          <div className="lp__section-head">
+            <span className="lp__section-eyebrow">// FAQ</span>
+            <h2>Common Questions</h2>
+          </div>
+          <div className="lp__faq">
+            {FAQS.map((faq, i) => (
+              <div className={`lp__faq-item ${openFaq === i ? 'lp__faq-item--open' : ''}`} key={i}>
+                <button className="lp__faq-q" onClick={() => setOpenFaq(openFaq === i ? null : i)}>
+                  <span>{faq.q}</span>
+                  <span className="lp__faq-chevron">▼</span>
+                </button>
+                {openFaq === i && <p className="lp__faq-a">{faq.a}</p>}
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
 
-      {/* FINAL CTA */}
-      <section className="lp__final-cta">
-        <h2>Ready to Secure Your Organisation?</h2>
-        <p>Start on Free — or jump straight into a 14-day trial of a paid plan. No commitment until the trial ends.</p>
+      {/* ══════════ FINAL CTA ══════════ */}
+      <div className="lp__final-cta">
+        <div className="lp__final-cta-sparkle">✳</div>
+        <h2>Your people are out there.<br />Give them a place to land.</h2>
         <div className="lp__hero-actions">
-          <Link to="/subscription" className="lp__btn lp__btn--primary">View Plans</Link>
-          <Link to="/support" className="lp__btn lp__btn--ghost">Talk to Gue Cyber →</Link>
+          <Link to="/subscription" className="lp__btn lp__btn--primary">Make yourself at home →</Link>
+          <Link to="/support" className="lp__btn lp__btn--ghost">Talk to Gue Cyber</Link>
         </div>
-      </section>
+        <p className="lp__final-cta-note">Secure communications start with a hello.</p>
+      </div>
 
       {showTrialModal && (
         <TrialModal
