@@ -7,7 +7,7 @@ import {
   IconBell, IconLink, IconZap, IconGlobe, IconCheckCircle,
   IconUsers, IconBuilding, IconBook, IconMonitor, IconSmartphone,
   IconAsterisk, IconArrowRight, IconBarChart, IconLayers, IconLock, IconGitHub,
-  IconMessage, IconStar, LogoGueInsight,
+  IconMessage, IconStar, IconAlertTriangle, LogoGueInsight,
 } from '../components/Icons';
 import './Landing.css';
 import { api } from '../services/api';

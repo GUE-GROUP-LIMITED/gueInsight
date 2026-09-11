@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import PublicHeader from '../components/PublicHeader';
+import Footer from '../components/Footer';
 import {
   IconActivity,
   IconServer,
@@ -215,6 +216,7 @@ export default function Status() {
         </div>
 
       </main>
+      <Footer />
     </>
   );
 }

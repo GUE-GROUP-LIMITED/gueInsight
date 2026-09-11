@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import PublicHeader from '../components/PublicHeader';
+import Footer from '../components/Footer';
 import {
   IconShield,
   IconClipboard,
@@ -304,6 +305,7 @@ export default function Resources() {
         </div>
 
       </main>
+      <Footer />
     </>
   );
 }

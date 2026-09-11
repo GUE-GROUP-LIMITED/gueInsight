@@ -3,7 +3,7 @@
 ══════════════════════════════════════ */
 
 .resources-page {
-  font-family: 'Inter', -apple-system, sans-serif;
+  font-family: "DM Sans Variable", sans-serif;
   color: #1A1A1A;
   background: #F5F2EE;
   min-height: 100vh;
@@ -307,6 +307,7 @@
   width: 100%;
   border-collapse: collapse;
   min-width: 640px;
+  font-family: "DM Sans Variable", sans-serif;
   font-size: 0.9rem;
   background: #ffffff;
 }
@@ -435,7 +436,7 @@
   background: #F5F2EE;
   color: #1A1A1A;
   font-size: 0.9rem;
-  font-family: 'Inter', sans-serif;
+  font-family: "DM Sans Variable", sans-serif;
   transition: border-color 0.18s;
 }
 

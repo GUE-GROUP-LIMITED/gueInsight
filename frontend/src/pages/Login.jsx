@@ -2,6 +2,7 @@ import { useContext, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { AuthContext, normalizeRole } from '../context/AuthContext';
+import { LogoGueInsight, IconLock, IconHeart, IconChevronLeft, IconArrowRight } from '../components/Icons';
 import './AuthPricing.css';
 import { useTranslation } from '../i18n/index';
 
@@ -47,7 +48,7 @@ const Login = () => {
 
 	return (
 		<div className="auth-split">
-			{/* ── LEFT PANEL ── */}
+			{/* ── LEFT PANEL (Desktop only, hidden on mobile/tablet) ── */}
 			<div className="auth-split__left">
 				{/* Decorative circles */}
 				<div className="auth-split__left-deco" aria-hidden="true" />
@@ -56,11 +57,7 @@ const Login = () => {
 				{/* Brand */}
 				<Link to="/" className="auth-split__left-brand">
 					<div className="auth-split__left-logo">
-						<svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-							<rect width="28" height="28" rx="7" fill="rgba(255,255,255,0.2)"/>
-							<path d="M14 5L6 8.5V14C6 18.1 9.4 21.7 14 23C18.6 21.7 22 18.1 22 14V8.5L14 5Z" fill="white" fillOpacity="0.9"/>
-							<path d="M11 14L13 16L17 12" stroke="#E8490A" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-						</svg>
+						<img src="/img/logo.png" alt="GueInsight" width="28" height="28" style={{ borderRadius: 6, objectFit: 'cover' }} />
 					</div>
 					<span className="auth-split__left-name">GueInsight<span className="auth-split__left-name-dot">.</span></span>
 				</Link>
@@ -82,7 +79,9 @@ const Login = () => {
 								<div className="auth-split__bubble-name">
 									Gabriel <span className="auth-split__bubble-time">just now</span>
 								</div>
-								<div className="auth-split__bubble-text">hey! saved you a spot. 🔐</div>
+								<div className="auth-split__bubble-text">
+									hey! saved you a spot. <IconLock size={13} color="#E8490A" style={{ verticalAlign: 'middle', marginLeft: 3 }} />
+								</div>
 							</div>
 						</div>
 						<div className="auth-split__bubble" style={{ marginLeft: 24 }}>
@@ -92,23 +91,30 @@ const Login = () => {
 									You <span className="auth-split__bubble-time">just now</span>
 								</div>
 								<div className="auth-split__bubble-text">feels like my kind of place.</div>
-								<div className="auth-split__bubble-reaction">❤️ 3</div>
+								<div className="auth-split__bubble-reaction">
+									<IconHeart size={12} color="#E8490A" fill="#E8490A" /> 3
+								</div>
 							</div>
 						</div>
 					</div>
 				</div>
 			</div>
 
-			{/* ── RIGHT PANEL ── */}
+			{/* ── RIGHT PANEL (Full width on smaller screens) ── */}
 			<div className="auth-split__right">
 				{/* Top bar */}
 				<div className="auth-split__right-topbar">
 					<Link to="/" className="auth-split__right-back">
-						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-							<path d="m15 18-6-6 6-6"/>
-						</svg>
+						<IconChevronLeft size={16} />
 						Back to home
 					</Link>
+
+					{/* Mobile brand (shown only on mobile/tablet when left panel is hidden) */}
+					<Link to="/" className="auth-split__mobile-brand" aria-label="GueInsight Home">
+						<img src="/img/logo.png" alt="GueInsight" width="26" height="26" style={{ borderRadius: 6 }} />
+						<span>GueInsight<span>.</span></span>
+					</Link>
+
 					<span className="auth-split__right-join">
 						New around here? <Link to={`/signup${location.search || ''}`}>Come on in ↗</Link>
 					</span>
