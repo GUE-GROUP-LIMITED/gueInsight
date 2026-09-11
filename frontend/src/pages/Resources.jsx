@@ -1,5 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import PublicHeader from '../components/PublicHeader';
 import Footer from '../components/Footer';
 import {
@@ -18,6 +20,10 @@ import {
   IconBarChart,
 } from '../components/Icons';
 import './Resources.css';
+
+if (typeof window !== 'undefined') {
+  gsap.registerPlugin(ScrollTrigger);
+}
 
 const industryUseCases = [
   {
@@ -69,6 +75,7 @@ const thoughtLeadership = [
 ];
 
 export default function Resources() {
+  const pageRef = useRef(null);
   const [hoursSaved, setHoursSaved] = useState(8);
   const [hourlyRate, setHourlyRate] = useState(85);
   const [auditReduction, setAuditReduction] = useState(35);
@@ -80,8 +87,162 @@ export default function Resources() {
     return Math.round(adjusted);
   }, [auditReduction, hoursSaved, hourlyRate]);
 
+  // Bounce ROI value whenever calculation changes
+  useEffect(() => {
+    gsap.fromTo(
+      '.resources-page__roi-result-value',
+      { scale: 0.82, opacity: 0.7 },
+      { scale: 1, opacity: 1, duration: 0.35, ease: 'back.out(2.5)' }
+    );
+  }, [roi]);
+
+  // Scrubbed Scroll Animations across every section
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      // 1. Hero stats scrubbed stagger
+      const statCards = gsap.utils.toArray('.resources-page__stat-card');
+      statCards.forEach((card, idx) => {
+        gsap.fromTo(
+          card,
+          { y: 35 + idx * 12, opacity: 0.4, scale: 0.95 },
+          {
+            y: 0,
+            opacity: 1,
+            scale: 1,
+            ease: 'power2.out',
+            scrollTrigger: {
+              trigger: card,
+              start: 'top 92%',
+              end: 'top 55%',
+              scrub: 1.25,
+            },
+          }
+        );
+      });
+
+      // 2. Industry Use Cases section
+      gsap.fromTo(
+        '.resources-page__section--white:first-of-type .resources-page__section-head',
+        { y: 28, opacity: 0.35 },
+        {
+          y: 0,
+          opacity: 1,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: '.resources-page__section--white:first-of-type',
+            start: 'top 88%',
+            end: 'top 58%',
+            scrub: 1.1,
+          },
+        }
+      );
+
+      const industryCards = gsap.utils.toArray('.resources-page__grid:not(.resources-page__grid--narrow) .resources-page__card');
+      industryCards.forEach((card, idx) => {
+        gsap.fromTo(
+          card,
+          { y: 38 + (idx % 2) * 16, opacity: 0.35, scale: 0.96 },
+          {
+            y: 0,
+            opacity: 1,
+            scale: 1,
+            ease: 'power2.out',
+            scrollTrigger: {
+              trigger: card,
+              start: 'top 93%',
+              end: 'top 52%',
+              scrub: 1.25,
+            },
+          }
+        );
+      });
+
+      // 3. Comparison Table reveal
+      gsap.fromTo(
+        '.resources-page__table-wrap',
+        { y: 38, opacity: 0.35, scale: 0.97 },
+        {
+          y: 0,
+          opacity: 1,
+          scale: 1,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: '.resources-page__table-wrap',
+            start: 'top 90%',
+            end: 'top 52%',
+            scrub: 1.25,
+          },
+        }
+      );
+
+      // 4. ROI Calculator section
+      gsap.fromTo(
+        '.resources-page__roi-wrap',
+        { y: 40, opacity: 0.4, scale: 0.96 },
+        {
+          y: 0,
+          opacity: 1,
+          scale: 1,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: '.resources-page__roi-wrap',
+            start: 'top 90%',
+            end: 'top 55%',
+            scrub: 1.25,
+          },
+        }
+      );
+
+      // 5. Thought Leadership section
+      const thoughtCards = gsap.utils.toArray('.resources-page__grid--narrow .resources-page__card');
+      thoughtCards.forEach((card, idx) => {
+        gsap.fromTo(
+          card,
+          { y: 36 + (idx % 3) * 14, opacity: 0.35, scale: 0.96 },
+          {
+            y: 0,
+            opacity: 1,
+            scale: 1,
+            ease: 'power2.out',
+            scrollTrigger: {
+              trigger: card,
+              start: 'top 92%',
+              end: 'top 55%',
+              scrub: 1.25,
+            },
+          }
+        );
+      });
+
+      // Hover feedback on cards (scale & elevation without vertical jump)
+      const allCards = gsap.utils.toArray('.resources-page__card');
+      allCards.forEach((card) => {
+        card.addEventListener('mouseenter', () => {
+          gsap.to(card, {
+            scale: 1.02,
+            duration: 0.3,
+            ease: 'back.out(2)',
+            boxShadow: '0 16px 36px rgba(0, 0, 0, 0.08)',
+            borderColor: '#E8490A',
+          });
+        });
+        card.addEventListener('mouseleave', () => {
+          gsap.to(card, {
+            scale: 1,
+            duration: 0.25,
+            ease: 'power2.out',
+            boxShadow: 'none',
+            borderColor: '#E8E4DF',
+          });
+        });
+      });
+    }, pageRef);
+
+    return () => ctx.revert();
+  }, []);
+
   return (
-    <>
+    <div ref={pageRef}>
       <PublicHeader
         featureTo="/#features"
         howTo="/docs#getting-started"
@@ -306,6 +467,6 @@ export default function Resources() {
 
       </main>
       <Footer />
-    </>
+    </div>
   );
 }

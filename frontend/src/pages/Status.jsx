@@ -1,6 +1,13 @@
+import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import PublicHeader from '../components/PublicHeader';
 import Footer from '../components/Footer';
+
+if (typeof window !== 'undefined') {
+  gsap.registerPlugin(ScrollTrigger);
+}
 import {
   IconActivity,
   IconServer,
@@ -93,10 +100,155 @@ const feedTimeClass = {
 };
 
 export default function Status() {
+  const statusRef = useRef(null);
   const allOk = services.every((s) => s.statusType === 'ok');
 
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      // 1. Hero live status badge bounce
+      gsap.from('.status-page__hero-badge', {
+        scale: 0.65,
+        opacity: 0,
+        duration: 0.8,
+        ease: 'back.out(2.5)',
+        delay: 0.1,
+      });
+
+      // Overall status card reveal
+      gsap.fromTo(
+        '.status-page__overall',
+        { y: 30, opacity: 0.5, scale: 0.96 },
+        {
+          y: 0,
+          opacity: 1,
+          scale: 1,
+          duration: 0.85,
+          ease: 'power2.out',
+        }
+      );
+
+      // 2. Scrubbed service cards reveal with staggered wave
+      const serviceCards = gsap.utils.toArray('.status-page__card');
+      serviceCards.forEach((card, idx) => {
+        gsap.fromTo(
+          card,
+          { y: 38 + (idx % 2) * 16, opacity: 0.35, scale: 0.96 },
+          {
+            y: 0,
+            opacity: 1,
+            scale: 1,
+            ease: 'power2.out',
+            scrollTrigger: {
+              trigger: card,
+              start: 'top 93%',
+              end: 'top 55%',
+              scrub: 1.25,
+            },
+          }
+        );
+
+        // Uptime bar fill scrubbed expansion
+        const uptimeFill = card.querySelector('.status-page__uptime-fill');
+        if (uptimeFill) {
+          gsap.fromTo(
+            uptimeFill,
+            { scaleX: 0 },
+            {
+              scaleX: 1,
+              ease: 'power2.out',
+              scrollTrigger: {
+                trigger: card,
+                start: 'top 90%',
+                end: 'top 52%',
+                scrub: 1.25,
+              },
+            }
+          );
+        }
+      });
+
+      // 3. Scrubbed Incident & maintenance feed
+      gsap.fromTo(
+        '.status-page__feed-head',
+        { y: 28, opacity: 0.35 },
+        {
+          y: 0,
+          opacity: 1,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: '.status-page__feed-section',
+            start: 'top 88%',
+            end: 'top 58%',
+            scrub: 1.1,
+          },
+        }
+      );
+
+      const feedItems = gsap.utils.toArray('.status-page__feed-item');
+      feedItems.forEach((item) => {
+        gsap.fromTo(
+          item,
+          { y: 32, opacity: 0.35 },
+          {
+            y: 0,
+            opacity: 1,
+            ease: 'power2.out',
+            scrollTrigger: {
+              trigger: item,
+              start: 'top 92%',
+              end: 'top 60%',
+              scrub: 1.2,
+            },
+          }
+        );
+      });
+
+      // 4. Support CTA card scrub
+      gsap.fromTo(
+        '.status-page__subscribe',
+        { scale: 0.93, y: 32, opacity: 0.6 },
+        {
+          scale: 1,
+          y: 0,
+          opacity: 1,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: '.status-page__subscribe',
+            start: 'top 92%',
+            end: 'center 60%',
+            scrub: 1.2,
+          },
+        }
+      );
+
+      // Hover feedback on service cards
+      serviceCards.forEach((card) => {
+        card.addEventListener('mouseenter', () => {
+          gsap.to(card, {
+            scale: 1.02,
+            duration: 0.3,
+            ease: 'back.out(2)',
+            boxShadow: '0 16px 36px rgba(0, 0, 0, 0.08)',
+            borderColor: '#E8490A',
+          });
+        });
+        card.addEventListener('mouseleave', () => {
+          gsap.to(card, {
+            scale: 1,
+            duration: 0.25,
+            ease: 'power2.out',
+            boxShadow: 'none',
+            borderColor: '#E8E4DF',
+          });
+        });
+      });
+    }, statusRef);
+
+    return () => ctx.revert();
+  }, []);
+
   return (
-    <>
+    <div ref={statusRef}>
       <PublicHeader
         featureTo="/#features"
         howTo="/docs#getting-started"
@@ -217,6 +369,6 @@ export default function Status() {
 
       </main>
       <Footer />
-    </>
+    </div>
   );
 }

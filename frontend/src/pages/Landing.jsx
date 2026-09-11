@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import TrialModal from '../components/TrialModal';
 import PublicHeader from '../components/PublicHeader';
 import {
@@ -7,10 +9,14 @@ import {
   IconBell, IconLink, IconZap, IconGlobe, IconCheckCircle,
   IconUsers, IconBuilding, IconBook, IconMonitor, IconSmartphone,
   IconAsterisk, IconArrowRight, IconBarChart, IconLayers, IconLock, IconGitHub,
-  IconMessage, IconStar, IconAlertTriangle, LogoGueInsight,
+  IconMessage, IconStar, IconAlertTriangle, IconUser, IconBank, LogoGueInsight,
 } from '../components/Icons';
 import './Landing.css';
 import { api } from '../services/api';
+
+if (typeof window !== 'undefined') {
+  gsap.registerPlugin(ScrollTrigger);
+}
 
 const FEATURES = [
   { icon: <IconShieldCheck size={22} />, title: 'vCISO Portal', desc: 'Your assigned virtual CISO posts recommendations, action items and security notes directly to your dashboard — included in Enterprise plans.' },
@@ -240,10 +246,890 @@ export default function Landing() {
     };
   }, []);
 
+  const landingRef = useRef(null);
   const scoreUpdateLabel = useMemo(() => getRelativeUpdateLabel(heroSnapshot.updatedAt), [heroSnapshot.updatedAt]);
 
+  // ── ORCHESTRATED GSAP SCRUBBED SCROLL ANIMATIONS (EVERY SECTION) ──
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      // 0. Top Scroll Progress Indicator (continuous scrub with page scroll)
+      gsap.to('.lp__scroll-progress-fill', {
+        scaleX: 1,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: '.lp',
+          start: 'top top',
+          end: 'bottom bottom',
+          scrub: 0.2,
+        },
+      });
+
+      // 1. HERO SECTION: Multi-directional Floating Parallax & 3D Tilt
+      // Floating Parallax Badges (silky smooth counter-drift)
+      gsap.to('.lp__hero-deco--tl', {
+        y: -95,
+        x: -28,
+        rotation: -16,
+        ease: 'sine.out',
+        scrollTrigger: {
+          trigger: '.lp__hero',
+          start: 'top top',
+          end: 'bottom top',
+          scrub: 1.3,
+        },
+      });
+
+      gsap.to('.lp__hero-deco--tr', {
+        y: -125,
+        x: 38,
+        rotation: 40,
+        ease: 'sine.out',
+        scrollTrigger: {
+          trigger: '.lp__hero',
+          start: 'top top',
+          end: 'bottom top',
+          scrub: 1.4,
+        },
+      });
+
+      gsap.to('.lp__hero-deco--ml', {
+        y: 70,
+        x: -20,
+        rotation: 14,
+        ease: 'sine.out',
+        scrollTrigger: {
+          trigger: '.lp__hero',
+          start: 'top top',
+          end: 'bottom top',
+          scrub: 1.3,
+        },
+      });
+
+      gsap.to('.lp__hero-deco--mr', {
+        y: 90,
+        x: 30,
+        rotation: -14,
+        ease: 'sine.out',
+        scrollTrigger: {
+          trigger: '.lp__hero',
+          start: 'top top',
+          end: 'bottom top',
+          scrub: 1.4,
+        },
+      });
+
+      // Hero text parallax: title, lead, and actions softly glide and fade as you scroll down
+      gsap.to('.lp__hero-top', {
+        y: -45,
+        opacity: 0.85,
+        ease: 'power1.out',
+        scrollTrigger: {
+          trigger: '.lp__hero',
+          start: 'top top',
+          end: 'bottom 40%',
+          scrub: 1.2,
+        },
+      });
+
+      // Dashboard Mockup 3D Perspective Scrub (Levels out to flat, then smoothly recedes)
+      const panelTimeline = gsap.timeline({
+        scrollTrigger: {
+          trigger: '.lp__hero-panel-wrap',
+          start: 'top 95%',
+          end: 'bottom 15%',
+          scrub: 1.2,
+        },
+      });
+      panelTimeline
+        .fromTo(
+          '.lp__hero-panel-wrap',
+          { rotateX: 12, scale: 0.92, y: 50, transformPerspective: 1200 },
+          { rotateX: 0, scale: 1, y: 0, ease: 'power2.out', duration: 1 }
+        )
+        .to('.lp__hero-panel-wrap', {
+          scale: 0.96,
+          y: -30,
+          opacity: 0.88,
+          ease: 'power1.in',
+          duration: 0.8,
+        });
+
+      // Mockup internal alerts cascade scrub
+      const mockAlerts = gsap.utils.toArray('.lp__mock-alert');
+      mockAlerts.forEach((alert, i) => {
+        gsap.fromTo(
+          alert,
+          { x: -16, opacity: 0.4 },
+          {
+            x: 0,
+            opacity: 1,
+            ease: 'power2.out',
+            scrollTrigger: {
+              trigger: alert,
+              start: 'top 92%',
+              end: 'top 65%',
+              scrub: 1.1,
+            },
+          }
+        );
+      });
+
+      // 2. TAGLINE BAR: Scrubbed reveal & gentle focus
+      gsap.fromTo(
+        '.lp__tagline',
+        { opacity: 0.35, scale: 0.96, y: 24 },
+        {
+          opacity: 1,
+          scale: 1,
+          y: 0,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: '.lp__tagline-bar',
+            start: 'top 88%',
+            end: 'center 50%',
+            scrub: 1.2,
+          },
+        }
+      );
+
+      // 3. CORE CAPABILITIES: Staggered Multi-Plane Wave Scrub
+      gsap.fromTo(
+        '.lp__section--capabilities .lp__section-head',
+        { y: 32, opacity: 0.3 },
+        {
+          y: 0,
+          opacity: 1,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: '.lp__section--capabilities',
+            start: 'top 88%',
+            end: 'top 55%',
+            scrub: 1.1,
+          },
+        }
+      );
+
+      const capCards = gsap.utils.toArray('.lp__capability-card');
+      capCards.forEach((card, i) => {
+        gsap.fromTo(
+          card,
+          { y: 42 + (i % 2) * 22, opacity: 0.35, scale: 0.95 },
+          {
+            y: 0,
+            opacity: 1,
+            scale: 1,
+            ease: 'power2.out',
+            scrollTrigger: {
+              trigger: card,
+              start: 'top 92%',
+              end: 'top 52%',
+              scrub: 1.25,
+            },
+          }
+        );
+
+        // Capability index number subtle scrubbed pop
+        const idxBadge = card.querySelector('.lp__capability-index');
+        if (idxBadge) {
+          gsap.fromTo(
+            idxBadge,
+            { scale: 0.9, opacity: 0.7 },
+            {
+              scale: 1.06,
+              opacity: 1,
+              ease: 'power1.out',
+              scrollTrigger: {
+                trigger: card,
+                start: 'top 88%',
+                end: 'top 55%',
+                scrub: 1.2,
+              },
+            }
+          );
+        }
+      });
+
+      // 4. NIS2 WARNING BANNER: Scrubbed expansion
+      gsap.fromTo(
+        '.lp__nis2-banner',
+        { scale: 0.93, y: 28, opacity: 0.5 },
+        {
+          scale: 1,
+          y: 0,
+          opacity: 1,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: '.lp__nis2-banner',
+            start: 'top 92%',
+            end: 'top 55%',
+            scrub: 1.2,
+          },
+        }
+      );
+
+      // 5. FEATURES SECTION: Cascade 3D Wave Scrub & icon lift
+      gsap.fromTo(
+        '#features .lp__section-head',
+        { y: 32, opacity: 0.3 },
+        {
+          y: 0,
+          opacity: 1,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: '#features',
+            start: 'top 88%',
+            end: 'top 55%',
+            scrub: 1.1,
+          },
+        }
+      );
+
+      const featureCards = gsap.utils.toArray('#features .lp__feature-card');
+      featureCards.forEach((card, idx) => {
+        // 3-column phase offset creates a gorgeous curved wave into view
+        const columnOffset = (idx % 3 === 1) ? 55 : (idx % 3 === 0) ? 35 : 45;
+        gsap.fromTo(
+          card,
+          { y: columnOffset, opacity: 0.32, scale: 0.95 },
+          {
+            y: 0,
+            opacity: 1,
+            scale: 1,
+            ease: 'power2.out',
+            scrollTrigger: {
+              trigger: card,
+              start: 'top 93%',
+              end: 'top 52%',
+              scrub: 1.3,
+            },
+          }
+        );
+
+        const icon = card.querySelector('.lp__feature-icon');
+        if (icon) {
+          gsap.fromTo(
+            icon,
+            { y: 10, scale: 0.92 },
+            {
+              y: 0,
+              scale: 1,
+              ease: 'power1.out',
+              scrollTrigger: {
+                trigger: card,
+                start: 'top 90%',
+                end: 'top 55%',
+                scrub: 1.2,
+              },
+            }
+          );
+        }
+      });
+
+      // 6. ABOUT SECTION: Differential Parallax Split (Left copy vs Right icon grid)
+      gsap.fromTo(
+        '.lp__about-left',
+        { y: 32, opacity: 0.45 },
+        {
+          y: -22,
+          opacity: 1,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: '.lp__about-section',
+            start: 'top 88%',
+            end: 'bottom 15%',
+            scrub: 1.3,
+          },
+        }
+      );
+
+      gsap.fromTo(
+        '.lp__avatar-grid',
+        { y: 65, opacity: 0.4 },
+        {
+          y: -50,
+          opacity: 1,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: '.lp__about-section',
+            start: 'top 88%',
+            end: 'bottom 15%',
+            scrub: 1.45,
+          },
+        }
+      );
+
+      // Avatar blobs wave scrub (alternating rotation & scale breathing)
+      const avatarBlobs = gsap.utils.toArray('.lp__avatar-blob');
+      avatarBlobs.forEach((blob, i) => {
+        gsap.fromTo(
+          blob,
+          { scale: 0.84, rotation: (i % 2 === 0 ? -10 : 10) },
+          {
+            scale: 1,
+            rotation: 0,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: '.lp__avatar-grid',
+              start: 'top 92%',
+              end: 'center 35%',
+              scrub: 1.25,
+            },
+          }
+        );
+      });
+
+      // 7. TRUST PACK & USE CASES (#proof): Dedicated Section Scrub
+      gsap.fromTo(
+        '#proof .lp__section-head',
+        { y: 32, opacity: 0.3 },
+        {
+          y: 0,
+          opacity: 1,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: '#proof',
+            start: 'top 88%',
+            end: 'top 55%',
+            scrub: 1.1,
+          },
+        }
+      );
+
+      const proofCards = gsap.utils.toArray('#proof .lp__feature-card');
+      proofCards.forEach((card, idx) => {
+        gsap.fromTo(
+          card,
+          { y: 38 + (idx % 3) * 15, opacity: 0.35, scale: 0.96 },
+          {
+            y: 0,
+            opacity: 1,
+            scale: 1,
+            ease: 'power2.out',
+            scrollTrigger: {
+              trigger: card,
+              start: 'top 93%',
+              end: 'top 55%',
+              scrub: 1.25,
+            },
+          }
+        );
+      });
+
+      // 8. HOW IT WORKS (STEPS): Sequential Step Scrub
+      gsap.fromTo(
+        '#how .lp__section-head',
+        { y: 32, opacity: 0.3 },
+        {
+          y: 0,
+          opacity: 1,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: '#how',
+            start: 'top 88%',
+            end: 'top 55%',
+            scrub: 1.1,
+          },
+        }
+      );
+
+      const stepItems = gsap.utils.toArray('.lp__step');
+      stepItems.forEach((step) => {
+        gsap.fromTo(
+          step,
+          { y: 32, opacity: 0.35, scale: 0.96 },
+          {
+            y: 0,
+            opacity: 1,
+            scale: 1,
+            ease: 'power2.out',
+            scrollTrigger: {
+              trigger: step,
+              start: 'top 92%',
+              end: 'top 58%',
+              scrub: 1.2,
+            },
+          }
+        );
+
+        const stepNumber = step.querySelector('.lp__step-n');
+        if (stepNumber) {
+          gsap.fromTo(
+            stepNumber,
+            { scale: 0.88, opacity: 0.65 },
+            {
+              scale: 1.08,
+              opacity: 1,
+              ease: 'power1.out',
+              scrollTrigger: {
+                trigger: step,
+                start: 'top 90%',
+                end: 'top 55%',
+                scrub: 1.2,
+              },
+            }
+          );
+        }
+      });
+
+      // 9. vCISO HIGHLIGHT: Left vs Right 3D Perspective Scrub
+      gsap.fromTo(
+        '.lp__vciso-left',
+        { x: -40, opacity: 0.35 },
+        {
+          x: 0,
+          opacity: 1,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: '.lp__vciso-section',
+            start: 'top 88%',
+            end: 'top 45%',
+            scrub: 1.25,
+          },
+        }
+      );
+
+      gsap.fromTo(
+        '.lp__vciso-right',
+        { x: 40, rotateY: -8, opacity: 0.35, transformPerspective: 1000 },
+        {
+          x: 0,
+          rotateY: 0,
+          opacity: 1,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: '.lp__vciso-section',
+            start: 'top 88%',
+            end: 'top 45%',
+            scrub: 1.25,
+          },
+        }
+      );
+
+      // vCISO live badge subtle pulse on scrub
+      gsap.fromTo(
+        '.lp__vciso-live',
+        { scale: 0.85 },
+        {
+          scale: 1.08,
+          ease: 'sine.out',
+          scrollTrigger: {
+            trigger: '.lp__vciso-section',
+            start: 'top 85%',
+            end: 'center 45%',
+            scrub: 1.2,
+          },
+        }
+      );
+
+      // 10. NATIVE APP TEASER: Scrubbed Device Mockup Rise & Differential Parallax
+      gsap.fromTo(
+        '.lp__app-teaser',
+        { scale: 0.93, y: 35, opacity: 0.65 },
+        {
+          scale: 1,
+          y: 0,
+          opacity: 1,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: '.lp__app-teaser',
+            start: 'top 88%',
+            end: 'top 45%',
+            scrub: 1.2,
+          },
+        }
+      );
+
+      gsap.fromTo(
+        '.lp__device-mockup',
+        { y: 55, scale: 0.94, opacity: 0.5 },
+        {
+          y: 0,
+          scale: 1,
+          opacity: 1,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: '.lp__app-teaser',
+            start: 'top 85%',
+            end: 'top 40%',
+            scrub: 1.3,
+          },
+        }
+      );
+
+      // 11. PRICING SECTION: Elevated Tier Scrub Focus
+      gsap.fromTo(
+        '#pricing .lp__section-head',
+        { y: 32, opacity: 0.3 },
+        {
+          y: 0,
+          opacity: 1,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: '#pricing',
+            start: 'top 88%',
+            end: 'top 55%',
+            scrub: 1.1,
+          },
+        }
+      );
+
+      const tiers = gsap.utils.toArray('.lp__tier');
+      tiers.forEach((tier) => {
+        const isHighlighted = tier.classList.contains('lp__tier--highlighted') || tier.classList.contains('lp__tier--elite');
+        gsap.fromTo(
+          tier,
+          { y: 42, opacity: 0.35, scale: 0.95 },
+          {
+            y: isHighlighted ? -10 : 0,
+            opacity: 1,
+            scale: isHighlighted ? 1.025 : 1,
+            ease: 'power2.out',
+            scrollTrigger: {
+              trigger: tier,
+              start: 'top 93%',
+              end: 'top 52%',
+              scrub: 1.25,
+            },
+          }
+        );
+      });
+
+      // 12. COMPLIANCE TABLE: Scrubbed Slide-Up & Scale
+      gsap.fromTo(
+        '.lp__table-wrap',
+        { y: 38, opacity: 0.35, scale: 0.97 },
+        {
+          y: 0,
+          opacity: 1,
+          scale: 1,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: '.lp__table-wrap',
+            start: 'top 92%',
+            end: 'top 52%',
+            scrub: 1.25,
+          },
+        }
+      );
+
+      // 13. WHO IT'S FOR: Staggered scrub & icon lift
+      gsap.fromTo(
+        '#who .lp__section-head',
+        { y: 32, opacity: 0.3 },
+        {
+          y: 0,
+          opacity: 1,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: '#who',
+            start: 'top 88%',
+            end: 'top 55%',
+            scrub: 1.1,
+          },
+        }
+      );
+
+      const whoCards = gsap.utils.toArray('.lp__who-card');
+      whoCards.forEach((card, idx) => {
+        gsap.fromTo(
+          card,
+          { y: 38 + (idx % 2) * 18, opacity: 0.35, scale: 0.95 },
+          {
+            y: 0,
+            opacity: 1,
+            scale: 1,
+            ease: 'power2.out',
+            scrollTrigger: {
+              trigger: card,
+              start: 'top 93%',
+              end: 'top 55%',
+              scrub: 1.25,
+            },
+          }
+        );
+
+        const icon = card.querySelector('.lp__who-icon');
+        if (icon) {
+          gsap.fromTo(
+            icon,
+            { y: 8, scale: 0.92 },
+            {
+              y: 0,
+              scale: 1.08,
+              ease: 'power1.out',
+              scrollTrigger: {
+                trigger: card,
+                start: 'top 90%',
+                end: 'top 55%',
+                scrub: 1.2,
+              },
+            }
+          );
+        }
+      });
+
+      // 14. BUILT BY FOUNDER SECTION: Card & Avatar Scrub
+      gsap.fromTo(
+        '.lp__built-by',
+        { y: 38, opacity: 0.35, scale: 0.97 },
+        {
+          y: 0,
+          opacity: 1,
+          scale: 1,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: '.lp__built-by',
+            start: 'top 92%',
+            end: 'top 55%',
+            scrub: 1.25,
+          },
+        }
+      );
+
+      gsap.fromTo(
+        '.lp__built-avatar',
+        { scale: 0.84, opacity: 0.6 },
+        {
+          scale: 1,
+          opacity: 1,
+          ease: 'back.out(1.5)',
+          scrollTrigger: {
+            trigger: '.lp__built-by',
+            start: 'top 90%',
+            end: 'top 50%',
+            scrub: 1.2,
+          },
+        }
+      );
+
+      // 15. FAQ ACCORDION: Cascade Scrub
+      const faqItems = gsap.utils.toArray('.lp__faq-item');
+      faqItems.forEach((faq) => {
+        gsap.fromTo(
+          faq,
+          { y: 26, opacity: 0.4 },
+          {
+            y: 0,
+            opacity: 1,
+            ease: 'power1.out',
+            scrollTrigger: {
+              trigger: faq,
+              start: 'top 93%',
+              end: 'top 68%',
+              scrub: 1.1,
+            },
+          }
+        );
+      });
+
+      // 16. FINAL CTA: Expansion & Ambient Glow Scrub
+      gsap.fromTo(
+        '.lp__final-cta',
+        { scale: 0.92, borderRadius: '44px', opacity: 0.75 },
+        {
+          scale: 1,
+          borderRadius: '24px',
+          opacity: 1,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: '.lp__final-cta',
+            start: 'top 92%',
+            end: 'center 60%',
+            scrub: 1.2,
+          },
+        }
+      );
+
+      // Continuous sparkle rotation scrubbed with overall page scroll
+      gsap.to('.lp__sparkle', {
+        rotation: 720,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: '.lp',
+          start: 'top top',
+          end: 'bottom bottom',
+          scrub: 0.8,
+        },
+      });
+
+      // ── BOUNCE ENTRANCE & HOVER MICRO-ANIMATIONS ──
+      // Hero eyebrow spring bounce
+      gsap.from('.lp__eyebrow', {
+        y: -28,
+        opacity: 0,
+        scale: 0.86,
+        duration: 1,
+        ease: 'back.out(2)',
+        delay: 0.1,
+      });
+
+      // Floating avatars elastic pop entrance
+      gsap.from('.lp__float-avatar', {
+        scale: 0,
+        opacity: 0,
+        duration: 1.1,
+        stagger: 0.12,
+        ease: 'elastic.out(1.1, 0.4)',
+        delay: 0.25,
+      });
+
+      // Continuous gentle physics-based float on avatars
+      gsap.to('.lp__float-avatar', {
+        y: '+=6',
+        duration: 2.4,
+        repeat: -1,
+        yoyo: true,
+        ease: 'sine.inOut',
+        stagger: {
+          each: 0.35,
+          from: 'random',
+        },
+      });
+
+      // Hover feedback on feature cards (scale & glow without conflicting with scroll y)
+      featureCards.forEach((card) => {
+        const icon = card.querySelector('.lp__feature-icon');
+        card.addEventListener('mouseenter', () => {
+          gsap.to(card, {
+            scale: 1.022,
+            duration: 0.35,
+            ease: 'back.out(2)',
+            boxShadow: '0 20px 40px rgba(232, 73, 10, 0.13)',
+            borderColor: '#E8490A',
+          });
+          if (icon) {
+            gsap.to(icon, {
+              scale: 1.18,
+              rotation: 6,
+              duration: 0.4,
+              ease: 'back.out(2.5)',
+            });
+          }
+        });
+        card.addEventListener('mouseleave', () => {
+          gsap.to(card, {
+            scale: 1,
+            duration: 0.3,
+            ease: 'power2.out',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+            borderColor: '#E8E4DF',
+          });
+          if (icon) {
+            gsap.to(icon, {
+              scale: 1,
+              rotation: 0,
+              duration: 0.3,
+              ease: 'power2.out',
+            });
+          }
+        });
+      });
+
+      // Hover feedback on capability cards
+      capCards.forEach((card) => {
+        card.addEventListener('mouseenter', () => {
+          gsap.to(card, {
+            scale: 1.02,
+            duration: 0.35,
+            ease: 'back.out(2)',
+            boxShadow: '0 14px 32px rgba(0,0,0,0.09)',
+          });
+        });
+        card.addEventListener('mouseleave', () => {
+          gsap.to(card, {
+            scale: 1,
+            duration: 0.28,
+            ease: 'power2.out',
+            boxShadow: 'none',
+          });
+        });
+      });
+
+      // Hover feedback on audience cards
+      whoCards.forEach((card) => {
+        card.addEventListener('mouseenter', () => {
+          gsap.to(card, {
+            scale: 1.02,
+            duration: 0.32,
+            ease: 'back.out(2)',
+            boxShadow: '0 14px 32px rgba(0,0,0,0.08)',
+          });
+        });
+        card.addEventListener('mouseleave', () => {
+          gsap.to(card, {
+            scale: 1,
+            duration: 0.28,
+            ease: 'power2.out',
+            boxShadow: 'none',
+          });
+        });
+      });
+
+      // Interactive hover on avatar blobs
+      avatarBlobs.forEach((blob) => {
+        blob.addEventListener('mouseenter', () => {
+          gsap.to(blob, {
+            scale: 1.28,
+            rotation: gsap.utils.random(-8, 8),
+            duration: 0.4,
+            ease: 'elastic.out(1.2, 0.3)',
+          });
+        });
+        blob.addEventListener('mouseleave', () => {
+          gsap.to(blob, {
+            scale: 1,
+            rotation: 0,
+            duration: 0.3,
+            ease: 'power2.out',
+          });
+        });
+      });
+
+      // Buttons hover bounce
+      const buttons = gsap.utils.toArray('.lp__btn--primary, .lp__btn--cta, .lp__tier-cta');
+      buttons.forEach((btn) => {
+        btn.addEventListener('mouseenter', () => {
+          gsap.to(btn, {
+            scale: 1.04,
+            duration: 0.25,
+            ease: 'back.out(2)',
+          });
+        });
+        btn.addEventListener('mouseleave', () => {
+          gsap.to(btn, {
+            scale: 1,
+            duration: 0.25,
+            ease: 'power2.out',
+          });
+        });
+        btn.addEventListener('mousedown', () => {
+          gsap.to(btn, {
+            scale: 0.96,
+            duration: 0.1,
+            ease: 'power1.out',
+          });
+        });
+        btn.addEventListener('mouseup', () => {
+          gsap.to(btn, {
+            scale: 1.04,
+            duration: 0.2,
+            ease: 'back.out(2)',
+          });
+        });
+      });
+
+    }, landingRef);
+
+    return () => ctx.revert();
+  }, []);
+
   return (
-    <div className="lp">
+    <div className="lp" ref={landingRef}>
+      {/* ── TOP SCRUBBED SCROLL PROGRESS BAR ── */}
+      <div className="lp__scroll-progress" aria-hidden="true">
+        <div className="lp__scroll-progress-fill" />
+      </div>
+
       {/* UTILITY BAR */}
       <div className="lp__utility">
         <span>🇧🇪 A <a href="https://www.guecyber.com" target="_blank" rel="noreferrer">Gue Cyber</a> product · Registered Belgian Enterprise</span>
@@ -334,7 +1220,7 @@ export default function Landing() {
             <div className="lp__mock-body">
               {/* Sidebar */}
               <div className="lp__mock-sidebar">
-                <div className="lp__mock-server-icon">🛡️</div>
+                <div className="lp__mock-server-icon"><IconShield size={18} color="#E8490A" /></div>
                 <div className="lp__mock-channel-group">THREAT INTEL</div>
                 <div className="lp__mock-channel lp__mock-channel--active">
                   <span>#</span> overview
@@ -711,10 +1597,10 @@ export default function Landing() {
         </div>
         <div className="lp__who-grid">
           {[
-            { icon: '🏢', title: 'SMEs & Mid-Market', desc: 'Professional-grade threat intelligence and NIS2 compliance without enterprise pricing or complexity.' },
-            { icon: '🛡️', title: 'IT & Security Teams', desc: 'Lightweight investigation layer to supplement SIEM/EDR — fast IoC extraction, enrichment and alerting.' },
-            { icon: '📋', title: 'Compliance Teams', desc: 'GDPR and NIS2-ready workflows, audit logging, evidence packs and incident reporting built in.' },
-            { icon: '🏦', title: 'Public Sector & Finance', desc: 'EU-only residency, audit-first design and traceable evidence for regulators and auditors.' },
+            { icon: <IconBuilding size={24} color="#E8490A" />, title: 'SMEs & Mid-Market', desc: 'Professional-grade threat intelligence and NIS2 compliance without enterprise pricing or complexity.' },
+            { icon: <IconShield size={24} color="#E8490A" />, title: 'IT & Security Teams', desc: 'Lightweight investigation layer to supplement SIEM/EDR — fast IoC extraction, enrichment and alerting.' },
+            { icon: <IconClipboard size={24} color="#E8490A" />, title: 'Compliance Teams', desc: 'GDPR and NIS2-ready workflows, audit logging, evidence packs and incident reporting built in.' },
+            { icon: <IconBank size={24} color="#E8490A" />, title: 'Public Sector & Finance', desc: 'EU-only residency, audit-first design and traceable evidence for regulators and auditors.' },
           ].map(w => (
             <article className="lp__who-card" key={w.title}>
               <span className="lp__who-icon">{w.icon}</span>
@@ -734,8 +1620,12 @@ export default function Landing() {
           <p>GueInsight isn't a white-labelled tool — it was designed and built from scratch by a cybersecurity professional with 15+ years of experience. MSc in Information Security &amp; Digital Forensics (University of East London). VDAB Cybersecurity certified. Registered enterprise in Belgium. When you subscribe to Enterprise Elite, you get Gabriel directly as your vCISO.</p>
         </div>
         <div className="lp__built-links">
-          <a href="https://www.guecyber.com" target="_blank" rel="noreferrer" className="lp__btn lp__btn--ghost">🛡️ Visit Gue Cyber</a>
-          <a href="https://www.gabrielaloho.com" target="_blank" rel="noreferrer" className="lp__btn lp__btn--ghost">👤 gabrielaloho.com</a>
+          <a href="https://www.guecyber.com" target="_blank" rel="noreferrer" className="lp__btn lp__btn--ghost" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <IconShieldCheck size={16} /> Visit Gue Cyber
+          </a>
+          <a href="https://www.gabrielaloho.com" target="_blank" rel="noreferrer" className="lp__btn lp__btn--ghost" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <IconUser size={16} /> gabrielaloho.com
+          </a>
         </div>
       </div>
 
@@ -762,7 +1652,9 @@ export default function Landing() {
 
       {/* ══════════ FINAL CTA ══════════ */}
       <div className="lp__final-cta">
-        <div className="lp__final-cta-sparkle">✳</div>
+        <div className="lp__final-cta-sparkle">
+          <IconAsterisk size={42} color="#ffffff" className="lp__sparkle" />
+        </div>
         <h2>Your people are out there.<br />Give them a place to land.</h2>
         <div className="lp__hero-actions">
           <Link to="/subscription" className="lp__btn lp__btn--primary">Make yourself at home →</Link>

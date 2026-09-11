@@ -80,11 +80,12 @@
   border: 1.5px solid #E8E4DF;
   border-radius: 16px;
   padding: 28px 24px;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
 }
 
 .resources-page__stat-card:hover {
-  transform: translateY(-3px);
   box-shadow: 0 12px 32px rgba(0,0,0,0.08);
 }
 
@@ -242,9 +243,11 @@
   border: 1.5px solid #E8E4DF;
   border-radius: 16px;
   padding: 32px 28px;
-  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
   position: relative;
   overflow: hidden;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
 }
 
 .resources-page__card::before {
