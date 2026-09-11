@@ -2,7 +2,7 @@ import { useContext, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { AuthContext, normalizeRole } from '../context/AuthContext';
-import { LogoGueInsight, IconLock, IconHeart, IconChevronLeft, IconArrowRight } from '../components/Icons';
+import { LogoGueInsight, IconLock, IconHeart, IconChevronLeft, IconArrowRight, IconArrowUpRight } from '../components/Icons';
 import './AuthPricing.css';
 import { useTranslation } from '../i18n/index';
 
@@ -104,20 +104,31 @@ const Login = () => {
 			<div className="auth-split__right">
 				{/* Top bar */}
 				<div className="auth-split__right-topbar">
-					<Link to="/" className="auth-split__right-back">
-						<IconChevronLeft size={16} />
-						Back to home
-					</Link>
+					<div className="auth-split__topbar-left">
+						<Link to="/" className="auth-split__right-back" title="Back to home">
+							<IconChevronLeft size={16} />
+							<span className="auth-split__back-label">Back to home</span>
+							<span className="auth-split__back-label-mobile">Back</span>
+						</Link>
+					</div>
 
 					{/* Mobile brand (shown only on mobile/tablet when left panel is hidden) */}
-					<Link to="/" className="auth-split__mobile-brand" aria-label="GueInsight Home">
-						<img src="/img/logo.png" alt="GueInsight" width="26" height="26" style={{ borderRadius: 6 }} />
-						<span>GueInsight<span>.</span></span>
-					</Link>
+					<div className="auth-split__topbar-center">
+						<Link to="/" className="auth-split__mobile-brand" aria-label="GueInsight Home">
+							<img src="/img/logo.png" alt="GueInsight" width="24" height="24" style={{ borderRadius: 6, objectFit: 'cover' }} />
+							<span>GueInsight<span className="auth-split__left-name-dot">.</span></span>
+						</Link>
+					</div>
 
-					<span className="auth-split__right-join">
-						New around here? <Link to={`/signup${location.search || ''}`}>Come on in ↗</Link>
-					</span>
+					<div className="auth-split__topbar-right">
+						<span className="auth-split__right-join">
+							<span className="auth-split__join-prompt">New around here?</span>
+							<Link to={`/signup${location.search || ''}`} className="auth-split__join-link">
+								<span>Come on in</span>
+								<IconArrowUpRight size={13} />
+							</Link>
+						</span>
+					</div>
 				</div>
 
 				{/* Form area */}
@@ -178,7 +189,11 @@ const Login = () => {
 								</p>
 							)}
 							<p style={{ marginTop: 8 }}>
-								Don't have an account yet? <Link to={`/signup${location.search || ''}`}>Come on in ↗</Link>
+								Don't have an account yet?{' '}
+								<Link to={`/signup${location.search || ''}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontWeight: 700, color: '#E8490A' }}>
+									<span>Come on in</span>
+									<IconArrowUpRight size={13} />
+								</Link>
 							</p>
 						</div>
 					</div>
