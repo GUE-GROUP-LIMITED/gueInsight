@@ -43,7 +43,8 @@ const AppShell = () => {
   const location = useLocation();
   const publicHeaderRoutes = ['/', '/login', '/signup', '/reset-password', '/docs', '/subscription', '/activate-admin', '/privacy', '/terms'];
   const showNavbar = !publicHeaderRoutes.includes(location.pathname) && !location.pathname.startsWith('/admin');
-  const showFooter = !location.pathname.startsWith('/admin');
+  const noFooterRoutes = ['/login', '/signup', '/reset-password', '/activate-admin'];
+  const showFooter = !noFooterRoutes.includes(location.pathname) && !location.pathname.startsWith('/admin');
 
   return (
     <>
