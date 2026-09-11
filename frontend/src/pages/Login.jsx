@@ -2,7 +2,7 @@ import { useContext, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { AuthContext, normalizeRole } from '../context/AuthContext';
-import PublicHeader from '../components/PublicHeader';
+import { LogoGueInsight, IconLock, IconHeart, IconChevronLeft, IconArrowRight } from '../components/Icons';
 import './AuthPricing.css';
 import { useTranslation } from '../i18n/index';
 
@@ -47,53 +47,144 @@ const Login = () => {
 	};
 
 	return (
-		<>
-			<PublicHeader featureTo="/#features" howTo="/docs#getting-started" whoTo="/#who" pricingTo="/subscription" trialTo="/subscription" />
-			<main className="auth-pricing-page auth-pricing-page--auth">
-				<section className="auth-pricing-card">
-				<div className="auth-pricing-card__head">
-					<p className="auth-pricing-card__eyebrow">{t('login.eyebrow')}</p>
-					<h1>{t('login.heading')}</h1>
-					<p>{t('login.lead')}</p>
+		<div className="auth-split">
+			{/* ── LEFT PANEL (Desktop only, hidden on mobile/tablet) ── */}
+			<div className="auth-split__left">
+				{/* Decorative circles */}
+				<div className="auth-split__left-deco" aria-hidden="true" />
+				<div className="auth-split__left-deco2" aria-hidden="true" />
+
+				{/* Brand */}
+				<Link to="/" className="auth-split__left-brand">
+					<div className="auth-split__left-logo">
+						<img src="/img/logo.png" alt="GueInsight" width="28" height="28" style={{ borderRadius: 6, objectFit: 'cover' }} />
+					</div>
+					<span className="auth-split__left-name">GueInsight<span className="auth-split__left-name-dot">.</span></span>
+				</Link>
+
+				{/* Content */}
+				<div className="auth-split__left-content">
+					<h1 className="auth-split__left-heading">
+						Right where<br />you <em>belong.</em>
+					</h1>
+					<p className="auth-split__left-sub">
+						For your people, your security,<br />and your beautifully specific concerns.
+					</p>
+
+					{/* Chat bubbles */}
+					<div className="auth-split__bubbles">
+						<div className="auth-split__bubble">
+							<div className="auth-split__bubble-avatar" style={{ background: '#1A1A1A' }}>GA</div>
+							<div className="auth-split__bubble-inner">
+								<div className="auth-split__bubble-name">
+									Gabriel <span className="auth-split__bubble-time">just now</span>
+								</div>
+								<div className="auth-split__bubble-text">
+									hey! saved you a spot. <IconLock size={13} color="#E8490A" style={{ verticalAlign: 'middle', marginLeft: 3 }} />
+								</div>
+							</div>
+						</div>
+						<div className="auth-split__bubble" style={{ marginLeft: 24 }}>
+							<div className="auth-split__bubble-avatar" style={{ background: '#9A9490' }}>Y</div>
+							<div className="auth-split__bubble-inner">
+								<div className="auth-split__bubble-name">
+									You <span className="auth-split__bubble-time">just now</span>
+								</div>
+								<div className="auth-split__bubble-text">feels like my kind of place.</div>
+								<div className="auth-split__bubble-reaction">
+									<IconHeart size={12} color="#E8490A" fill="#E8490A" /> 3
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			{/* ── RIGHT PANEL (Full width on smaller screens) ── */}
+			<div className="auth-split__right">
+				{/* Top bar */}
+				<div className="auth-split__right-topbar">
+					<Link to="/" className="auth-split__right-back">
+						<IconChevronLeft size={16} />
+						Back to home
+					</Link>
+
+					{/* Mobile brand (shown only on mobile/tablet when left panel is hidden) */}
+					<Link to="/" className="auth-split__mobile-brand" aria-label="GueInsight Home">
+						<img src="/img/logo.png" alt="GueInsight" width="26" height="26" style={{ borderRadius: 6 }} />
+						<span>GueInsight<span>.</span></span>
+					</Link>
+
+					<span className="auth-split__right-join">
+						New around here? <Link to={`/signup${location.search || ''}`}>Come on in ↗</Link>
+					</span>
 				</div>
 
-				<form className="auth-pricing-form" onSubmit={handleSubmit}>
-					<label htmlFor="login-email">{t('login.email')}</label>
-					<input
-						id="login-email"
-						type="email"
-						placeholder={t('login.placeholder_email')}
-						value={email}
-						onChange={(e) => setEmail(e.target.value)}
-						required
-					/>
+				{/* Form area */}
+				<div className="auth-split__right-body">
+					<div className="auth-split__form-wrap">
+						<h1 className="auth-split__form-heading">Hey, welcome back.</h1>
+						<p className="auth-split__form-sub">The conversation's better with you in it.</p>
 
-					<label htmlFor="login-password">{t('login.password')}</label>
-					<input
-						id="login-password"
-						type="password"
-						placeholder={t('login.placeholder_password')}
-						value={password}
-						onChange={(e) => setPassword(e.target.value)}
-						required
-					/>
+						{/* Email + password form */}
+						<p style={{ fontSize: '0.8rem', color: '#9A9490', textAlign: 'center', margin: '0 0 16px' }}>
+							or, the good old email way
+						</p>
 
-					<button type="submit" disabled={loading}>
-						{loading ? t('login.signing') : t('login.log_in')}
-					</button>
+						<form className="auth-split__form" onSubmit={handleSubmit}>
+							<div>
+								<label className="auth-split__label" htmlFor="login-email">
+									{t('login.email')}
+								</label>
+								<input
+									id="login-email"
+									type="email"
+									placeholder={t('login.placeholder_email')}
+									value={email}
+									onChange={(e) => setEmail(e.target.value)}
+									className="auth-split__input"
+									required
+								/>
+							</div>
 
-					{success && <p className="auth-pricing-message auth-pricing-message--success">{success}</p>}
-					{error && <p className="auth-pricing-message auth-pricing-message--error">{error}</p>}
+							<div>
+								<label className="auth-split__label" htmlFor="login-password">
+									{t('login.password')}
+								</label>
+								<input
+									id="login-password"
+									type="password"
+									placeholder={t('login.placeholder_password')}
+									value={password}
+									onChange={(e) => setPassword(e.target.value)}
+									className="auth-split__input"
+									required
+								/>
+							</div>
 
-					<div className="auth-pricing-links auth-pricing-links--login">
-						<Link to={`/signup${location.search || ''}`}>{t('login.sign_up')}</Link>
-						{showResetPassword ? <Link to="/reset-password">{t('login.reset_password')}</Link> : null}
+							<button type="submit" className="auth-split__submit" disabled={loading}>
+								<span>{loading ? t('login.signing') : t('login.log_in')}</span>
+								<span className="auth-split__submit-arrow">›</span>
+							</button>
+
+							{success && <p className="auth-split__message auth-split__message--success">{success}</p>}
+							{error && <p className="auth-split__message auth-split__message--error">{error}</p>}
+						</form>
+
+						<div className="auth-split__form-footer">
+							{showResetPassword && (
+								<p>
+									Forgot your password? <Link to="/reset-password">{t('login.reset_password')}</Link>
+								</p>
+							)}
+							<p style={{ marginTop: 8 }}>
+								Don't have an account yet? <Link to={`/signup${location.search || ''}`}>Come on in ↗</Link>
+							</p>
+						</div>
 					</div>
-				</form>
-
-				</section>
-			</main>
-		</>
+				</div>
+			</div>
+		</div>
 	);
 };
 

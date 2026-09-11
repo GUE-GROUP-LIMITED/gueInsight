@@ -5,17 +5,26 @@ import './Footer.css';
 const Footer = () => (
   <footer className="app-footer" role="contentinfo">
     <div className="app-footer__top">
+      {/* Brand column */}
       <div className="app-footer__brand-col">
         <div className="app-footer__brand-row">
-          <img src="/img/logo.png" alt="GueInsight" className="app-footer__logo" onError={(e) => { e.currentTarget.src = '/img/guecyber-logo.svg'; }} />
+          {/* Real logo from public/img/logo.png */}
+          <img
+            src="/img/logo.png"
+            alt="GueInsight logo"
+            className="app-footer__logo"
+            width="30"
+            height="30"
+          />
           <div className="app-footer__brand-name">Gue<span>Insight</span></div>
         </div>
-        <div className="app-footer__brand-sub">SUBSCRIPTION-BASED THREAT INTELLIGENCE PLATFORM · BY GUE CYBER · BELGIUM</div>
+        <div className="app-footer__brand-sub">Subscription-based threat intelligence platform · by Gue Cyber · Belgium</div>
         <div className="app-footer__legal">Enterprise no: 1037.163.392 · Doorniksesteenweg 3B bus 101, 8580 Avelgem, Belgium</div>
       </div>
 
+      {/* Product links */}
       <div className="app-footer__nav-group">
-        <h4>PRODUCT</h4>
+        <h4>Product</h4>
         <ul>
           <li><Link to="/#features">Features</Link></li>
           <li><Link to="/docs#getting-started">How It Works</Link></li>
@@ -26,8 +35,9 @@ const Footer = () => (
         </ul>
       </div>
 
+      {/* Gue Cyber links */}
       <div className="app-footer__nav-group">
-        <h4>GUE CYBER</h4>
+        <h4>Gue Cyber</h4>
         <ul>
           <li><a href="https://www.guecyber.com" target="_blank" rel="noopener noreferrer">guecyber.com</a></li>
           <li><a href="https://www.guecyber.com/#services" target="_blank" rel="noopener noreferrer">vCISO Services</a></li>
@@ -36,8 +46,9 @@ const Footer = () => (
         </ul>
       </div>
 
+      {/* Legal links */}
       <div className="app-footer__nav-group">
-        <h4>LEGAL</h4>
+        <h4>Legal</h4>
         <ul>
           <li><Link to="/privacy">Privacy Policy</Link></li>
           <li><Link to="/terms">Terms of Service</Link></li>
@@ -46,12 +57,15 @@ const Footer = () => (
       </div>
     </div>
 
+    {/* Bottom bar */}
     <div className="app-footer__bottom">
       <span>© 2026 GueInsight · A Gue Cyber product · Avelgem, Belgium</span>
-      <span>
+      <span className="app-footer__made">
         <a href="https://www.guecyber.com" target="_blank" rel="noopener noreferrer">guecyber.com</a>
         {' · '}
         <a href="https://www.gabrielaloho.com" target="_blank" rel="noopener noreferrer">gabrielaloho.com</a>
+        {' · '}
+        Made in <span>☀️</span> Belgium
       </span>
     </div>
   </footer>
