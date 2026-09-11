@@ -48,12 +48,14 @@ const PublicHeader = ({
 					{/* Brand */}
 					<div className="gi-nav-brand-group">
 						<Link to="/" className="gi-nav-brand">
-							{/* SVG shield/insight icon */}
-							<svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-								<rect width="28" height="28" rx="7" fill="#1A1A1A"/>
-								<path d="M14 5L6 8.5V14C6 18.1 9.4 21.7 14 23C18.6 21.7 22 18.1 22 14V8.5L14 5Z" fill="#E8490A"/>
-								<path d="M11 14L13 16L17 12" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-							</svg>
+							{/* Real logo from /img/logo.png */}
+							<img
+								src="/img/logo.png"
+								alt="GueInsight logo"
+								className="gi-nav-logo-mark"
+								width="30"
+								height="30"
+							/>
 							<div className="gi-nav-name">GueInsight<span className="gi-nav-name-dot">.</span></div>
 						</Link>
 						<div className="gi-nav-by">by <a href="https://www.guecyber.com" target="_blank" rel="noreferrer">Gue Cyber</a></div>

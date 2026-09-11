@@ -2,16 +2,23 @@ import { Link } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import TrialModal from '../components/TrialModal';
 import PublicHeader from '../components/PublicHeader';
+import {
+  IconShield, IconShieldCheck, IconSearch, IconClipboard, IconDatabase,
+  IconBell, IconLink, IconZap, IconGlobe, IconCheckCircle,
+  IconUsers, IconBuilding, IconBook, IconMonitor, IconSmartphone,
+  IconAsterisk, IconArrowRight, IconBarChart, IconLayers, IconLock, IconGitHub,
+  IconMessage, IconStar, LogoGueInsight,
+} from '../components/Icons';
 import './Landing.css';
 import { api } from '../services/api';
 
 const FEATURES = [
-  { icon: '🛡️', title: 'vCISO Portal', desc: 'Your assigned virtual CISO posts recommendations, action items and security notes directly to your dashboard — included in Enterprise plans.' },
-  { icon: '📋', title: 'NIS2 Compliance', desc: 'Built-in NIS2 checklist, gap analysis, incident reporting with PDF export, and audit-ready evidence packs for Belgian regulators.' },
-  { icon: '🔍', title: 'AI-Assisted Threat Intelligence', desc: 'Upload files, paste indicators or connect M365 / Google Workspace — automated IoC extraction, scoring, enrichment and faster triage in seconds.' },
-  { icon: '📊', title: 'GDPR Tooling', desc: 'Data export, deletion requests, audit logging (90 days → unlimited) and data-subject request workflows built into every paid tier.' },
-  { icon: '🔗', title: 'Cloud Connectors', desc: 'Microsoft 365 and Google Workspace integrations for user, device and policy discovery — spot GDPR and NIS2 gaps across your tenant.' },
-  { icon: '🚨', title: 'Proactive Security Operations', desc: 'Custom alert rules, Slack / Teams notifications and weekly security summaries that help your team act before issues spread.' },
+  { icon: <IconShieldCheck size={22} />, title: 'vCISO Portal', desc: 'Your assigned virtual CISO posts recommendations, action items and security notes directly to your dashboard — included in Enterprise plans.' },
+  { icon: <IconClipboard size={22} />, title: 'NIS2 Compliance', desc: 'Built-in NIS2 checklist, gap analysis, incident reporting with PDF export, and audit-ready evidence packs for Belgian regulators.' },
+  { icon: <IconSearch size={22} />, title: 'AI-Assisted Threat Intelligence', desc: 'Upload files, paste indicators or connect M365 / Google Workspace — automated IoC extraction, scoring, enrichment and faster triage in seconds.' },
+  { icon: <IconDatabase size={22} />, title: 'GDPR Tooling', desc: 'Data export, deletion requests, audit logging (90 days → unlimited) and data-subject request workflows built into every paid tier.' },
+  { icon: <IconLink size={22} />, title: 'Cloud Connectors', desc: 'Microsoft 365 and Google Workspace integrations for user, device and policy discovery — spot GDPR and NIS2 gaps across your tenant.' },
+  { icon: <IconBell size={22} />, title: 'Proactive Security Operations', desc: 'Custom alert rules, Slack / Teams notifications and weekly security summaries that help your team act before issues spread.' },
 ];
 
 const TRUST_PACK = [
@@ -148,8 +155,13 @@ function getRelativeUpdateLabel(isoDate) {
   return `Updated ${Math.floor(hours / 24)}d ago`;
 }
 
-// Avatar blobs for the about/feature section
-const AVATAR_BLOBS = ['🛡️', '🔍', '📊', '🔗', '🚨', '📋', '⚡', '🏢', '🇪🇺', '💬', '🔐', '✅'];
+// SVG icon set for the avatar/blob grid — no emojis
+const AVATAR_BLOBS_ICONS = [
+  <IconShield size={28} />, <IconSearch size={28} />, <IconBarChart size={28} />,
+  <IconLink size={28} />, <IconBell size={28} />, <IconClipboard size={28} />,
+  <IconZap size={28} />, <IconBuilding size={28} />, <IconGlobe size={28} />,
+  <IconMessage size={28} />, <IconLock size={28} />, <IconCheckCircle size={28} />,
+];
 
 export default function Landing() {
   const [showTrialModal, setShowTrialModal] = useState(false);
@@ -254,21 +266,21 @@ export default function Landing() {
 
           {/* Floating decorative avatars */}
           <div className="lp__hero-deco lp__hero-deco--tl">
-            <div className="lp__float-avatar lp__float-avatar--sm">🛡️</div>
+            <div className="lp__float-avatar lp__float-avatar--sm"><IconShield size={20} color="#E8490A" /></div>
           </div>
           <div className="lp__hero-deco lp__hero-deco--tr">
-            <span className="lp__sparkle">✳</span>
+            <IconAsterisk size={28} color="#E8490A" className="lp__sparkle" />
           </div>
           <div className="lp__hero-deco lp__hero-deco--ml" style={{ left: '5%' }}>
-            <div className="lp__float-avatar">🔍</div>
+            <div className="lp__float-avatar"><IconSearch size={22} color="#E8490A" /></div>
           </div>
           <div className="lp__hero-deco lp__hero-deco--mr" style={{ right: '5%' }}>
-            <div className="lp__float-avatar lp__float-avatar--lg">🏢</div>
+            <div className="lp__float-avatar lp__float-avatar--lg"><IconBuilding size={28} color="#E8490A" /></div>
           </div>
 
           {/* Eyebrow pill */}
           <p className="lp__eyebrow">
-            <span>🇧🇪</span>
+            <IconGlobe size={14} color="#E8490A" />
             GueInsight — Threat Intelligence, Compliance &amp; vCISO in one platform
           </p>
 
@@ -294,16 +306,16 @@ export default function Landing() {
 
           {/* CTA buttons */}
           <div className="lp__hero-actions">
-            <Link to="/subscription" className="lp__btn lp__btn--primary">View Plans →</Link>
+            <Link to="/subscription" className="lp__btn lp__btn--primary">View Plans <IconArrowRight size={16} /></Link>
             <Link to="/subscription" className="lp__btn lp__btn--ghost">See all features</Link>
           </div>
 
           {/* Trust indicators */}
           <div className="lp__trust-row">
-            <span>⚡ Fast IoC extraction</span>
-            <span>📋 NIS2 &amp; GDPR ready</span>
-            <span>🛡️ vCISO guidance</span>
-            <span>🇪🇺 EU data residency</span>
+            <span><IconZap size={14} color="#E8490A" /> Fast IoC extraction</span>
+            <span><IconClipboard size={14} color="#E8490A" /> NIS2 &amp; GDPR ready</span>
+            <span><IconShieldCheck size={14} color="#E8490A" /> vCISO guidance</span>
+            <span><IconGlobe size={14} color="#E8490A" /> EU data residency</span>
           </div>
         </div>
 
@@ -414,10 +426,10 @@ export default function Landing() {
       {/* ══════════ NIS2 BANNER ══════════ */}
       <div className="lp__nis2-banner">
         <div>
-          <strong>⚠️ NIS2 is now enforced in Belgium.</strong>{' '}
+          <strong style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><IconAlertTriangle size={16} color="#DC2626" /> NIS2 is now enforced in Belgium.</strong>{' '}
           Organisations in critical sectors face fines up to <strong>€10 million</strong> for non-compliance. GueInsight's Enterprise Risk and Elite tiers include full NIS2 incident reporting, gap analysis, and audit evidence.
         </div>
-        <Link to="/subscription" className="lp__btn lp__btn--nis2">See NIS2 Plans →</Link>
+        <Link to="/subscription" className="lp__btn lp__btn--nis2">See NIS2 Plans <IconArrowRight size={14} /></Link>
       </div>
 
       {/* ══════════ FEATURES GRID ══════════ */}
@@ -431,7 +443,7 @@ export default function Landing() {
           <div className="lp__features-grid">
             {FEATURES.map(f => (
               <article className="lp__feature-card" key={f.title}>
-                <span className="lp__feature-icon">{f.icon}</span>
+                <div className="lp__feature-icon">{f.icon}</div>
                 <h3>{f.title}</h3>
                 <p>{f.desc}</p>
               </article>
@@ -444,7 +456,7 @@ export default function Landing() {
       <div className="lp__about-section">
         {/* Left text */}
         <div className="lp__about-left">
-          <span className="lp__about-eyebrow">✳ About GueInsight</span>
+        <span className="lp__about-eyebrow"><IconAsterisk size={14} color="#E8490A" /> About GueInsight</span>
           <h2>A little less enterprise.<br />A lot more intelligence.</h2>
           <p>
             We believe cybersecurity shouldn't require a full SOC budget. So we're building focused, affordable tools for organisations who want real security insight — not just dashboards. No big pitch. Just good security.
@@ -460,21 +472,21 @@ export default function Landing() {
               className="lp__btn lp__btn--ghost"
               style={{ display: 'inline-flex' }}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2Z" /></svg>
+              <IconGitHub size={16} />
               Star on GitHub
             </a>
           </div>
         </div>
 
-        {/* Right — floating avatar grid */}
+        {/* Right — icon grid */}
         <div className="lp__avatar-grid" aria-hidden="true">
-          {AVATAR_BLOBS.map((emoji, i) => (
+          {AVATAR_BLOBS_ICONS.map((iconEl, i) => (
             <div
               key={i}
               className="lp__avatar-blob"
-              style={{ animationDelay: `${i * 0.28}s` }}
+              style={{ animationDelay: `${i * 0.28}s`, color: '#E8490A' }}
             >
-              {emoji}
+              {iconEl}
             </div>
           ))}
         </div>
@@ -491,7 +503,7 @@ export default function Landing() {
           <div className="lp__features-grid">
             {TRUST_PACK.map((item) => (
               <article className="lp__feature-card" key={item.title}>
-                <span className="lp__feature-icon">✓</span>
+                <div className="lp__feature-icon"><IconCheckCircle size={22} color="#16a34a" /></div>
                 <h3>{item.title}</h3>
                 <p>{item.body}</p>
               </article>
@@ -500,7 +512,7 @@ export default function Landing() {
           <div className="lp__features-grid" style={{ marginTop: '16px' }}>
             {USE_CASE_NOTES.map((item) => (
               <article className="lp__feature-card" key={item.title}>
-                <span className="lp__feature-icon">▣</span>
+                <div className="lp__feature-icon"><IconLayers size={22} color="#E8490A" /></div>
                 <h3>{item.title}</h3>
                 <p>{item.body}</p>
               </article>

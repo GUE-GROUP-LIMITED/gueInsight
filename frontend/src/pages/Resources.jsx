@@ -1,22 +1,41 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import PublicHeader from '../components/PublicHeader';
+import {
+  IconShield,
+  IconClipboard,
+  IconSearch,
+  IconDatabase,
+  IconHeart,
+  IconBank,
+  IconGlobe,
+  IconSettings,
+  IconTrendingUp,
+  IconCheckCircle,
+  IconArrowRight,
+  IconBook,
+  IconBarChart,
+} from '../components/Icons';
 import './Resources.css';
 
 const industryUseCases = [
   {
+    icon: <IconHeart size={22} />,
     title: 'Healthcare',
     body: 'Track audit evidence, data-subject requests, and incident response steps for regulated patient data workflows.',
   },
   {
+    icon: <IconBank size={22} />,
     title: 'Finance',
     body: 'Map access controls and tenant drift across Microsoft 365 and Google Workspace for audit-ready reporting.',
   },
   {
+    icon: <IconGlobe size={22} />,
     title: 'Public Sector',
     body: 'Use EU residency, export/delete workflows, and incident summaries to support procurement and oversight requirements.',
   },
   {
+    icon: <IconSettings size={22} />,
     title: 'Manufacturing',
     body: 'Combine threat intelligence and compliance workflows to protect distributed plants, vendors, and service accounts.',
   },
@@ -32,14 +51,17 @@ const comparisonRows = [
 
 const thoughtLeadership = [
   {
+    icon: <IconClipboard size={22} />,
     title: 'NIS2 readiness for Belgian SMEs',
     body: 'Short, practical guidance on incident reporting, evidence collection, and control ownership.',
   },
   {
+    icon: <IconDatabase size={22} />,
     title: 'GDPR operations that scale',
     body: 'How to keep export, deletion, and audit workflows usable without a full security team.',
   },
   {
+    icon: <IconShield size={22} />,
     title: 'Security operations without SIEM sprawl',
     body: 'Where GueInsight fits alongside existing EDR and cloud security tooling.',
   },
@@ -59,106 +81,228 @@ export default function Resources() {
 
   return (
     <>
-      <PublicHeader featureTo="/#features" howTo="/docs#getting-started" whoTo="/#who" pricingTo="/subscription" resourcesTo="/resources" statusTo="/status" trialTo="/subscription" />
+      <PublicHeader
+        featureTo="/#features"
+        howTo="/docs#getting-started"
+        whoTo="/#who"
+        pricingTo="/subscription"
+        resourcesTo="/resources"
+        statusTo="/status"
+        trialTo="/subscription"
+      />
+
       <main className="resources-page">
-        <section className="resources-page__hero">
-          <p className="resources-page__eyebrow">Growth & distribution</p>
-          <h1>Resources that help prospects understand the product fast</h1>
-          <p>
-            This page is intentionally practical: use cases, a competitor snapshot, an ROI calculator,
-            and editorial topics you can turn into a blog or newsletter cadence.
-          </p>
-          <div className="resources-page__hero-actions">
-            <Link to="/subscription" className="resources-page__button resources-page__button--primary">See pricing</Link>
-            <Link to="/support" className="resources-page__button resources-page__button--ghost">Talk to sales</Link>
-          </div>
-        </section>
 
-        <section className="resources-page__section">
-          <div className="resources-page__section-head">
-            <p className="resources-page__eyebrow">Industry use cases</p>
-            <h2>Landing pages you can tailor by vertical</h2>
-          </div>
-          <div className="resources-page__grid">
-            {industryUseCases.map((item) => (
-              <article key={item.title} className="resources-page__card">
-                <h3>{item.title}</h3>
-                <p>{item.body}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="resources-page__section resources-page__section--alt">
-          <div className="resources-page__section-head">
-            <p className="resources-page__eyebrow">Comparison snapshot</p>
-            <h2>Positioning against the tools buyers already know</h2>
-          </div>
-          <div className="resources-page__table-wrap">
-            <table className="resources-page__table">
-              <thead>
-                <tr>
-                  <th>Capability</th>
-                  <th>GueInsight</th>
-                  <th>Compliance-only platform</th>
-                  <th>Generic MSSP stack</th>
-                </tr>
-              </thead>
-              <tbody>
-                {comparisonRows.map((row) => (
-                  <tr key={row[0]}>
-                    <td>{row[0]}</td>
-                    <td>{row[1]}</td>
-                    <td>{row[2]}</td>
-                    <td>{row[3]}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section className="resources-page__section">
-          <div className="resources-page__section-head">
-            <p className="resources-page__eyebrow">ROI calculator</p>
-            <h2>Show the value in minutes, not just features</h2>
-          </div>
-          <div className="resources-page__roi">
-            <label>
-              <span>Hours saved per month</span>
-              <input type="range" min="0" max="40" value={hoursSaved} onChange={(event) => setHoursSaved(event.target.value)} />
-              <strong>{hoursSaved} hours</strong>
-            </label>
-            <label>
-              <span>Average hourly cost (€)</span>
-              <input type="number" min="0" step="5" value={hourlyRate} onChange={(event) => setHourlyRate(event.target.value)} />
-            </label>
-            <label>
-              <span>Audit prep reduction (%)</span>
-              <input type="number" min="0" max="100" step="5" value={auditReduction} onChange={(event) => setAuditReduction(event.target.value)} />
-            </label>
-            <div className="resources-page__roi-result">
-              <p>Estimated annual value</p>
-              <strong>€{roi.toLocaleString()}</strong>
-              <span>Use this as a rough sales conversation starter.</span>
+        {/* ══ HERO ══ */}
+        <div className="resources-page__inner">
+          <section className="resources-page__hero">
+            <div className="resources-page__hero-left">
+              <span className="resources-page__hero-badge">
+                <IconBook size={14} />
+                Growth &amp; distribution
+              </span>
+              <h1>Resources that help you <em>understand</em> the product fast</h1>
+              <p className="resources-page__hero-lead">
+                This page is intentionally practical: use cases, a competitor snapshot, an ROI calculator,
+                and editorial topics you can turn into a blog or newsletter cadence.
+              </p>
+              <div className="resources-page__hero-actions">
+                <Link to="/subscription" className="resources-page__btn resources-page__btn--primary">
+                  See pricing
+                  <IconArrowRight size={16} />
+                </Link>
+                <Link to="/support" className="resources-page__btn resources-page__btn--ghost">
+                  Talk to sales
+                </Link>
+              </div>
             </div>
-          </div>
-        </section>
 
-        <section className="resources-page__section resources-page__section--alt">
-          <div className="resources-page__section-head">
-            <p className="resources-page__eyebrow">Thought leadership</p>
-            <h2>Topics to publish regularly</h2>
-          </div>
-          <div className="resources-page__grid resources-page__grid--narrow">
-            {thoughtLeadership.map((item) => (
-              <article key={item.title} className="resources-page__card">
-                <h3>{item.title}</h3>
-                <p>{item.body}</p>
-              </article>
-            ))}
-          </div>
-        </section>
+            {/* Hero stats */}
+            <div className="resources-page__hero-stats">
+              <div className="resources-page__stat-card">
+                <div className="resources-page__stat-icon">
+                  <IconShield size={22} />
+                </div>
+                <div className="resources-page__stat-num">€10M</div>
+                <div className="resources-page__stat-label">Max NIS2 fine for Belgian critical sector non-compliance</div>
+              </div>
+              <div className="resources-page__stat-card">
+                <div className="resources-page__stat-icon">
+                  <IconBarChart size={22} />
+                </div>
+                <div className="resources-page__stat-num">72h</div>
+                <div className="resources-page__stat-label">NIS2 incident reporting window</div>
+              </div>
+              <div className="resources-page__stat-card">
+                <div className="resources-page__stat-icon">
+                  <IconDatabase size={22} />
+                </div>
+                <div className="resources-page__stat-num">100%</div>
+                <div className="resources-page__stat-label">EU data residency on Elite tier</div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        {/* ══ INDUSTRY USE CASES ══ */}
+        <div className="resources-page__section--white">
+          <section className="resources-page__inner resources-page__section">
+            <div className="resources-page__section-head">
+              <span className="resources-page__eyebrow">
+                <IconGlobe size={13} />
+                Industry use cases
+              </span>
+              <h2>Landing pages you can tailor by vertical</h2>
+            </div>
+            <div className="resources-page__grid">
+              {industryUseCases.map((item) => (
+                <article key={item.title} className="resources-page__card">
+                  <div className="resources-page__card-icon">{item.icon}</div>
+                  <h3>{item.title}</h3>
+                  <p>{item.body}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+        </div>
+
+        {/* ══ COMPARISON TABLE ══ */}
+        <div className="resources-page__inner">
+          <section className="resources-page__section">
+            <div className="resources-page__section-head">
+              <span className="resources-page__eyebrow">
+                <IconSearch size={13} />
+                Comparison snapshot
+              </span>
+              <h2>Positioning against the tools buyers already know</h2>
+            </div>
+            <div className="resources-page__table-wrap">
+              <table className="resources-page__table">
+                <thead>
+                  <tr>
+                    <th>Capability</th>
+                    <th>GueInsight</th>
+                    <th>Compliance-only platform</th>
+                    <th>Generic MSSP stack</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {comparisonRows.map((row) => (
+                    <tr key={row[0]}>
+                      <td>{row[0]}</td>
+                      <td>
+                        <span className="resources-page__table-yes">
+                          <IconCheckCircle size={14} color="#16a34a" />
+                          {row[1]}
+                        </span>
+                      </td>
+                      <td>{row[2]}</td>
+                      <td>{row[3]}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        {/* ══ ROI CALCULATOR ══ */}
+        <div className="resources-page__section--white">
+          <section className="resources-page__inner resources-page__section">
+            <div className="resources-page__section-head resources-page__section-head--center">
+              <span className="resources-page__eyebrow">
+                <IconTrendingUp size={13} />
+                ROI calculator
+              </span>
+              <h2>Show the value in minutes, not just features</h2>
+              <p>Adjust the inputs below to estimate the annual value GueInsight could deliver for your team.</p>
+            </div>
+
+            <div className="resources-page__roi-wrap">
+              {/* Left — inputs */}
+              <div className="resources-page__roi-left">
+                <h3>Calculate your savings</h3>
+                <p>Use this as a starting point for sales conversations with security buyers.</p>
+
+                <div className="resources-page__roi-fields">
+                  <div className="resources-page__roi-field">
+                    <label htmlFor="roi-hours">Hours saved per month on security triage</label>
+                    <div className="resources-page__roi-field-row">
+                      <input
+                        id="roi-hours"
+                        type="range"
+                        min="0"
+                        max="40"
+                        value={hoursSaved}
+                        onChange={(e) => setHoursSaved(e.target.value)}
+                      />
+                      <span className="resources-page__roi-field-value">{hoursSaved}h</span>
+                    </div>
+                  </div>
+
+                  <div className="resources-page__roi-field">
+                    <label htmlFor="roi-rate">Average analyst hourly cost (€)</label>
+                    <input
+                      id="roi-rate"
+                      type="number"
+                      min="0"
+                      step="5"
+                      value={hourlyRate}
+                      onChange={(e) => setHourlyRate(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="resources-page__roi-field">
+                    <label htmlFor="roi-audit">Audit prep time reduction (%)</label>
+                    <input
+                      id="roi-audit"
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="5"
+                      value={auditReduction}
+                      onChange={(e) => setAuditReduction(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Right — result */}
+              <div className="resources-page__roi-result">
+                <span className="resources-page__roi-result-label">Estimated annual value</span>
+                <div className="resources-page__roi-result-value">
+                  €{roi.toLocaleString()}
+                </div>
+                <span className="resources-page__roi-result-note">
+                  Use this as a rough sales conversation starter — not a guaranteed figure.
+                </span>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        {/* ══ THOUGHT LEADERSHIP ══ */}
+        <div className="resources-page__inner">
+          <section className="resources-page__section">
+            <div className="resources-page__section-head">
+              <span className="resources-page__eyebrow">
+                <IconBook size={13} />
+                Thought leadership
+              </span>
+              <h2>Topics to publish regularly</h2>
+            </div>
+            <div className="resources-page__grid resources-page__grid--narrow">
+              {thoughtLeadership.map((item) => (
+                <article key={item.title} className="resources-page__card">
+                  <div className="resources-page__card-icon">{item.icon}</div>
+                  <h3>{item.title}</h3>
+                  <p>{item.body}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+        </div>
+
       </main>
     </>
   );

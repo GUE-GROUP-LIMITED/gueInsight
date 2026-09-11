@@ -8,12 +8,14 @@ const Footer = () => (
       {/* Brand column */}
       <div className="app-footer__brand-col">
         <div className="app-footer__brand-row">
-          {/* SVG shield icon — same as nav */}
-          <svg width="30" height="30" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <rect width="28" height="28" rx="7" fill="#1A1A1A"/>
-            <path d="M14 5L6 8.5V14C6 18.1 9.4 21.7 14 23C18.6 21.7 22 18.1 22 14V8.5L14 5Z" fill="#E8490A"/>
-            <path d="M11 14L13 16L17 12" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          {/* Real logo from public/img/logo.png */}
+          <img
+            src="/img/logo.png"
+            alt="GueInsight logo"
+            className="app-footer__logo"
+            width="30"
+            height="30"
+          />
           <div className="app-footer__brand-name">Gue<span>Insight</span></div>
         </div>
         <div className="app-footer__brand-sub">Subscription-based threat intelligence platform · by Gue Cyber · Belgium</div>
