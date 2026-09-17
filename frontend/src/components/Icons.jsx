@@ -187,3 +187,47 @@ export const LogoGueInsight = ({ size = 28, className = '' }) => (
     <path d="M11 14L13 16L17 12" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
+
+// Grid (4 squares)
+export const IconGrid = (p) => <Icon {...p} d={<><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></>} />;
+
+// Chevron right
+export const IconChevronRight = (p) => <Icon {...p} d={<polyline points="9 18 15 12 9 6"/>} />;
+
+// Arrow left
+export const IconArrowLeft = (p) => <Icon {...p} d={<><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></>} />;
+
+// Play
+export const IconPlay = (p) => <Icon {...p} d={<polygon points="5 3 19 12 5 21 5 3"/>} />;
+
+// Sliders / Controls
+export const IconSliders = (p) => <Icon {...p} d={<><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></>} />;
+
+// Plus
+export const IconPlus = (p) => <Icon {...p} d={<><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>} />;
+
+// More horizontal (...)
+export const IconMoreHorizontal = (p) => <Icon {...p} d={<><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="19" cy="12" r="1.5" fill="currentColor"/><circle cx="5" cy="12" r="1.5" fill="currentColor"/></>} />;
+
+// Cloud
+export const IconCloud = (p) => <Icon {...p} d={<path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>} />;
+
+// CPU / Chip
+export const IconCpu = (p) => <Icon {...p} d={<><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></>} />;
+
+// Square (unchecked checkbox / feed item)
+export const IconSquare = (p) => <Icon {...p} d={<rect x="3" y="3" width="18" height="18" rx="3"/>} />;
+
+// Apple logo outline
+export const IconApple = ({ size = 16, color = 'currentColor', className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={color} className={className} aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.38c.62-.75 1.04-1.8 0.93-2.85-.9.04-1.99.6-2.63 1.35-.57.65-.96 1.71-.83 2.72 1.01.08 2.03-.52 2.53-1.22z"/>
+  </svg>
+);
+
+// Target / Bullseye
+export const IconTarget = (p) => <Icon {...p} d={<><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></>} />;
+
+// Lightbulb / Recommendation
+export const IconLightbulb = (p) => <Icon {...p} d={<><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A6 6 0 0 0 6 8c0 1 .2 2 .6 3 .76.76 1.23 1.52 1.41 2.5"/><path d="M12 2v2"/><path d="M12 8v4"/></>} />;
+

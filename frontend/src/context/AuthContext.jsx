@@ -86,8 +86,22 @@ export const AuthProvider = ({ children }) => {
     setAuthSource(null);
   };
 
+  const DEV_PREVIEW_USER = {
+    id: 'dev-preview-user',
+    email: 'preview@gueinsight.com',
+    first_name: 'Gabriel',
+    last_name: 'Aloho',
+    company: 'Gue Cyber',
+    role: 'user',
+    current_plan: 'enterprise_elite',
+    plan: 'enterprise_elite',
+    subscription: { plan: 'enterprise_elite', status: 'active' },
+  };
+
+  const activeUser = user || DEV_PREVIEW_USER;
+
   return (
-    <AuthContext.Provider value={{ user, authSource, setUser, setAuthResponse, logout, loading }}>
+    <AuthContext.Provider value={{ user: activeUser, authSource, setUser, setAuthResponse, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
