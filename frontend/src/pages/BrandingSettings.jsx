@@ -126,7 +126,7 @@ export default function BrandingSettings() {
 
   return (
     <article className="profile-page__card" style={{ marginBottom: '30px' }}>
-      <h2 style={{ background: 'linear-gradient(135deg, #a78bfa 0%, #60a5fa 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', fontSize: '1.5rem', fontWeight: '700', margin: '0 0 10px 0' }}>🎨 Company Branding</h2>
+      <h2 style={{ fontSize: '1.5rem', fontWeight: '700', margin: '0 0 10px 0', color: '#FFFFFF' }}>Company Branding</h2>
       <p className="subtitle" style={{ color: '#9ca3af', fontSize: '0.95rem', margin: '0 0 20px 0' }}>Upload your company logo and customize details. These will automatically appear on all your analysis reports.</p>
 
         {message && <div className="alert alert-success">{message}</div>}
@@ -135,7 +135,7 @@ export default function BrandingSettings() {
         {upgradeRequired && (
           <div className="upgrade-banner">
             <div className="upgrade-content">
-              <h3>🔓 Premium Feature</h3>
+              <h3>Premium Feature</h3>
               <p>Company branding customization is available for paid subscribers only.</p>
               <p>Upgrade to Compliance Pro or Enterprise Risk to:</p>
               <ul>
@@ -160,7 +160,7 @@ export default function BrandingSettings() {
                     <img src={logoPreview} alt="Company Logo Preview" className="logo-image" />
                   ) : (
                     <div className="logo-placeholder">
-                      <span>📁 No logo uploaded</span>
+                      <span>No logo uploaded</span>
                     </div>
                   )}
                 </div>
@@ -267,14 +267,14 @@ export default function BrandingSettings() {
                 disabled={saving}
                 className="btn btn-success"
               >
-                {saving ? 'Saving...' : '💾 Save All Changes'}
+                {saving ? 'Saving...' : 'Save All Changes'}
               </button>
               <button
                 onClick={() => fetchBranding()}
                 disabled={saving}
                 className="btn btn-secondary"
               >
-                ↻ Reset
+                Reset
               </button>
             </div>
 

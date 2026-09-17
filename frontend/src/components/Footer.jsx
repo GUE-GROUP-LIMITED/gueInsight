@@ -63,9 +63,7 @@ const Footer = () => (
       <span className="app-footer__made">
         <a href="https://www.guecyber.com" target="_blank" rel="noopener noreferrer">guecyber.com</a>
         {' · '}
-        <a href="https://www.gabrielaloho.com" target="_blank" rel="noopener noreferrer">gabrielaloho.com</a>
-        {' · '}
-        Made in <span>☀️</span> Belgium
+        Made in Belgium
       </span>
     </div>
   </footer>

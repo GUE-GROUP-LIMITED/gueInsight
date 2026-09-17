@@ -2,15 +2,35 @@ import { useContext, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { api } from '../services/api';
-import DashboardTabsNav from '../components/DashboardTabsNav';
 import { normalizePlan } from '../utils/planTier';
+import {
+  IconShieldCheck,
+  IconCheck,
+  IconSquare,
+  IconLightbulb,
+  IconTarget,
+  IconClipboard,
+  IconFile,
+  IconAlertTriangle,
+  IconMail
+} from '../components/Icons';
 import './VCISOPortal.css';
 
 const PLAN_ORDER = ['free', 'starter', 'compliance_pro', 'enterprise_professional', 'enterprise_risk', 'enterprise_elite'];
 const canAccessVCISO = (plan) => PLAN_ORDER.indexOf(plan) >= PLAN_ORDER.indexOf('enterprise_elite');
 
-const PRIORITY_COLORS = { critical: '#FF5C5C', high: '#FFB84D', medium: '#00C2E0', low: '#6E8499' };
-const TYPE_ICONS = { recommendation: '💡', action: '🎯', checklist: '📋', advisory: '📝', alert: '🚨' };
+const PRIORITY_COLORS = { critical: '#E53E3E', high: '#F25C05', medium: '#3B82F6', low: '#6E7571' };
+
+const renderTypeIcon = (type) => {
+  switch (type) {
+    case 'recommendation': return <IconLightbulb size={16} />;
+    case 'action': return <IconTarget size={16} />;
+    case 'checklist': return <IconClipboard size={16} />;
+    case 'advisory': return <IconFile size={16} />;
+    case 'alert': return <IconAlertTriangle size={16} />;
+    default: return <IconFile size={16} />;
+  }
+};
 
 // Sample vCISO notes for demo — in production these come from the backend
 const DEMO_NOTES = [
@@ -65,7 +85,7 @@ function NoteCard({ note, onCheckItem }) {
     <article className={`vp__note vp__note--${note.priority}`}>
       <div className="vp__note-head">
         <div className="vp__note-meta">
-          <span className="vp__note-icon">{TYPE_ICONS[note.type] || '📝'}</span>
+          <span className="vp__note-icon">{renderTypeIcon(note.type)}</span>
           <span className={`vp__note-priority vp__note-priority--${note.priority}`}>{note.priority.toUpperCase()}</span>
           <span className="vp__note-type">{note.type}</span>
           {note.status !== 'informational' && (
@@ -88,8 +108,8 @@ function NoteCard({ note, onCheckItem }) {
         <div className="vp__note-checklist">
           {(expanded ? note.checklist : note.checklist.slice(0, 2)).map((item, i) => (
             <div key={i} className={`vp__cl-item ${checkedItems[i] ? 'vp__cl-item--done' : ''}`}>
-              <button className="vp__cl-btn" onClick={() => handleCheck(i)}>
-                {checkedItems[i] ? '✓' : '○'}
+              <button className="vp__cl-btn" onClick={() => handleCheck(i)} aria-label="Toggle checklist item">
+                {checkedItems[i] ? <IconCheck size={13} /> : <IconSquare size={13} />}
               </button>
               <span>{item}</span>
             </div>
@@ -143,10 +163,8 @@ export default function VCISOPortal() {
   if (!hasAccess) {
     return (
       <div className="vp">
-        <DashboardTabsNav />
-
         <div className="vp__locked">
-          <div className="vp__locked-icon">🛡️</div>
+          <div className="vp__locked-icon"><IconShieldCheck size={42} color="#F25C05" /></div>
           <h2>vCISO Portal</h2>
           <p>The vCISO Portal is available on <strong>Enterprise Elite</strong>. Your assigned virtual CISO — Gabriel Aloho (Gue Cyber) — posts personalised security recommendations, action items, NIS2 remediation checklists, and monthly advisory notes directly to your dashboard.</p>
           <div className="vp__locked-features">
@@ -163,15 +181,12 @@ export default function VCISOPortal() {
             <NoteCard note={DEMO_NOTES[0]} />
           </div>
         </div>
-
       </div>
     );
   }
 
   return (
     <div className="vp">
-      <DashboardTabsNav />
-
       <div className="vp__header">
         <div>
           <p className="vp__eyebrow">// Enterprise Elite · vCISO Portal</p>
@@ -191,10 +206,10 @@ export default function VCISOPortal() {
       {/* Stats row */}
       <div className="vp__stats">
         {[
-          { label: 'Open Actions', value: notes.filter(n=>n.status==='open').length, color: '#FF5C5C' },
-          { label: 'In Progress',  value: notes.filter(n=>n.status==='in_progress').length, color: '#FFB84D' },
-          { label: 'Critical',     value: notes.filter(n=>n.priority==='critical').length, color: '#FF5C5C' },
-          { label: 'Total Notes',  value: notes.length, color: '#00C2E0' },
+          { label: 'Open Actions', value: notes.filter(n=>n.status==='open').length, color: '#E53E3E' },
+          { label: 'In Progress',  value: notes.filter(n=>n.status==='in_progress').length, color: '#F25C05' },
+          { label: 'Critical',     value: notes.filter(n=>n.priority==='critical').length, color: '#E53E3E' },
+          { label: 'Total Notes',  value: notes.length, color: '#3B82F6' },
         ].map(s => (
           <div key={s.label} className="vp__stat">
             <span className="vp__stat-val" style={{color: s.color}}>{s.value}</span>
@@ -226,7 +241,7 @@ export default function VCISOPortal() {
 
       <div className="vp__contact">
         <p>Need to reach your vCISO directly?</p>
-        <Link to="/support" className="vp__btn vp__btn--ghost">📩 Message Gue Cyber</Link>
+        <Link to="/support" className="vp__btn vp__btn--ghost"><IconMail size={15} /> Message Gue Cyber</Link>
       </div>
     </div>
   );

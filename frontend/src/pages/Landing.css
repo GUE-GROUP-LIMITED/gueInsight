@@ -1631,4 +1631,6 @@
   .lp__avatar-blob { width: 52px; height: 52px; font-size: 1.2rem; }
   .lp__pricing-grid { grid-template-columns: 1fr; }
   .lp__nis2-banner { flex-direction: column; align-items: flex-start; }
+  /* Hide floating decorative icons above hero text on mobile — they overlap the headline */
+  .lp__hero-deco { display: none; }
 }

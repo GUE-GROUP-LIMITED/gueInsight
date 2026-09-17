@@ -1273,7 +1273,7 @@ export default function Landing() {
 
                 {/* vCISO note */}
                 <div className="lp__mock-vciso">
-                  <p className="lp__mock-vciso-label">💬 vCISO Note — {heroSnapshot.vcisoNote.authorName}</p>
+                  <p className="lp__mock-vciso-label">vCISO Note — {heroSnapshot.vcisoNote.authorName}</p>
                   <p className="lp__mock-vciso-text">"{heroSnapshot.vcisoNote.note}"</p>
                 </div>
               </div>
@@ -1347,21 +1347,7 @@ export default function Landing() {
           <p>
             We believe cybersecurity shouldn't require a full SOC budget. So we're building focused, affordable tools for organisations who want real security insight — not just dashboards. No big pitch. Just good security.
           </p>
-          <p>
-            GueInsight is built by <strong>Gabriel Aloho</strong> — founder of <a href="https://www.guecyber.com" target="_blank" rel="noreferrer" style={{ color: 'var(--orange)', fontWeight: 600 }}>Gue Cyber</a>, MSc in Information Security &amp; Digital Forensics, registered enterprise in Belgium.
-          </p>
-          <div className="lp__about-cta">
-            <a
-              href="https://www.gabrielaloho.com/"
-              target="_blank"
-              rel="noreferrer"
-              className="lp__btn lp__btn--ghost"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
-            >
-              <IconUser size={16} />
-              Visit CEO Portfolio
-            </a>
-          </div>
+
         </div>
 
         {/* Right — icon grid */}
@@ -1454,13 +1440,13 @@ export default function Landing() {
                 <span className="lp__vciso-live">LIVE</span>
               </div>
               <div className="lp__vciso-note">
-                <p className="lp__vciso-note-label">🔴 Action Required</p>
+                <p className="lp__vciso-note-label">Action Required</p>
                 <p className="lp__vciso-note-title">Patch CVE-2025-4421 — Critical</p>
                 <p className="lp__vciso-note-body">This vulnerability affects your current .NET runtime. I've added a full remediation checklist. Patch before Friday to stay within your NIS2 72-hour window.</p>
                 <div className="lp__vciso-note-meta">Due: Friday · Priority: Critical</div>
               </div>
               <div className="lp__vciso-note" style={{ opacity: 0.7 }}>
-                <p className="lp__vciso-note-label">📋 Compliance Update</p>
+                <p className="lp__vciso-note-label">Compliance Update</p>
                 <p className="lp__vciso-note-title">NIS2 Article 21 — Monthly Check</p>
                 <p className="lp__vciso-note-body">Your incident response plan needs one update — see Compliance tab for the specific gap I've flagged this month.</p>
               </div>
@@ -1528,7 +1514,7 @@ export default function Landing() {
         <div className="lp__pricing-grid">
           {TIERS.map(tier => (
             <div className={`lp__tier ${tier.highlighted ? 'lp__tier--highlighted' : ''} ${tier.elite ? 'lp__tier--elite' : ''}`} key={tier.id}>
-              {tier.highlighted && <div className="lp__tier-badge">⚡ Most Popular</div>}
+              {tier.highlighted && <div className="lp__tier-badge">Most Popular</div>}
               {tier.elite && <div className="lp__tier-badge lp__tier-badge--elite">✦ vCISO Included</div>}
               <div className="lp__tier-top">
                 <p className="lp__tier-name">{tier.name}</p>
@@ -1611,23 +1597,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ══════════ BUILT BY ══════════ */}
-      <div className="lp__built-by">
-        <div className="lp__built-avatar">GA</div>
-        <div className="lp__built-text">
-          <p className="lp__section-eyebrow" style={{ textAlign: 'left', display: 'inline-block', marginBottom: 8 }}>// Built &amp; operated by</p>
-          <h3>Gabriel Aloho · Founder, Gue Cyber</h3>
-          <p>GueInsight isn't a white-labelled tool — it was designed and built from scratch by a cybersecurity professional with 15+ years of experience. MSc in Information Security &amp; Digital Forensics (University of East London). VDAB Cybersecurity certified. Registered enterprise in Belgium. When you subscribe to Enterprise Elite, you get Gabriel directly as your vCISO.</p>
-        </div>
-        <div className="lp__built-links">
-          <a href="https://www.guecyber.com" target="_blank" rel="noreferrer" className="lp__btn lp__btn--ghost" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            <IconShieldCheck size={16} /> Visit Gue Cyber
-          </a>
-          <a href="https://www.gabrielaloho.com" target="_blank" rel="noreferrer" className="lp__btn lp__btn--ghost" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            <IconUser size={16} /> gabrielaloho.com
-          </a>
-        </div>
-      </div>
+
 
       {/* ══════════ FAQ ══════════ */}
       <div className="lp__section--alt">

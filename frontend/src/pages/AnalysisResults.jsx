@@ -2,6 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import './AnalysisResults.css';
+import {
+  IconShield,
+  IconDownload,
+  IconCopy,
+  IconCheck,
+  IconCheckCircle,
+  IconAlertTriangle,
+  IconFile,
+  IconMail,
+  IconLink,
+  IconSearch,
+  IconBell,
+  IconZap,
+  IconBarChart,
+  IconX,
+} from '../components/Icons';
 
 export default function AnalysisResults() {
   const { analysisId } = useParams();
@@ -10,7 +26,9 @@ export default function AnalysisResults() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [shareMethod, setShareMethod] = useState(null);
-  const [emailInput, setEmailInput] = useState('');
+  const [emailTo, setEmailTo] = useState('');
+  const [emailStatus, setEmailStatus] = useState(null);
+  const [reportFormat, setReportFormat] = useState('pdf');
 
   const formatAdjustment = (value) => {
     const amount = Number(value || 0);
@@ -18,27 +36,26 @@ export default function AnalysisResults() {
   };
 
   useEffect(() => {
-    fetchAnalysisResults();
+    fetchResults();
   }, [analysisId]);
 
-  const fetchAnalysisResults = async () => {
+  const fetchResults = async () => {
     try {
       setLoading(true);
+      setError(null);
       const response = await api.get(`/api/analysis/${analysisId}`);
       setResults(response.data);
-      setError(null);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load analysis results');
-      setLoading(false);
+      setError(err.response?.data?.error || 'Failed to fetch analysis results');
     } finally {
       setLoading(false);
     }
   };
 
-  const downloadReport = async (format = 'pdf') => {
+  const downloadReport = async (format) => {
     try {
-      const response = await api.get(`/api/analysis/${analysisId}/download?format=${format}`, {
-        responseType: 'blob'
+      const response = await api.get(`/api/analysis/${analysisId}/report?format=${format}`, {
+        responseType: 'blob',
       });
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
@@ -46,51 +63,47 @@ export default function AnalysisResults() {
       link.setAttribute('download', `analysis-${analysisId}.${format}`);
       document.body.appendChild(link);
       link.click();
-      link.parentElement.removeChild(link);
+      link.parentNode.removeChild(link);
     } catch (err) {
-      alert('Failed to download report');
+      alert('Failed to download report: ' + (err.response?.data?.error || err.message));
     }
   };
 
-  const sendViaEmail = async () => {
-    if (!emailInput) {
-      alert('Please enter an email address');
-      return;
-    }
+  const shareViaEmail = async (e) => {
+    e.preventDefault();
     try {
+      setEmailStatus('sending');
       await api.post(`/api/analysis/${analysisId}/share`, {
-        email: emailInput,
-        method: 'email'
+        email: emailTo,
+        format: reportFormat,
       });
-      alert('Report sent successfully!');
-      setShareMethod(null);
-      setEmailInput('');
+      setEmailStatus('success');
+      setEmailTo('');
+      setTimeout(() => {
+        setShareMethod(null);
+        setEmailStatus(null);
+      }, 3000);
     } catch (err) {
-      alert('Failed to send email');
+      setEmailStatus('error');
     }
   };
 
-  const copyShareLink = async () => {
-    try {
-      const response = await api.post(`/api/analysis/${analysisId}/share`, {
-        method: 'link'
-      });
-      const shareUrl = `${window.location.origin}${response.data.share_url || `/api/analysis/shared/${response.data.share_token}`}`;
-      navigator.clipboard.writeText(shareUrl);
-      alert('Share link copied to clipboard!');
-    } catch (err) {
-      alert('Failed to create share link');
-    }
+  const copyShareLink = () => {
+    const shareUrl = `${window.location.origin}/analysis/${analysisId}`;
+    navigator.clipboard.writeText(shareUrl);
+    alert('Share link copied to clipboard!');
   };
 
   if (loading) {
-    return <div className="results-loading">⏳ Analyzing results...</div>;
+    return <div className="results-loading">Loading analysis results...</div>;
   }
 
   if (error) {
     return (
       <div className="results-error">
-        <p>❌ {error}</p>
+        <p style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <IconAlertTriangle size={16} color="#ef4444" /> {error}
+        </p>
         <button onClick={() => navigate('/dashboard')}>Back to Dashboard</button>
       </div>
     );
@@ -114,7 +127,20 @@ export default function AnalysisResults() {
         {/* Threat Level Badge */}
         <div className={`threat-badge threat-${results.threat_level?.toLowerCase() || 'low'}`}>
           <span className="threat-icon">
-            {results.threat_level === 'High' ? '🔴' : results.threat_level === 'Medium' ? '🟡' : '🟢'}
+            <span
+              style={{
+                display: 'inline-block',
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                backgroundColor:
+                  results.threat_level === 'High'
+                    ? '#ef4444'
+                    : results.threat_level === 'Medium'
+                    ? '#f59e0b'
+                    : '#10b981',
+              }}
+            />
           </span>
           <span className="threat-text">{results.threat_level || 'Unknown'}</span>
         </div>
@@ -124,15 +150,14 @@ export default function AnalysisResults() {
       <section className="results-actions">
         <div className="actions-left">
           <button className="btn btn-primary" onClick={() => downloadReport('pdf')}>
-            📥 Download PDF
+            <IconDownload size={15} /> Download PDF
           </button>
           <button className="btn btn-secondary" onClick={() => downloadReport('json')}>
-            📋 Export JSON
+            <IconCopy size={15} /> Export JSON
           </button>
           <button className="btn btn-secondary" onClick={() => downloadReport('csv')}>
-            📊 Export CSV
+            <IconBarChart size={15} /> Export CSV
           </button>
-
         </div>
 
         <div className="actions-right">
@@ -140,10 +165,10 @@ export default function AnalysisResults() {
             className="btn btn-accent"
             onClick={() => setShareMethod(shareMethod === 'email' ? null : 'email')}
           >
-            ✉️ Send Email
+            <IconMail size={15} /> Send Email
           </button>
           <button className="btn btn-accent" onClick={copyShareLink}>
-            🔗 Share Link
+            <IconLink size={15} /> Share Link
           </button>
         </div>
       </section>
@@ -219,7 +244,9 @@ export default function AnalysisResults() {
       {/* File Metadata */}
       {results.metadata && (
         <section className="results-section">
-          <h2>📄 File Information</h2>
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <IconFile size={18} /> File Information
+          </h2>
           <div className="metadata-grid">
             <div className="metadata-item">
               <label>File Type:</label>
@@ -240,7 +267,9 @@ export default function AnalysisResults() {
       {/* Indicators of Compromise */}
       {results.indicators_of_compromise && results.indicators_of_compromise.length > 0 && (
         <section className="results-section">
-          <h2>🚨 Indicators of Compromise (IoCs)</h2>
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <IconAlertTriangle size={18} /> Indicators of Compromise (IoCs)
+          </h2>
           <div className="ioc-container">
             {results.indicators_of_compromise.map((ioc, idx) => (
               <div key={idx} className={`ioc-card ioc-${ioc.type}`}>
@@ -261,7 +290,7 @@ export default function AnalysisResults() {
                     alert('Copied to clipboard!');
                   }}
                 >
-                  📋 Copy
+                  <IconCopy size={13} /> Copy
                 </button>
               </div>
             ))}
@@ -272,7 +301,9 @@ export default function AnalysisResults() {
       {/* Suspicious Patterns */}
       {results.suspicious_patterns && results.suspicious_patterns.length > 0 && (
         <section className="results-section">
-          <h2>⚠️ Suspicious Patterns Detected</h2>
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <IconAlertTriangle size={18} /> Suspicious Patterns Detected
+          </h2>
           <div className="patterns-list">
             {results.suspicious_patterns.map((pattern, idx) => (
               <div key={idx} className="pattern-item">
@@ -297,11 +328,13 @@ export default function AnalysisResults() {
       {/* Alerts Triggered */}
       {results.alerts_triggered && results.alerts_triggered.length > 0 && (
         <section className="results-section">
-          <h2>🔔 Alerts Triggered</h2>
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <IconBell size={18} /> Alerts Triggered
+          </h2>
           <div className="alerts-list">
             {results.alerts_triggered.map((alert, idx) => (
               <div key={idx} className="alert-item">
-                <span className="alert-icon">⚡</span>
+                <span className="alert-icon"><IconZap size={14} /></span>
                 <span className="alert-text">{alert}</span>
               </div>
             ))}
@@ -312,7 +345,9 @@ export default function AnalysisResults() {
       {/* VirusTotal / Third-party Enrichment */}
       {results.enrichment && (
         <section className="results-section">
-          <h2>🔍 Third-Party Intelligence</h2>
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <IconSearch size={18} /> Third-Party Intelligence
+          </h2>
           <div className="enrichment-grid">
             {results.enrichment.virustotal && (
               <div className="enrichment-card">
@@ -338,6 +373,10 @@ export default function AnalysisResults() {
                   <label>Abuse Score:</label>
                   <span>{results.enrichment.abuseipdb.abuse_score || 'N/A'}%</span>
                 </div>
+                <div className="enrichment-stat">
+                  <label>Last Analysis:</label>
+                  <span>{results.enrichment.abuseipdb.last_analysis || 'N/A'}</span>
+                </div>
                 <a href={`https://www.abuseipdb.com/check/${results.indicator}`} 
                    target="_blank" rel="noopener noreferrer" className="external-link">
                   View on AbuseIPDB →
@@ -352,7 +391,9 @@ export default function AnalysisResults() {
       {(!results.indicators_of_compromise || results.indicators_of_compromise.length === 0) &&
        (!results.suspicious_patterns || results.suspicious_patterns.length === 0) && (
         <section className="results-section results-clean">
-          <h2>✅ Analysis Complete</h2>
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <IconCheckCircle size={18} color="#10B981" /> Analysis Complete
+          </h2>
           <p>No indicators of compromise or suspicious patterns detected in this analysis.</p>
         </section>
       )}

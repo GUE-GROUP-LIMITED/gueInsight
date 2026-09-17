@@ -2,8 +2,18 @@ import { useContext, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { api } from '../services/api';
-import DashboardTabsNav from '../components/DashboardTabsNav';
 import { normalizePlan } from '../utils/planTier';
+import {
+  IconLock,
+  IconCheck,
+  IconClipboard,
+  IconShieldCheck,
+  IconAlertTriangle,
+  IconFile,
+  IconExternalLink,
+  IconX,
+  IconSquare
+} from '../components/Icons';
 import './ComplianceDashboard.css';
 
 const PLAN_ORDER = ['free', 'starter', 'compliance_pro', 'enterprise_professional', 'enterprise_risk', 'enterprise_elite'];
@@ -45,11 +55,11 @@ function planMeetsRequirement(userPlan, requiredTier) {
 
 function ComplianceScore({ checked, total, label }) {
   const pct = total === 0 ? 0 : Math.round((checked / total) * 100);
-  const color = pct >= 80 ? '#00E5A0' : pct >= 50 ? '#FFB84D' : '#FF5C5C';
+  const color = pct >= 80 ? '#10B981' : pct >= 50 ? '#F25C05' : '#E53E3E';
   return (
     <div className="cd__score-card">
       <svg className="cd__score-ring" viewBox="0 0 56 56">
-        <circle cx="28" cy="28" r="24" fill="none" stroke="rgba(0,194,224,0.1)" strokeWidth="5" />
+        <circle cx="28" cy="28" r="24" fill="none" stroke="rgba(0,0,0,0.06)" strokeWidth="5" />
         <circle
           cx="28" cy="28" r="24" fill="none"
           stroke={color} strokeWidth="5"
@@ -59,7 +69,7 @@ function ComplianceScore({ checked, total, label }) {
           transform="rotate(-90 28 28)"
           style={{ transition: 'stroke-dashoffset 0.6s ease' }}
         />
-        <text x="28" y="33" textAnchor="middle" fontSize="11" fontWeight="800" fill={color} fontFamily="Syne,sans-serif">{pct}%</text>
+        <text x="28" y="33" textAnchor="middle" fontSize="12" fontWeight="800" fill={color} fontFamily="DM Sans,sans-serif">{pct}%</text>
       </svg>
       <div>
         <p className="cd__score-label">{label}</p>
@@ -78,7 +88,7 @@ function ChecklistItem({ item, checked, onChange, locked }) {
         disabled={locked}
         aria-label={checked ? 'Mark incomplete' : 'Mark complete'}
       >
-        {locked ? '🔒' : checked ? '✓' : '○'}
+        {locked ? <IconLock size={13} /> : checked ? <IconCheck size={14} /> : <IconSquare size={14} />}
       </button>
       <div className="cd__check-body">
         <span className="cd__check-article">{item.article}</span>
@@ -277,8 +287,6 @@ export default function ComplianceDashboard() {
 
   return (
     <div className="cd">
-      <DashboardTabsNav />
-
       {/* Header */}
       <div className="cd__header">
         <div>
@@ -359,10 +367,16 @@ export default function ComplianceDashboard() {
             className={`cd__tab ${activeTab === tab ? 'cd__tab--active' : ''}`}
             onClick={() => setActiveTab(tab)}
           >
-            {tab === 'nis2' ? '📋 NIS2 Checklist' : tab === 'gdpr' ? '🔐 GDPR Checklist' : '🚨 Incidents'}
-            {!canNis2 && tab === 'nis2' && <span className="cd__tab-lock">🔒</span>}
-            {!canGdpr && tab === 'gdpr' && <span className="cd__tab-lock">🔒</span>}
-            {!canNis2 && tab === 'incidents' && <span className="cd__tab-lock">🔒</span>}
+            {tab === 'nis2' ? (
+              <><IconClipboard size={15} /> NIS2 Checklist</>
+            ) : tab === 'gdpr' ? (
+              <><IconShieldCheck size={15} /> GDPR Checklist</>
+            ) : (
+              <><IconAlertTriangle size={15} /> Incidents</>
+            )}
+            {!canNis2 && tab === 'nis2' && <span className="cd__tab-lock"><IconLock size={12} /></span>}
+            {!canGdpr && tab === 'gdpr' && <span className="cd__tab-lock"><IconLock size={12} /></span>}
+            {!canNis2 && tab === 'incidents' && <span className="cd__tab-lock"><IconLock size={12} /></span>}
           </button>
         ))}
       </div>
@@ -392,8 +406,8 @@ export default function ComplianceDashboard() {
           </div>
           {canNis2 && (
             <div className="cd__actions">
-              <Link to="/support" className="cd__action-btn">📄 Download NIS2 Evidence Pack</Link>
-              <Link to="/support" className="cd__action-btn cd__action-btn--secondary">🚨 Report NIS2 Incident</Link>
+              <Link to="/support" className="cd__action-btn"><IconFile size={14} /> Download NIS2 Evidence Pack</Link>
+              <Link to="/support" className="cd__action-btn cd__action-btn--secondary"><IconAlertTriangle size={14} /> Report NIS2 Incident</Link>
             </div>
           )}
         </div>
@@ -424,8 +438,8 @@ export default function ComplianceDashboard() {
           </div>
           {canGdpr && (
             <div className="cd__actions">
-              <Link to="/profile" className="cd__action-btn">📤 Submit Data Export Request</Link>
-              <Link to="/profile" className="cd__action-btn cd__action-btn--secondary">🗑️ Submit Deletion Request</Link>
+              <Link to="/profile" className="cd__action-btn"><IconExternalLink size={14} /> Submit Data Export Request</Link>
+              <Link to="/profile" className="cd__action-btn cd__action-btn--secondary"><IconX size={14} /> Submit Deletion Request</Link>
             </div>
           )}
         </div>
@@ -462,7 +476,7 @@ export default function ComplianceDashboard() {
                 ))}
               </div>
               <div className="cd__actions">
-                <Link to="/support" className="cd__action-btn">🚨 File NIS2 Incident Report</Link>
+                <Link to="/support" className="cd__action-btn"><IconAlertTriangle size={14} /> File NIS2 Incident Report</Link>
               </div>
             </>
           )}

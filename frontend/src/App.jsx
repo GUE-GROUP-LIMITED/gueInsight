@@ -41,9 +41,11 @@ const ScrollToTop = () => {
 
 const AppShell = () => {
   const location = useLocation();
-  const publicHeaderRoutes = ['/', '/login', '/signup', '/reset-password', '/docs', '/subscription', '/activate-admin', '/privacy', '/terms'];
-  const showNavbar = !publicHeaderRoutes.includes(location.pathname) && !location.pathname.startsWith('/admin');
-  const showFooter = !location.pathname.startsWith('/admin');
+  const publicHeaderRoutes = ['/', '/login', '/signup', '/reset-password', '/docs', '/subscription', '/activate-admin', '/privacy', '/terms', '/status', '/resources', '/profile', '/billing'];
+  const isDashboardRoute = location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/threatintel');
+  const showNavbar = !publicHeaderRoutes.includes(location.pathname) && !location.pathname.startsWith('/admin') && !isDashboardRoute;
+  const noFooterRoutes = ['/login', '/signup', '/reset-password', '/activate-admin', '/profile', '/billing'];
+  const showFooter = !noFooterRoutes.includes(location.pathname) && !location.pathname.startsWith('/admin') && !isDashboardRoute;
 
   return (
     <>

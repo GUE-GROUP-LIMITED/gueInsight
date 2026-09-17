@@ -34,7 +34,7 @@ const Login = () => {
 			const response = await api.post('/auth/login', { email, password });
 			setAuthResponse(response.data || {});
 			setShowResetPassword(false);
-			const nextTarget = new URLSearchParams(location.search).get('next');
+			const nextTarget = new URLSearchParams(location.search).get('next') || location.state?.from?.pathname;
 			const role = normalizeRole(
 				response.data?.user?.role || response.data?.user?.app_metadata?.role || response.data?.user?.user_metadata?.role
 			);
