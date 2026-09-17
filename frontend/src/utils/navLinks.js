@@ -13,9 +13,9 @@ export function getNavLinks(user, homePath = '/', t) {
 
     return [
       { to: '/dashboard',             label: t ? t('nav.home')   : 'Dashboard' },
-      { to: '/threatintel',           label: '🧠 Threat Intel' },
-      { to: '/dashboard/compliance',  label: '📋 Compliance' },
-      { to: '/dashboard/vciso',       label: '🛡️ vCISO' },
+      { to: '/threatintel',           label: 'Threat Intel' },
+      { to: '/dashboard/compliance',  label: 'Compliance' },
+      { to: '/dashboard/vciso',       label: 'vCISO Portal' },
       { to: '/support',               label: t ? t('nav.support') : 'Support' },
       { to: '/subscription',          label: t ? t('nav.plans')   : 'Plans' },
     ];

@@ -208,15 +208,6 @@ export default function DashboardShell({ defaultTab = 'threat' }) {
                   <Link to="/docs" className="cg-dropdown__item" onClick={() => setUserMenuOpen(false)}>
                     <IconBook size={15} /> Documentation
                   </Link>
-                  <a
-                    href="https://www.gabrielaloho.com/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="cg-dropdown__item"
-                    onClick={() => setUserMenuOpen(false)}
-                  >
-                    <IconExternalLink size={15} /> CEO Portfolio
-                  </a>
                 </div>
                 <div className="cg-dropdown__footer">
                   <button

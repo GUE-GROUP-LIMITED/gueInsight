@@ -1273,7 +1273,7 @@ export default function Landing() {
 
                 {/* vCISO note */}
                 <div className="lp__mock-vciso">
-                  <p className="lp__mock-vciso-label">💬 vCISO Note — {heroSnapshot.vcisoNote.authorName}</p>
+                  <p className="lp__mock-vciso-label">vCISO Note — {heroSnapshot.vcisoNote.authorName}</p>
                   <p className="lp__mock-vciso-text">"{heroSnapshot.vcisoNote.note}"</p>
                 </div>
               </div>
@@ -1440,13 +1440,13 @@ export default function Landing() {
                 <span className="lp__vciso-live">LIVE</span>
               </div>
               <div className="lp__vciso-note">
-                <p className="lp__vciso-note-label">🔴 Action Required</p>
+                <p className="lp__vciso-note-label">Action Required</p>
                 <p className="lp__vciso-note-title">Patch CVE-2025-4421 — Critical</p>
                 <p className="lp__vciso-note-body">This vulnerability affects your current .NET runtime. I've added a full remediation checklist. Patch before Friday to stay within your NIS2 72-hour window.</p>
                 <div className="lp__vciso-note-meta">Due: Friday · Priority: Critical</div>
               </div>
               <div className="lp__vciso-note" style={{ opacity: 0.7 }}>
-                <p className="lp__vciso-note-label">📋 Compliance Update</p>
+                <p className="lp__vciso-note-label">Compliance Update</p>
                 <p className="lp__vciso-note-title">NIS2 Article 21 — Monthly Check</p>
                 <p className="lp__vciso-note-body">Your incident response plan needs one update — see Compliance tab for the specific gap I've flagged this month.</p>
               </div>
@@ -1514,7 +1514,7 @@ export default function Landing() {
         <div className="lp__pricing-grid">
           {TIERS.map(tier => (
             <div className={`lp__tier ${tier.highlighted ? 'lp__tier--highlighted' : ''} ${tier.elite ? 'lp__tier--elite' : ''}`} key={tier.id}>
-              {tier.highlighted && <div className="lp__tier-badge">⚡ Most Popular</div>}
+              {tier.highlighted && <div className="lp__tier-badge">Most Popular</div>}
               {tier.elite && <div className="lp__tier-badge lp__tier-badge--elite">✦ vCISO Included</div>}
               <div className="lp__tier-top">
                 <p className="lp__tier-name">{tier.name}</p>

@@ -248,7 +248,7 @@ const Navbar = () => {
                       role="menuitem"
                       onClick={closeMenu}
                     >
-                      💳 Billing &amp; Invoices
+                      Billing &amp; Invoices
                     </NavLink>
                     <button
                       type="button"

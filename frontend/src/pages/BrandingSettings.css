@@ -6,24 +6,15 @@
   color: #e0e7ff;
 }
 
-/* When embedded in Profile, remove the page-level styling */
+/* When embedded in Profile, remove page-level styling and match cockpit aesthetic */
+.profile-page .branding-settings,
 .profile-page__layout .branding-settings {
   min-height: auto;
   background: none;
   padding: 0;
 }
 
-.branding-container {
-  max-width: 900px;
-  margin: 0 auto;
-  background: linear-gradient(to bottom, #1f2937, #111827);
-  border-radius: 12px;
-  padding: 40px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(139, 92, 246, 0.2);
-}
-
-/* When embedded in Profile card */
+.profile-page .branding-container,
 .profile-page__layout .branding-container {
   max-width: none;
   margin: 0;
@@ -32,6 +23,44 @@
   padding: 0;
   box-shadow: none;
   border: none;
+}
+
+.profile-page .branding-container h1 {
+  font-size: 1.5rem;
+  color: #FFFFFF;
+  background: none;
+  -webkit-text-fill-color: initial;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.profile-page .branding-section {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+}
+
+.profile-page .branding-section h2 {
+  color: #FFFFFF;
+  font-size: 1.2rem;
+}
+
+.profile-page .file-label,
+.profile-page .btn-primary {
+  background: linear-gradient(135deg, #FF662C 0%, #E8490A 100%) !important;
+  box-shadow: 0 4px 14px rgba(232, 73, 10, 0.3) !important;
+}
+
+.profile-page .form-control {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #FFFFFF !important;
+  border-radius: 10px !important;
+}
+
+.profile-page .form-control:focus {
+  border-color: #E8490A !important;
+  box-shadow: 0 0 0 3px rgba(232, 73, 10, 0.25) !important;
 }
 
 .branding-container h1 {

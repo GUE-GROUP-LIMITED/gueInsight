@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './NIS2IncidentReport.css';
+import { IconLock, IconDownload, IconCheckCircle, IconAlertTriangle } from './Icons';
 
 /* eslint-disable react/no-unescaped-entities */
 /**
@@ -143,7 +144,7 @@ const NIS2IncidentReport = ({ onSubmit, onDownloadPDF }) => {
           Report critical infrastructure incidents to competent authorities
         </p>
         <div className="nis2-info">
-          <strong>🔒 Directive:</strong> NIS2 Directive (EU 2022/2555) - Mandatory for critical infrastructure operators
+          <strong><IconLock size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} /> Directive:</strong> NIS2 Directive (EU 2022/2555) - Mandatory for critical infrastructure operators
         </div>
       </div>
 
@@ -300,7 +301,8 @@ const NIS2IncidentReport = ({ onSubmit, onDownloadPDF }) => {
               className="btn btn-secondary"
               onClick={handleDownloadPDF}
             >
-              📄 Download PDF for Regulator
+              <IconDownload size={15} style={{ verticalAlign: 'middle', marginRight: 6 }} />
+              Download PDF for Regulator
             </button>
           )}
         </div>
@@ -311,22 +313,22 @@ const NIS2IncidentReport = ({ onSubmit, onDownloadPDF }) => {
         <h3>Competent Authorities by Country</h3>
         <div className="contacts-grid">
           <div className="contact-card">
-            <strong>🇩🇪 Germany</strong>
+            <strong>Germany (DE)</strong>
             <p>Bundesamt für Sicherheit in der Informationstechnik (BSI)</p>
             <a href="mailto:incident@bsi.de">incident@bsi.de</a>
           </div>
           <div className="contact-card">
-            <strong>🇫🇷 France</strong>
+            <strong>France (FR)</strong>
             <p>Agence nationale de la sécurité des systèmes d'information (ANSSI)</p>
             <a href="mailto:report@anssi.gouv.fr">report@anssi.gouv.fr</a>
           </div>
           <div className="contact-card">
-            <strong>🇳🇱 Netherlands</strong>
+            <strong>Netherlands (NL)</strong>
             <p>Dutch National Cyber Security Centre (NCSC)</p>
             <a href="mailto:incident@ncsc.nl">incident@ncsc.nl</a>
           </div>
           <div className="contact-card">
-            <strong>🇪🇺 EU</strong>
+            <strong>European Union (EU)</strong>
             <p>European Network and Information Security Agency (ENISA)</p>
             <a href="https://www.enisa.europa.eu/">www.enisa.europa.eu</a>
           </div>

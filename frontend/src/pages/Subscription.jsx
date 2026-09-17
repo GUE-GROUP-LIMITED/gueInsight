@@ -207,7 +207,7 @@ const Subscription = () => {
 					<div className="sub-status-item">
 						<span className="sub-status-label">Plan type</span>
 						<span className={`sub-status-value sub-status-badge ${subDetails.is_trial ? 'sub-status-badge--trial' : 'sub-status-badge--paid'}`}>
-							{subDetails.is_trial ? '⏳ Free trial' : '✓ Full subscription'}
+							{subDetails.is_trial ? 'Free trial' : 'Full subscription'}
 						</span>
 					</div>
 					<div className="sub-status-item">
@@ -230,12 +230,12 @@ const Subscription = () => {
 					<div className="sub-status-item">
 						<span className="sub-status-label">Status</span>
 						<span className={`sub-status-value sub-status-badge ${subDetails.status === 'active' ? 'sub-status-badge--active' : 'sub-status-badge--expired'}`}>
-							{subDetails.status === 'active' ? '🟢 Active' : '🔴 Expired'}
+							{subDetails.status === 'active' ? 'Active' : 'Expired'}
 						</span>
 					</div>
 					<div className="sub-status-item sub-status-item--link">
 						<span className="sub-status-label">Billing history</span>
-						<Link to="/profile#billing" className="sub-status-history-link">View invoices &amp; receipts →</Link>
+						<Link to="/billing" className="sub-status-history-link">View invoices &amp; receipts →</Link>
 					</div>
 				</section>
 			)}
@@ -244,7 +244,7 @@ const Subscription = () => {
 				{plans.map((plan) => (
 					<article className={`pricing-card ${plan.recommended ? 'pricing-card--recommended' : ''} ${plan.key === currentPlan ? 'pricing-card--current' : ''}`} key={plan.name}>
 						{plan.recommended && <p className="pricing-card__badge">{t('pricing.most_popular')}</p>}
-					{plan.key === currentPlan && showCurrentPlan && <p className="pricing-card__current-badge">✓ Your current plan</p>}
+					{plan.key === currentPlan && showCurrentPlan && <p className="pricing-card__current-badge">Your current plan</p>}
 						<h2>{plan.name}</h2>
 						<p className="pricing-card__price">
 							{plan.price}<span>{plan.cycle}</span>
