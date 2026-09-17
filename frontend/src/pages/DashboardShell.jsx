@@ -103,7 +103,7 @@ export default function DashboardShell({ defaultTab = 'threat' }) {
         <div className="cg-header__left">
           <Link to="/" className="cg-brand" aria-label="GueInsight Home">
             <span className="cg-brand__icon-wrap">
-              <LogoGueInsight size={28} />
+              <LogoGueInsight size={30} />
             </span>
             <span className="cg-brand__name">GueInsight<span className="cg-brand__dot">.</span></span>
           </Link>

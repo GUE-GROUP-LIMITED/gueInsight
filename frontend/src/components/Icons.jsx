@@ -171,21 +171,27 @@ export const IconBriefcase = (p) => <Icon {...p} d={<><rect x="2" y="7" width="2
 // Key / Security
 export const IconKey = (p) => <Icon {...p} d={<><path d="m21 2-2 2m-1.5 1.5L14 9m-2 2a5 5 0 1 1-7-7 5 5 0 0 1 7 7zm0 0 4 4 1.5-1.5M19 8l2 2"/></>} />;
 
-// GueInsight Logo SVG (inline reusable)
-export const LogoGueInsight = ({ size = 28, className = '' }) => (
-  <svg
+// GueInsight Brand Logo (Official /img/logo.png matching Landing page)
+export const LogoGueInsight = ({ size = 30, className = '', style = {} }) => (
+  <img
+    src="/img/logo.png"
+    alt="GueInsight logo"
     width={size}
     height={size}
-    viewBox="0 0 28 28"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    className={className}
-    aria-label="GueInsight logo"
-  >
-    <rect width="28" height="28" rx="7" fill="#1A1A1A"/>
-    <path d="M14 5L6 8.5V14C6 18.1 9.4 21.7 14 23C18.6 21.7 22 18.1 22 14V8.5L14 5Z" fill="#E8490A"/>
-    <path d="M11 14L13 16L17 12" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
+    className={`cg-brand__logo-img ${className}`.trim()}
+    style={{
+      width: size,
+      height: size,
+      objectFit: 'contain',
+      borderRadius: 6,
+      flexShrink: 0,
+      display: 'block',
+      ...style,
+    }}
+    onError={(e) => {
+      e.currentTarget.src = '/img/guecyber-logo.svg';
+    }}
+  />
 );
 
 // Grid (4 squares)
