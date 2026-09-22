@@ -6,7 +6,7 @@ import { AuthContext } from '../context/AuthContext';
  * Route protection wrapper.
  * Ensures user is authenticated before accessing protected routes.
  * Supports:
- * - adminOnly: redirect non-admin or unauthenticated users to /admin/login
+ * - adminOnly: redirect non-admin or unauthenticated users to /login
  * - userOnly: redirect admin users to /admin
  */
 const ProtectedRoute = ({ children, adminOnly = false, userOnly = false }) => {
@@ -35,7 +35,7 @@ const ProtectedRoute = ({ children, adminOnly = false, userOnly = false }) => {
 
   if (!user) {
     if (adminOnly) {
-      return <Navigate to="/admin/login" state={{ from: location }} replace />;
+      return <Navigate to="/login" state={{ from: location }} replace />;
     }
     return <Navigate to="/login" state={{ from: location }} replace />;
   }

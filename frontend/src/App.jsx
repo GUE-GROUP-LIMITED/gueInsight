@@ -14,7 +14,6 @@ import Profile from './pages/Profile';
 import Subscription from './pages/Subscription';
 import Billing from './pages/Billing';
 import Payment from './pages/Payment';
-import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminCompliance from './pages/AdminCompliance';
 import Documentation from './pages/Documentation';
@@ -81,7 +80,7 @@ const AppShell = () => {
         <Route path="/admin/support" element={<ProtectedRoute adminOnly={true}><AdminSupport /></ProtectedRoute>} />
         <Route path="/admin/profile" element={<ProtectedRoute adminOnly={true}><Profile /></ProtectedRoute>} />
         <Route path="/admin/change-password" element={<ProtectedRoute adminOnly={true}><ResetPassword /></ProtectedRoute>} />
-        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin/login" element={<Navigate to="/login" replace />} />
         <Route path="/admin/users" element={<ProtectedRoute adminOnly={true}><UserManagement /></ProtectedRoute>} />
         <Route path="/admin/access" element={<ProtectedRoute adminOnly={true}><AdminAccessControl /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />

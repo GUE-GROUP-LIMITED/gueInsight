@@ -55,7 +55,7 @@ const ActivateAdmin = () => {
       <PublicHeader
         showLogin={true}
         loginLabel="Admin Login"
-        loginTo="/admin/login"
+        loginTo="/login"
         trialLabel="Back to Home"
         trialTo="/"
       />
@@ -123,7 +123,7 @@ const ActivateAdmin = () => {
           </form>
 
           <p className="activate-admin-page__footer">
-            Already activated? <Link to="/admin/login">Continue to admin sign in</Link>
+            Already activated? <Link to="/login">Continue to sign in</Link>
           </p>
         </section>
       </main>

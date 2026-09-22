@@ -894,3 +894,224 @@
     width: 100%;
   }
 }
+
+/* Match the user cockpit visual system while preserving the admin layout. */
+.admin-shell {
+  --admin-canvas: #E5E2D8;
+  --admin-dark: #161917;
+  --admin-cream: #ECE9E0;
+  --admin-peach: #F6E4DC;
+  --admin-orange: #F25C05;
+  --admin-muted: #5C635E;
+  --admin-border: rgba(0, 0, 0, 0.08);
+  background: var(--admin-canvas);
+  color: var(--admin-dark);
+  font-family: "DM Sans Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.admin-shell__sidebar {
+  background: var(--admin-dark);
+  color: #F2EFE8;
+  padding: 22px 18px;
+  box-shadow: 10px 0 30px rgba(22, 25, 23, 0.12);
+}
+
+.admin-shell__brand {
+  border-bottom-color: rgba(255, 255, 255, 0.12);
+}
+
+.admin-shell__brand-mark {
+  border-radius: 10px;
+  background: var(--admin-orange);
+}
+
+.admin-shell__brand span,
+.admin-shell__sidebar-label,
+.admin-shell__eyebrow,
+.admin-shell__section-label {
+  color: rgba(242, 239, 232, 0.62);
+}
+
+.admin-shell__nav-link {
+  border: 0;
+  border-radius: 30px;
+  background: transparent;
+  color: rgba(242, 239, 232, 0.74);
+}
+
+.admin-shell__nav-icon {
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: currentColor;
+}
+
+.admin-shell__nav-link:hover,
+.admin-shell__nav-link.is-active {
+  background: rgba(242, 92, 5, 0.18);
+  color: #FFFFFF;
+  transform: none;
+}
+
+.admin-shell__sidebar-card {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.admin-shell__sidebar-card p {
+  color: rgba(242, 239, 232, 0.68);
+}
+
+.admin-shell__sidebar-action,
+.admin-shell__topbar-button,
+.admin-shell__chip:not(.admin-shell__chip--ghost) {
+  background: var(--admin-orange);
+  box-shadow: 0 8px 18px rgba(242, 92, 5, 0.18);
+}
+
+.admin-shell__content {
+  padding: 28px;
+  gap: 18px;
+}
+
+.admin-shell__topbar,
+.admin-shell__panel {
+  border: 1px solid var(--admin-border);
+  border-radius: 18px;
+  background: var(--admin-cream);
+  box-shadow: 0 10px 24px rgba(22, 25, 23, 0.05);
+}
+
+.admin-shell__topbar h1,
+.admin-shell__panel-header h2,
+.admin-shell__table tbody td strong,
+.admin-shell__timeline-item strong,
+.admin-shell__vciso-item h3 {
+  color: var(--admin-dark);
+}
+
+.admin-shell__stat-card {
+  border-radius: 18px;
+  box-shadow: 0 14px 28px rgba(22, 25, 23, 0.08);
+}
+
+.admin-shell__stat-card--blue {
+  background: var(--admin-dark);
+}
+
+.admin-shell__stat-card--green {
+  background: #31463D;
+}
+
+.admin-shell__stat-card--orange {
+  background: var(--admin-orange);
+}
+
+.admin-shell__stat-card--red {
+  background: #A84F35;
+}
+
+.admin-shell__chart-bars {
+  background: #F2EFE8;
+}
+
+.admin-shell__chart-bars span,
+.admin-shell__activity-fill.is-blue,
+.admin-shell__activity-fill.is-orange {
+  background: var(--admin-orange);
+  box-shadow: 0 10px 18px rgba(242, 92, 5, 0.16);
+}
+
+.admin-shell__chart-bars span:nth-child(even),
+.admin-shell__activity-fill.is-green {
+  background: #31463D;
+}
+
+.admin-shell__activity-fill.is-red {
+  background: #A84F35;
+}
+
+.admin-shell__chart-legend,
+.admin-shell__feedback,
+.admin-shell__timeline-item p,
+.admin-shell__timeline-item time,
+.admin-shell__vciso-item p {
+  color: var(--admin-muted);
+}
+
+.admin-shell__chart-legend .is-blue,
+.admin-shell__chart-legend .is-orange {
+  background: var(--admin-orange);
+}
+
+.admin-shell__chart-legend .is-green {
+  background: #31463D;
+}
+
+.admin-shell__chart-legend .is-red {
+  background: #A84F35;
+}
+
+.admin-shell__activity-track {
+  background: rgba(22, 25, 23, 0.1);
+}
+
+.admin-shell__table {
+  background: var(--admin-cream);
+}
+
+.admin-shell__table th,
+.admin-shell__table td {
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+  color: var(--admin-muted);
+}
+
+.admin-shell__table thead th {
+  background: #E2DED3;
+  color: var(--admin-muted);
+}
+
+.admin-shell__table tbody tr:nth-child(even),
+.admin-shell__table tbody tr:hover {
+  background: #F2EFE8;
+}
+
+.admin-shell__avatar,
+.admin-shell__timeline-dot {
+  background: var(--admin-orange);
+}
+
+.admin-shell__timeline-dot {
+  box-shadow: 0 0 0 6px rgba(242, 92, 5, 0.14);
+}
+
+.admin-shell__field > span {
+  color: var(--admin-muted);
+}
+
+.admin-shell__field input,
+.admin-shell__field textarea,
+.admin-shell__field select,
+.admin-shell__vciso-search input {
+  border-color: var(--admin-border);
+  border-radius: 12px;
+  background: #F7F4EC;
+  color: var(--admin-dark);
+}
+
+.admin-shell__field input:focus,
+.admin-shell__field textarea:focus,
+.admin-shell__field select:focus,
+.admin-shell__vciso-search input:focus {
+  outline-color: rgba(242, 92, 5, 0.35);
+  border-color: var(--admin-orange);
+}
+
+.admin-shell__vciso-history,
+.admin-shell__vciso-item {
+  border-color: var(--admin-border);
+}
+
+.admin-shell__vciso-item {
+  background: #F2EFE8;
+}

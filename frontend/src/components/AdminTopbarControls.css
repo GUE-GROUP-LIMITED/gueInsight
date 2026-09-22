@@ -7,6 +7,12 @@
   position: relative;
 }
 
+.admin-topbar-controls__search input {
+  border-color: rgba(0, 0, 0, 0.1);
+  background: #F7F4EC;
+  color: #161917;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -35,9 +41,9 @@
   border-radius: 50%;
   display: inline-grid;
   place-items: center;
-  background: #f6f9fc;
-  color: #5f7191;
-  border: 1px solid #d6e0ea;
+  background: #ECE9E0;
+  color: #5C635E;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   cursor: pointer;
   flex: 0 0 auto;
 }
@@ -54,11 +60,11 @@
   justify-content: center;
   padding: 0.74rem 1rem;
   border-radius: 999px;
-  background: linear-gradient(135deg, #5b7cfa, #4bcabf);
+  background: #F25C05;
   color: #fff;
   text-decoration: none;
   font-weight: 700;
-  box-shadow: 0 10px 18px rgba(91, 124, 250, 0.14);
+  box-shadow: 0 10px 18px rgba(242, 92, 5, 0.18);
 }
 
 .admin-topbar-controls__support-link {
@@ -69,9 +75,9 @@
   border-radius: 999px;
   text-decoration: none;
   font-weight: 700;
-  border: 1px solid #d6e0ea;
-  background: #fff;
-  color: #35507f;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: #ECE9E0;
+  color: #161917;
 }
 
 .admin-topbar-controls__support-count {
@@ -81,7 +87,7 @@
   border-radius: 999px;
   display: inline-grid;
   place-items: center;
-  background: #4bcabf;
+  background: #F25C05;
   color: #fff;
   font-size: 0.75rem;
   font-weight: 800;
@@ -106,9 +112,9 @@
   border-radius: 50%;
   display: inline-grid;
   place-items: center;
-  background: #f6f9fc;
-  color: #5f7191;
-  border: 1px solid #d6e0ea;
+  background: #ECE9E0;
+  color: #5C635E;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   cursor: pointer;
 }
 
@@ -128,7 +134,7 @@
   border-radius: 999px;
   display: grid;
   place-items: center;
-  background: #4bcabf;
+  background: #F25C05;
   color: #fff;
   font-size: 0.68rem;
   font-weight: 700;
@@ -140,9 +146,9 @@
   gap: 10px;
   padding: 7px 12px 7px 7px;
   border-radius: 999px;
-  background: #fff;
-  border: 1px solid #d6e0ea;
-  color: #1f2d3d;
+  background: #ECE9E0;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  color: #161917;
   cursor: pointer;
 }
 
@@ -152,7 +158,7 @@
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, #5b7cfa, #4bcabf);
+  background: #161917;
   color: #fff;
   font-weight: 800;
   font-size: 0.8rem;
