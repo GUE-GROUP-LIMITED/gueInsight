@@ -931,3 +931,75 @@
     align-items: flex-start;
   }
 }
+
+.user-shell {
+  --admin-canvas: #E5E2D8;
+  --admin-dark: #161917;
+  --admin-cream: #ECE9E0;
+  --admin-orange: #F25C05;
+  --admin-muted: #5C635E;
+  background: var(--admin-canvas);
+  color: var(--admin-dark);
+  font-family: "DM Sans Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.user-shell__sidebar {
+  background: var(--admin-dark);
+}
+
+.user-shell__brand-mark {
+  border-radius: 10px;
+  background: var(--admin-orange);
+}
+
+.user-shell__nav-link {
+  border: 0;
+  border-radius: 30px;
+  background: transparent;
+}
+
+.user-shell__nav-link:hover,
+.user-shell__nav-link.is-active {
+  background: rgba(242, 92, 5, 0.18);
+  transform: none;
+}
+
+.user-shell__sidebar-card {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.user-shell__sidebar-action,
+.user-shell__topbar-button,
+.user-shell__chip:not(.user-shell__chip--ghost) {
+  background: var(--admin-orange);
+}
+
+.user-shell__content,
+.user-shell__topbar,
+.user-shell__panel,
+.user-shell__stat-card {
+  box-shadow: 0 10px 24px rgba(22, 25, 23, 0.05);
+}
+
+.user-shell__topbar,
+.user-shell__panel {
+  border-color: rgba(0, 0, 0, 0.08);
+  background: var(--admin-cream);
+}
+
+.user-shell__stat-card--blue {
+  background: var(--admin-dark);
+}
+
+.user-shell__stat-card--green {
+  background: #31463D;
+}
+
+.user-shell__stat-card--orange {
+  background: var(--admin-orange);
+}
+
+.user-shell__stat-card--red {
+  background: #A84F35;
+}

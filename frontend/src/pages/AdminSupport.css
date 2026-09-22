@@ -395,3 +395,114 @@
     align-items: flex-start;
   }
 }
+
+.admin-support-shell {
+  --admin-canvas: #E5E2D8;
+  --admin-dark: #161917;
+  --admin-cream: #ECE9E0;
+  --admin-orange: #F25C05;
+  --admin-muted: #5C635E;
+  background: var(--admin-canvas);
+  color: var(--admin-dark);
+  font-family: "DM Sans Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.admin-support-shell__sidebar {
+  background: var(--admin-dark);
+  color: #F2EFE8;
+}
+
+.admin-support-shell__brand {
+  border-bottom-color: rgba(255, 255, 255, 0.12);
+}
+
+.admin-support-shell__brand-mark {
+  border-radius: 10px;
+  background: var(--admin-orange);
+}
+
+.admin-support-shell__brand span,
+.admin-support-shell__sidebar-label,
+.admin-support-shell__eyebrow,
+.admin-support-shell__section-label {
+  color: rgba(242, 239, 232, 0.62);
+}
+
+.admin-support-shell__nav-link {
+  border: 0;
+  border-radius: 30px;
+  background: transparent;
+  color: rgba(242, 239, 232, 0.74);
+}
+
+.admin-support-shell__nav-link.is-active,
+.admin-support-shell__nav-link:hover {
+  background: rgba(242, 92, 5, 0.18);
+}
+
+.admin-support-shell__sidebar-card {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.admin-support-shell__sidebar-action,
+.admin-support-shell__button--primary {
+  background: var(--admin-orange);
+  box-shadow: 0 8px 18px rgba(242, 92, 5, 0.18);
+}
+
+.admin-support-shell__content {
+  padding: 28px;
+}
+
+.admin-support-shell__topbar,
+.admin-support-shell__stat-card,
+.admin-support-shell__card {
+  border-color: rgba(0, 0, 0, 0.08);
+  background: var(--admin-cream);
+  box-shadow: 0 10px 24px rgba(22, 25, 23, 0.05);
+}
+
+.admin-support-shell__topbar h1,
+.admin-support-shell__stat-card strong,
+.admin-support-shell__card-head h2,
+.admin-support-shell__detail-body h3,
+.admin-support-shell__queue-item strong,
+.admin-support-shell__detail-grid dd {
+  color: var(--admin-dark);
+}
+
+.admin-support-shell__stat-card p,
+.admin-support-shell__stat-card span,
+.admin-support-shell__queue-item p,
+.admin-support-shell__detail-grid dt,
+.admin-support-shell__detail-body p,
+.admin-support-shell__form span,
+.admin-support-shell__hint {
+  color: var(--admin-muted);
+}
+
+.admin-support-shell__filter select,
+.admin-support-shell__form input,
+.admin-support-shell__form textarea,
+.admin-support-shell__detail-grid div {
+  border-color: rgba(0, 0, 0, 0.08);
+  background: #F7F4EC;
+  color: var(--admin-dark);
+}
+
+.admin-support-shell__queue-item {
+  border-color: rgba(0, 0, 0, 0.08);
+  background: #F2EFE8;
+}
+
+.admin-support-shell__queue-item.is-active {
+  border-color: var(--admin-orange);
+  box-shadow: 0 0 0 3px rgba(242, 92, 5, 0.12);
+}
+
+.admin-support-shell__button--ghost {
+  color: var(--admin-dark);
+  border-color: rgba(0, 0, 0, 0.1);
+  background: #F2EFE8;
+}

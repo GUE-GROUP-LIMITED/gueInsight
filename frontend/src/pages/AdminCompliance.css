@@ -309,3 +309,63 @@
     align-items: stretch;
   }
 }
+
+.admin-compliance-page {
+  --admin-cream: #ECE9E0;
+  --admin-dark: #161917;
+  --admin-orange: #F25C05;
+  --admin-muted: #5C635E;
+  background: transparent;
+  color: var(--admin-dark);
+  font-family: "DM Sans Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.admin-compliance-page__header,
+.admin-compliance-page__stats article,
+.admin-compliance-card {
+  border-color: rgba(0, 0, 0, 0.08);
+  background: var(--admin-cream);
+  box-shadow: 0 10px 24px rgba(22, 25, 23, 0.05);
+}
+
+.admin-compliance-page__eyebrow,
+.admin-compliance-card__muted,
+.admin-compliance-page__header p,
+.admin-compliance-page__stats span,
+.admin-compliance-page__feedback,
+.admin-compliance-pagination span {
+  color: var(--admin-muted);
+}
+
+.admin-compliance-page__header h1,
+.admin-compliance-card h2 {
+  color: var(--admin-dark);
+}
+
+.admin-compliance-page__link,
+.admin-compliance-bulk-row button,
+.admin-compliance-pagination button,
+.admin-compliance-actions button {
+  border-color: rgba(0, 0, 0, 0.1);
+  background: #F2EFE8;
+  color: var(--admin-dark);
+}
+
+.admin-compliance-filters input,
+.admin-compliance-filters select,
+.admin-compliance-control-input,
+.admin-compliance-soc2-stats div {
+  border-color: rgba(0, 0, 0, 0.1);
+  background: #F7F4EC;
+  color: var(--admin-dark);
+}
+
+.admin-compliance-table th,
+.admin-compliance-table td {
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+
+.admin-compliance-pill--info {
+  background: rgba(242, 92, 5, 0.14);
+  color: #A33D08;
+}
