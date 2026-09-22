@@ -9,6 +9,16 @@ def _is_truthy(value):
 def _app_env():
     return os.getenv('APP_ENV', os.getenv('FLASK_ENV', 'development')).strip().lower()
 
+
+def _database_uri():
+    uri = os.getenv('DATABASE_URL') or os.getenv('SQLALCHEMY_DATABASE_URI')
+    if not uri:
+        return 'sqlite:///' + os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'instance', 'app.db')
+    if uri.startswith('postgres://'):
+        return 'postgresql://' + uri[len('postgres://'):]
+    return uri
+
+
 class Config:
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
     APP_ENV = _app_env()
@@ -19,10 +29,7 @@ class Config:
     SECURITY_PASSWORD_SALT = os.getenv('SECURITY_PASSWORD_SALT', 'dev-security-salt')
     
     # Database configuration
-    SQLALCHEMY_DATABASE_URI = os.getenv(
-        'SQLALCHEMY_DATABASE_URI',
-        'sqlite:///' + os.path.join(BASE_DIR, '..', 'instance', 'app.db')
-    )
+    SQLALCHEMY_DATABASE_URI = _database_uri()
     UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
     OUTPUT_FOLDER = os.path.join(BASE_DIR, 'output/user_reports')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size

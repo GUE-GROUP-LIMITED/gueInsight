@@ -31,6 +31,13 @@ def _column_exists(table_name, column_name):
 
 
 def upgrade():
+    # The first revision must also bootstrap a brand-new database. Existing
+    # databases keep their schema and only receive the compliance changes below.
+    from app import db
+    import app.models  # noqa: F401
+
+    db.metadata.create_all(bind=op.get_bind())
+
     if not _column_exists('user', 'gdpr_consent_at'):
         op.add_column('user', sa.Column('gdpr_consent_at', sa.DateTime(), nullable=True))
     if not _column_exists('user', 'gdpr_consent_version'):
